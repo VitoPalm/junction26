@@ -1,0 +1,30 @@
+{
+  "name": "@junction26/exp-openrouter-ikea",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "build:lib": "tsc -p tsconfig.lib.json && cp src/lib/styles.css dist-lib/styles.css",
+    "test": "npm run build:lib && node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@wearables-ui-toolkit/androidx-shapes": "130.33.0",
+    "@wearables-ui-toolkit/icons": "130.33.0",
+    "@wearables-ui-toolkit/mrbd": "130.33.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router-dom": "7.18.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.8"
+  },
+  "version": "0.1.0"
+}

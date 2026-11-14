@@ -1,0 +1,293 @@
+{
+  "formatVersion": 1,
+  "title": "TROTTEN Assembly",
+  "commonSteps": [
+    {
+      "id": "prepare-safely",
+      "title": "Prepare safely",
+      "text": "Read the instructions first. Use two people to handle large panels; work on a rug or protected floor. If unsure, contact IKEA.",
+      "hint": "Do not stand on the panels.",
+      "sourcePage": 2,
+      "sourceStep": null,
+      "diagram": {
+        "page": 2,
+        "x": 0.06,
+        "y": 0.04,
+        "width": 0.88,
+        "height": 0.69
+      }
+    },
+    {
+      "id": "check-parts-tools",
+      "title": "Check parts and tools",
+      "text": "Check: 4×10060287; 8×10084064/10084286; 17×100181/10073700; 4×101669/10073697; 4×114254; 8×104875; 2×A; 2 hooks. Keys 100049, 108490; wrench 103675.",
+      "hint": "Match fasteners to the source drawing.",
+      "sourcePage": 3,
+      "sourceStep": null,
+      "diagram": {
+        "page": 3,
+        "x": 0.1,
+        "y": 0.04,
+        "width": 0.82,
+        "height": 0.9
+      }
+    },
+    {
+      "id": "build-end-frames",
+      "title": "Build the end frames",
+      "text": "Assemble the two matching leg frames as shown. Fit the indicated foot rails and use the 10060287 screws in the illustrated holes.",
+      "hint": "Make two matching assemblies.",
+      "sourcePage": 4,
+      "sourceStep": "1",
+      "diagram": {
+        "page": 4,
+        "x": 0.05,
+        "y": 0.03,
+        "width": 0.83,
+        "height": 0.7
+      }
+    },
+    {
+      "id": "fit-a-connectors",
+      "title": "Fit the A connectors",
+      "text": "Fit the two A blocks into the ends of the long rails. Align each block’s side button with the rail opening, as shown.",
+      "hint": "Press the block into place.",
+      "sourcePage": 5,
+      "sourceStep": "2",
+      "diagram": {
+        "page": 5,
+        "x": 0.05,
+        "y": 0.1,
+        "width": 0.9,
+        "height": 0.66
+      }
+    },
+    {
+      "id": "attach-first-frame",
+      "title": "Attach the first frame",
+      "text": "Set the leg frame onto the foot rail in the shown orientation. Insert and tighten the indicated 10060287 screws.",
+      "hint": "Follow the close-up for hole alignment.",
+      "sourcePage": 6,
+      "sourceStep": "3",
+      "diagram": {
+        "page": 6,
+        "x": 0.05,
+        "y": 0.03,
+        "width": 0.9,
+        "height": 0.46
+      }
+    },
+    {
+      "id": "fit-connector-bolts",
+      "title": "Fit connector bolts",
+      "text": "Install two 101669/10073697 connector bolts in the indicated holes. Tighten with hex key 100049, as shown.",
+      "hint": "Use two here; keep the remaining pair for later.",
+      "sourcePage": 6,
+      "sourceStep": "4",
+      "diagram": {
+        "page": 6,
+        "x": 0.05,
+        "y": 0.48,
+        "width": 0.9,
+        "height": 0.46
+      }
+    },
+    {
+      "id": "secure-cross-brace",
+      "title": "Secure the brace joint",
+      "text": "Fit the two 10084064/10084286 bolts at the shown joint. Tighten them with hex key 108490.",
+      "hint": "Use the bolt orientation shown.",
+      "sourcePage": 7,
+      "sourceStep": "5",
+      "diagram": {
+        "page": 7,
+        "x": 0.05,
+        "y": 0.03,
+        "width": 0.9,
+        "height": 0.49
+      }
+    },
+    {
+      "id": "fit-joint-washers",
+      "title": "Fit joint washers",
+      "text": "At the two joints shown, add the indicated hardware, including toothed washers 114254. Tighten with the included 103675 wrench.",
+      "hint": "Keep the washer orientation shown.",
+      "sourcePage": 7,
+      "sourceStep": "6",
+      "diagram": {
+        "page": 7,
+        "x": 0.05,
+        "y": 0.49,
+        "width": 0.9,
+        "height": 0.47
+      }
+    },
+    {
+      "id": "tighten-connectors",
+      "title": "Tighten the connectors",
+      "text": "Tighten the two indicated connector fasteners with hex key 100049. Use the close-up to identify their position.",
+      "hint": "Complete both joints.",
+      "sourcePage": 8,
+      "sourceStep": "7",
+      "diagram": {
+        "page": 8,
+        "x": 0.05,
+        "y": 0.03,
+        "width": 0.9,
+        "height": 0.48
+      }
+    },
+    {
+      "id": "join-second-frame",
+      "title": "Join the second frame",
+      "text": "Bring the second leg frame to the long rail assembly. Align and lower it into place as shown.",
+      "hint": "Keep the feet oriented as pictured.",
+      "sourcePage": 8,
+      "sourceStep": "8",
+      "diagram": {
+        "page": 8,
+        "x": 0.05,
+        "y": 0.48,
+        "width": 0.9,
+        "height": 0.47
+      }
+    }
+  ],
+  "variants": [
+    {
+      "id": "top-140",
+      "label": "140 cm tabletop",
+      "steps": [
+        {
+          "id": "140-position-rail",
+          "title": "Set the 140 cm position",
+          "text": "Use this branch for a 140 cm (55 1/8 in) tabletop. Align the rail and frame in the 140 cm position shown; fit the indicated 100181 fasteners and 104875 nuts.",
+          "hint": "This is the 140 cm layout, not the 160 cm layout.",
+          "sourcePage": 9,
+          "sourceStep": "9",
+          "diagram": {
+            "page": 9,
+            "x": 0.05,
+            "y": 0.03,
+            "width": 0.9,
+            "height": 0.91
+          }
+        },
+        {
+          "id": "140-fit-top",
+          "title": "Attach the tabletop",
+          "text": "Place the tabletop face down and position the frame as shown. Fit the two hooks and their screws; install the seven indicated 100181 rail screws. Tighten with key 108490.",
+          "hint": "Use the supplied predrilled holes.",
+          "sourcePage": 10,
+          "sourceStep": "10",
+          "diagram": {
+            "page": 10,
+            "x": 0.05,
+            "y": 0.03,
+            "width": 0.9,
+            "height": 0.78
+          }
+        },
+        {
+          "id": "140-tighten-joints",
+          "title": "Tighten the rail joints",
+          "text": "Tighten the two indicated joint nuts with wrench 103675. Tighten the two shown 100181 bolts with hex key 108490.",
+          "hint": "Check both rail joints.",
+          "sourcePage": 11,
+          "sourceStep": "11",
+          "diagram": {
+            "page": 11,
+            "x": 0.05,
+            "y": 0.03,
+            "width": 0.9,
+            "height": 0.9
+          }
+        },
+        {
+          "id": "140-turn-desk",
+          "title": "Turn the desk upright",
+          "text": "With another person, lift and turn the assembled desk upright as shown. Keep control of the tabletop while turning.",
+          "hint": "Do not turn it alone.",
+          "sourcePage": 12,
+          "sourceStep": "12",
+          "diagram": {
+            "page": 12,
+            "x": 0.08,
+            "y": 0.12,
+            "width": 0.84,
+            "height": 0.65
+          }
+        }
+      ]
+    },
+    {
+      "id": "top-160",
+      "label": "160 cm tabletop",
+      "steps": [
+        {
+          "id": "160-position-rail",
+          "title": "Set the 160 cm position",
+          "text": "Use this branch for a 160 cm (63 in) tabletop. Align the rail and frame in the 160 cm position shown; fit the indicated 100181 fasteners and 104875 nuts.",
+          "hint": "This is the 160 cm layout, not the 140 cm layout.",
+          "sourcePage": 13,
+          "sourceStep": "9",
+          "diagram": {
+            "page": 13,
+            "x": 0.05,
+            "y": 0.03,
+            "width": 0.9,
+            "height": 0.91
+          }
+        },
+        {
+          "id": "160-fit-top",
+          "title": "Attach the tabletop",
+          "text": "Place the tabletop face down and position the frame as shown. Fit the two hooks and their screws; install the seven indicated 100181 rail screws. Tighten with key 108490.",
+          "hint": "Use the supplied predrilled holes.",
+          "sourcePage": 14,
+          "sourceStep": "10",
+          "diagram": {
+            "page": 14,
+            "x": 0.05,
+            "y": 0.03,
+            "width": 0.9,
+            "height": 0.78
+          }
+        },
+        {
+          "id": "160-tighten-joints",
+          "title": "Tighten the rail joints",
+          "text": "Tighten the two indicated joint nuts with wrench 103675. Tighten the two shown 100181 bolts with hex key 108490.",
+          "hint": "Check both rail joints.",
+          "sourcePage": 15,
+          "sourceStep": "11",
+          "diagram": {
+            "page": 15,
+            "x": 0.05,
+            "y": 0.03,
+            "width": 0.9,
+            "height": 0.9
+          }
+        },
+        {
+          "id": "160-turn-desk",
+          "title": "Turn the desk upright",
+          "text": "With another person, lift and turn the assembled desk upright as shown. Keep control of the tabletop while turning.",
+          "hint": "Do not turn it alone.",
+          "sourcePage": 16,
+          "sourceStep": "12",
+          "diagram": {
+            "page": 16,
+            "x": 0.08,
+            "y": 0.12,
+            "width": 0.84,
+            "height": 0.65
+          }
+        }
+      ]
+    }
+  ],
+  "uncertainties": [
+    "The source uses diagrams rather than written assembly directions; match part orientation and fastener placement to each cited source view."
+  ]
+}

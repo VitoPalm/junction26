@@ -1,0 +1,75 @@
+/* Fixed pages: clipping prevents scroll input; the measured fit guard rejects overflow. */
+html, body, #root {
+  block-size: 100%;
+  inline-size: 100%;
+  margin: 0;
+  background: var(--uit-color-background-window);
+  overflow: clip;
+}
+.g-screen-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  block-size: 100%;
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow: clip;
+}
+.g-page-title { padding: var(--uit-spacing-large); min-inline-size: 0; }
+.g-viewport { min-block-size: 0; min-inline-size: 0; overflow: clip; }
+.g-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uit-spacing-large);
+  box-sizing: border-box;
+  block-size: 100%;
+  padding: var(--uit-spacing-large);
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.g-stack { display: grid; gap: var(--uit-spacing-small); min-inline-size: 0; flex: 0 0 auto; }
+.g-diagram { display: block; inline-size: 100%; block-size: 100%; min-block-size: 0; min-inline-size: 0; object-fit: contain; }
+.g-choices { display: flex; flex-direction: column; align-items: center; gap: var(--uit-spacing-large); }
+.g-fit-error { padding: var(--uit-spacing-large); }
+.g-action-dock { min-inline-size: 0; padding-block-end: var(--uit-spacing-xsmall); }
+
+/* Additive display: the lens (and the simulator, via mix-blend-mode: screen)
+   adds our light to the world. Black is transparent; nothing can darken or blur
+   what is behind it. Plates and backdrop blur only wash out our own content, so
+   readability comes from bright, heavy, large ink. */
+:root {
+  --g-ink: #fff;
+  --g-ink-soft: #e6ebf2;
+  /* Blue is dim on an additive display; keep accents high-luminance. */
+  --g-ink-accent: #8fdcff;
+}
+.g-readable-surface { display: flex; flex: 1 1 auto; min-inline-size: 0; min-block-size: 0; }
+.g-diagram-box {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 0;
+  min-inline-size: 0;
+  block-size: 100%;
+}
+/* Raw source shown for one frame before the inked render is ready. */
+.g-diagram-pending { filter: brightness(1.6); }
+
+.g-title { color: var(--g-ink); letter-spacing: 0.005em; }
+.g-copy { gap: var(--uit-spacing-medium, 12px); }
+.g-eyebrow { color: var(--g-ink-accent) !important; letter-spacing: 0.08em; }
+.g-body { color: var(--g-ink); }
+.g-hint { color: var(--g-ink-soft); font-weight: 600; }
+.g-value { color: var(--g-ink); font-weight: 700; }
+/* Text alone floats in empty space; anchor it with the content area's top. */
+.g-content > .g-copy { margin-block: auto 0; }
+.g-content > .g-copy:only-child { margin-block: auto; }
+/* Diagrams get every pixel between the title and the actions. */
+.g-content:has(> .g-diagram-box) { padding: var(--uit-spacing-xsmall, 4px) var(--uit-spacing-medium, 12px); }
+.g-page-title:has(+ .g-viewport .g-diagram-box) { padding-block-end: var(--uit-spacing-xsmall, 4px); }
+/* Toolkit button labels are 24px regular and scale to ~0.8 when unfocused;
+   on an additive display thin glyphs vanish against bright scenes. */
+.g-action-dock .uit-text-label,
+.g-choices .uit-text-label { font-weight: 700; }
+.g-choices [class*="subtitleLabel"] { font-weight: 600; color: var(--g-ink-soft); }

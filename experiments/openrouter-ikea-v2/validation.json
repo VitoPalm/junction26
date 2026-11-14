@@ -1,0 +1,32 @@
+{
+  "schemaValid": true,
+  "uniqueStepIdsWithinEachGuide": true,
+  "validCropBounds": true,
+  "commonScreens": 9,
+  "variants": [
+    {
+      "id": "tabletop-140",
+      "screens": 13
+    },
+    {
+      "id": "tabletop-160",
+      "screens": 13
+    }
+  ],
+  "sourcePagesReferenced": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ]
+}
