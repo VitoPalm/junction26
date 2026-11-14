@@ -67,7 +67,23 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `PORT` | api | `8080` (matches Dockerfile `EXPOSE`) |
 | `SESSION_SECRET` | api | Random 32+ bytes. Signs device/session tokens |
 | `PUBLIC_ORIGIN` | api | The Aiven HTTPS URL; used in QR/deep links |
-| `MAX_UPLOAD_BYTES`, `GENERATION_CONCURRENCY`, `MAX_OUTPUT_TOKENS` | api, worker | Abuse and budget limits |
+| `MAX_UPLOAD_BYTES`, `GENERATION_CONCURRENCY`, `MAX_OUTPUT_TOKENS` | api, worker | Abuse and budget limits (defaults 50 MiB, 2, 16000) |
+| `MAX_DEFINITION_BYTES`, `MAX_STATE_BYTES` | api | JSON size limits (defaults 512 KiB, 256 KiB) |
+| `NODE_ENV` | api, worker | `production` in the image. **Refuses `AUTH_MODE=dev` and non-S3 storage** |
+| `SERVICE_ROLE` | container | `api` (default), `worker` or `migrate`; read by `scripts/entrypoint.sh` |
+| `MIGRATE_ON_START` | api, worker | `true` on the `api` app; migrations take an advisory lock |
+| `MIGRATION_DATABASE_URL` | api, worker | Optional direct (non-PgBouncer) URI for migrations; defaults to `DATABASE_URL` |
+| `DATABASE_POOL_MAX` | api | Connections per API process (default 10) |
+| `STORAGE_DRIVER` | api, worker | `s3` (default, required in production), `fs` or `memory` for development |
+| `AUTH_MODE` | api | Only `dev` exists until the identity provider is chosen |
+| `LOG_LEVEL` | api, worker | `debug`, `info` (default), `warn`, `error` |
+| `WORKER_CONCURRENCY`, `WORKER_POLL_MS`, `WORKER_LEASE_MS`, `WORKER_ID` | worker | Defaults 2, 1000, 60000, generated |
+| `WORKER_HEALTH_PORT` | worker | If set, serves `GET /healthz` (for hosts that need a listening port) |
+| `SHUTDOWN_GRACE_MS` | api, worker | Default 20000 |
+
+The parser is `packages/server-common/src/config.ts`. It lists every problem at
+once and exits before serving anything. Local values for development live in
+`.env.backend.local` (template: [`.env.backend.example`](../.env.backend.example)).
 
 ## 2. Object storage: Verda **[done]**
 
@@ -173,45 +189,26 @@ labelled "New", with no GA/beta statement):
 - Database: a service integration injects `DATABASE_URL` (full URI only).
   A Runtime app **can't** integrate with another Runtime app.
 
-### Files to add to the repo
+### Files in the repo **[done]**
 
-`Dockerfile` (one image for both processes):
-
-```dockerfile
-FROM node:26-alpine AS build
-WORKDIR /app
-COPY package.json package-lock.json ./
-COPY packages ./packages
-COPY apps ./apps
-RUN npm ci && npm run build
-
-FROM node:26-alpine
-WORKDIR /app
-ENV NODE_ENV=production PORT=8080
-COPY --from=build /app /app
-RUN npm prune --omit=dev
-EXPOSE 8080
-CMD ["node", "apps/api/dist/main.js"]
-```
-
-`compose.yaml`:
-
-```yaml
-services:
-  api:
-    build: { context: ., dockerfile: Dockerfile }
-    environment:
-      - SERVICE_ROLE=api
-  worker:
-    build: { context: ., dockerfile: Dockerfile.worker }   # same as Dockerfile, CMD apps/worker
-    environment:
-      - SERVICE_ROLE=worker
-```
+- [`Dockerfile`](../Dockerfile): one image (node:26-alpine, ~200 MB) with only
+  the backend workspaces installed and built. The entrypoint
+  ([`scripts/entrypoint.sh`](../scripts/entrypoint.sh)) picks the process from
+  `SERVICE_ROLE` and `exec`s node so SIGTERM reaches graceful shutdown.
+  Verified locally with podman on 2026-11-14 (build, `/readyz`, clean stop).
+- [`compose.yaml`](../compose.yaml): `api` (port 8080, `MIGRATE_ON_START=true`)
+  and `worker`, same Dockerfile, different `SERVICE_ROLE`.
+- [`.dockerignore`](../.dockerignore): keeps `.env*` secrets, docs and
+  experiments out of the build context.
 
 Untested assumption to verify on the first deploy: that a port-less `worker`
-service becomes its own Runtime app. If it doesn't, give the worker a tiny
-`/healthz` HTTP listener on 8080 so it deploys like the API, without a public
-route being used.
+service becomes its own Runtime app. `compose.yaml` already sets
+`WORKER_HEALTH_PORT=8080`, so the worker answers `GET /healthz` on 8080 and can
+be deployed like the API if needed (don't route public traffic to it).
+
+**Before the first deploy, decide user authentication.** The image runs with
+`NODE_ENV=production`, which refuses the dev auth placeholder. Overriding
+`NODE_ENV=development` on a public URL would let anyone act as any user.
 
 ### Deploy steps
 
@@ -257,7 +254,11 @@ release leases.
 
 ## 6. Local development
 
-Prerequisites: Node **≥22.12** (26 LTS recommended), npm, Google Chrome with
+Backend: see [backend-development.md](backend-development.md) (`npm run dev:db`,
+`dev:api`, `dev:worker`). The rest of this section covers the experiments and
+the glasses UI.
+
+Prerequisites: Node **≥22.18** (26 LTS recommended), podman or docker for the backend database, npm, Google Chrome with
 the simulator extension, Python 3 with `requests` + `Pillow`, and Poppler
 (`pdftoppm`, `pdftotext`) for the experiment scripts.
 

@@ -1,0 +1,32 @@
+{
+  "name": "@junction26/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "junction26-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "junction26-source": "./src/testing.ts",
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --env-file-if-exists=../../.env.backend.local --conditions=junction26-source --test --test-concurrency=1 'src/**/*.test.ts'",
+    "migrate": "node --env-file-if-exists=../../.env.backend.local --conditions=junction26-source src/cli.ts migrate"
+  },
+  "dependencies": {
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2",
+    "@types/pg": "8.23.1"
+  }
+}

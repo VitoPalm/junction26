@@ -4,13 +4,20 @@
   "type": "module",
   "workspaces": [
     "packages/*",
+    "apps/*",
     "experiments/*/app"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:db": "scripts/dev-db.sh",
+    "dev:api": "npm run dev -w @junction26/api",
+    "dev:worker": "npm run dev -w @junction26/worker",
+    "migrate": "npm run migrate -w @junction26/db",
+    "smoke:storage": "node --env-file=.env.verda.local --conditions=junction26-source scripts/smoke-storage.ts"
   },
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.18"
   }
 }

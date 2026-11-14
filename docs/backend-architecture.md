@@ -1,8 +1,11 @@
 # Backend architecture
 
 Status: agreed design, 2026-11-14; provider facts re-verified the same day. This
-records the agreed direction and proposed implementation contracts; **the backend
-is not implemented yet**. Product intent lives in [product-spec.md](product-spec.md),
+records the agreed direction and the reasons behind it. **The backend skeleton
+(milestone M3) is implemented and tested locally, not deployed.** The
+implemented contracts are in [api.md](api.md), [jobs.md](jobs.md) and
+[database.md](database.md). Where this page and those disagree, those describe
+the code. Product intent lives in [product-spec.md](product-spec.md),
 step-by-step provisioning in [infrastructure-setup.md](infrastructure-setup.md),
 device facts in [glasses-platform.md](glasses-platform.md), and the build order
 in [implementation-plan.md](implementation-plan.md).
@@ -33,7 +36,11 @@ We do not build or deploy a separate executable application for every applet.
 | Background work | Separate worker with durable jobs recorded in PostgreSQL |
 | Code organization | One TypeScript repository (npm workspaces); separate API and worker entry points, one container image |
 | Object traffic | Proxied through the API: Verda has no CORS or public access, so browsers never talk to it |
-| Runtime language | TypeScript on Node 26 LTS (local dev works on Node 22.12+) |
+| Runtime language | TypeScript on Node 26 LTS (local dev works on Node 22.18+) |
+| HTTP framework | Hono 4.13 on `@hono/node-server` (small, streaming request bodies, in-process test requests) |
+| Database access | `pg` 8.23 with plain SQL migrations and typed query functions; no ORM |
+| Request validation | zod 4.6 |
+| User authentication | **Open.** `AUTH_MODE=dev` placeholder, refused in production. Device sessions via pairing are implemented |
 
 Start with modest capacity. Managed plan upgrades provide a growth path; automatic
 horizontal scaling is not an initial requirement. Do not provision GPUs, Redis,
@@ -273,9 +280,10 @@ migration. If the installed release is not a supported migration base, keep it
 working and require an explicit migration/recovery path. Cloud data may lag local
 data; generation must not assume its last backup is the wearer's current state.
 
-## Proposed API surface
+## API surface
 
-Paths are a starting contract, not implemented endpoints:
+Implemented; the full contract (sessions, errors, idempotency, every endpoint)
+is in [api.md](api.md). The original proposal, for reference:
 
 | Endpoint | Purpose |
 | --- | --- |
@@ -333,19 +341,24 @@ name: select and document the actual plans.
 ## Open decisions and next implementation work
 
 1. Define the component/action DSL and strict applet schema.
-2. Choose authoring authentication and glasses pairing/session handling.
+2. Choose authoring authentication (pairing and device sessions are done).
 3. Verify glasses persistent storage, offline launch, and WebMCP behavior on hardware.
 4. Select Aiven database/runtime plans and region; verify backup and pooling settings.
 5. Specify state migration operations and review rules with concrete examples.
 6. Define package format, size limits, and cache/version compatibility rules.
 7. Implement the smallest full flow: author -> preview -> publish -> download ->
-   local action -> state backup -> restore.
+   local action -> state backup -> restore. **Backend half done:** the
+   author (definition submitted directly) -> publish -> package -> download ->
+   backup -> restore path passes as an integration test
+   (`apps/api/src/e2e.test.ts`). Generation, preview and the glasses side are
+   still to build.
 
 ## Current infrastructure and references
 
 Verda project, bucket, and storage credentials are configured and verified; see
-[Verda setup](verda.md). OpenRouter is funded and keyed. Aiven database/runtime and
-the application are not yet provisioned or implemented. Provisioning steps:
+[Verda setup](verda.md). OpenRouter is funded and keyed. The API and worker are
+implemented ([backend-development.md](backend-development.md)); Aiven
+database/runtime are not yet provisioned, so nothing is deployed. Provisioning steps:
 [infrastructure-setup.md](infrastructure-setup.md).
 
 - [Aiven deployment](https://aiven.io/docs/products/runtime/deploy-apps)

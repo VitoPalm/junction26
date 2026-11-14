@@ -18,7 +18,8 @@ For an engineer or agent starting cold. Read in this order:
 | Verda bucket + credentials, OpenRouter key | **Provisioned** |
 | Aiven PostgreSQL + Runtime | Not provisioned |
 | Applet format v1 (general, beyond guides) | **Draft below**, not implemented |
-| API, worker, DB schema, glasses app shell, authoring client, WebMCP adapter, sync | Not implemented |
+| Backend: API, worker, DB schema, storage adapter (`apps/api`, `apps/worker`, `packages/db`, `packages/storage`, `packages/server-common`) | **Built (M3 skeleton)**, tested against PostgreSQL 18 locally, container image builds. Not deployed. User auth is a dev placeholder; generation is a placeholder ([backend-development.md](backend-development.md)) |
+| Glasses app shell, authoring client, WebMCP adapter, applet format/runtime, model adapter, ingest | Not implemented |
 | Hardware verification (WebMCP, storage, band, readability) | Not done |
 
 The experiments contain copies of the component library (`experiments/*/app/src/lib`)
@@ -29,8 +30,8 @@ frozen at trial time. **`packages/glasses-ui` is canonical.** Keep the
 
 ```text
 apps/
-  api/            Node HTTP server: /v1 API + serves glasses/ and author/ static builds
-  worker/         Node job runner (same image, different entry point)
+  api/            [exists] Node HTTP server: /v1 API (+ will serve glasses/ and author/ static builds)
+  worker/         [exists] Node job runner (same image, different entry point)
   glasses/        React + Vite web app for MRBD (library, runtime host, WebMCP adapter, SW)
   author/         React + Vite PWA for phone/laptop (library, chat, uploads, preview, review)
 packages/
@@ -38,8 +39,9 @@ packages/
   applet-format/  types + JSON Schema + validators + fit/copy rules (shared by everyone)
   runtime/        pure state machine: dispatch(action, args) → new state; used by glasses AND preview
   diff/           revision comparison → change report (data-loss detection)
-  db/             SQL migrations + typed queries
-  storage/        S3 adapter (Verda today)
+  db/             [exists] SQL migrations + typed queries
+  storage/        [exists] S3 adapter (Verda today), fs + memory for dev/tests
+  server-common/  [exists] env config, logger, shutdown, interim definition check
   model/          OpenRouter adapter (structured output, usage, errors)
   ingest/         PDF/image preparation (render pages, extract text, crop, ink)
 experiments/      frozen trials and evidence; do not build product code here
@@ -161,6 +163,14 @@ a test stub of `document.modelContext`; Meta perf budgets met (first load
 < 300 KB).
 
 ### M3. Backend skeleton + infrastructure
+
+**Status 2026-11-14:** code done; infrastructure not. Built: schema + migrator,
+storage adapter, every endpoint except change reviews and static hosting,
+device pairing, durable job runner with lease recovery, packaging/publish,
+state backup, Dockerfile + compose. Tests cover ownership checks, idempotency
+keys and lease recovery (simulated by an expired lease rather than literally
+killing a process). Remaining: provision Aiven, deploy, choose user auth (open
+decision 1), verify `/readyz` in deployment.
 
 Provision Aiven PG + Runtime per [infrastructure-setup.md](infrastructure-setup.md).
 `apps/api`, `apps/worker`, `packages/db` (tables from backend-architecture),

@@ -23,9 +23,12 @@ verification object was deleted.
 
 Use object keys under these prefixes:
 
-- `uploads/<user-id>/<upload-id>/` for original user material.
-- `assets/<content-hash>/` for applet-specific prepared assets.
-- `applets/<applet-id>/revisions/<revision-id>/` for immutable published packages.
+- `uploads/<user-id>/<upload-id>/original` for original user material.
+- `assets/<sha256>.<ext>` for applet-specific prepared assets.
+- `releases/<project-id>/<release-id>/package.json` for immutable published packages.
+- `healthcheck/` for `npm run smoke:storage` (deleted after each run).
+
+The layout is defined once in `packages/storage/src/keys.ts`.
 
 Enforce ownership in the backend. Published packages should include their unique
 assets, with shared components and standard assets shipped in the web app.
@@ -45,8 +48,9 @@ access is suspended.**
 
 ## Remaining infrastructure
 
-No compute instance or backend deployment has been provisioned. The repository
-does not yet contain an application to deploy. No Aiven database has been set up.
+No compute instance or backend deployment has been provisioned. The backend
+(`apps/api`, `apps/worker`) exists and uses this bucket through
+`packages/storage`; the adapter passed a live round trip on 2026-11-14. No Aiven database has been set up.
 The selected application host is now Aiven Runtime, with Aiven PostgreSQL for
 structured persistence. Verda is used for object storage; no Verda CPU host is
 required by the current plan. See [Backend architecture](backend-architecture.md).

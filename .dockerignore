@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/dist-lib
+**/test-results
+**/playwright-report
+.env*
+!.env*.example
+.data
+.git
+experiments
+!experiments/*/app/package.json
+docs
+assets

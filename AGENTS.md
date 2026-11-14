@@ -14,18 +14,23 @@ Band and by "Hey Meta" voice through WebMCP.
 5. [docs/infrastructure-setup.md](docs/infrastructure-setup.md): provisioning, env vars, deploy, local dev.
 6. [docs/authoring-instructions.md](docs/authoring-instructions.md): policy given to the authoring model.
 7. [docs/experiments.md](docs/experiments.md): what the trials proved.
+8. Backend work: [docs/backend-development.md](docs/backend-development.md), then
+   [docs/api.md](docs/api.md), [docs/jobs.md](docs/jobs.md), [docs/database.md](docs/database.md).
 
 ## Commands
 
 ```sh
-npm ci                     # root; npm workspaces (packages/*, experiments/*/app)
+npm ci                     # root; npm workspaces (packages/*, apps/*, experiments/*/app)
 npm run build              # every workspace
 npm test                   # unit tests in every workspace
 (cd packages/glasses-ui && npx playwright test)                 # browser tests (Chrome)
 (cd experiments/openrouter-ikea-v2/app && npx vite --host 127.0.0.1 --port 4182)   # live demo
+npm run dev:db             # local PostgreSQL (podman/docker); DB tests skip without TEST_DATABASE_URL
+npm run dev:api            # backend API on :8080 (needs .env.backend.local)
+npm run dev:worker         # backend job worker
 ```
 
-Requires Node ≥22.12 (26 LTS recommended) and Google Chrome at
+Requires Node ≥22.18 (26 LTS recommended), podman or docker for the backend database, and Google Chrome at
 `/usr/bin/google-chrome-stable` for Playwright.
 
 ## Rules
@@ -42,6 +47,10 @@ Requires Node ≥22.12 (26 LTS recommended) and Google Chrome at
 - Secrets live only in git-ignored `.env.*.local` files and runtime secrets.
   Never put keys in frontend code, packages, logs or commits.
 - Browsers never talk to Verda (no CORS). Route object traffic through the API.
+- Backend: every query on user data filters by owner; migrations are
+  append-only (new file, never edit); job handlers must be safe to run twice.
+  Update docs/api.md, jobs.md or database.md in the same change as the behavior.
+- `AUTH_MODE=dev` is a placeholder and must never be exposed publicly.
 - `experiments/*/run.py` spends real money; never re-run over recorded evidence.
 - Don't claim glasses behavior (WebMCP, storage, readability) is verified
   unless it was tested on the device. Say "simulator" or "unverified".

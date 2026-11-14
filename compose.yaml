@@ -1,0 +1,18 @@
+# Aiven Runtime deploys each service as its own app from this file.
+# Both build the same Dockerfile; SERVICE_ROLE picks the process.
+# Secrets and DATABASE_URL are configured per app in Aiven, not here.
+services:
+  api:
+    build: { context: ., dockerfile: Dockerfile }
+    environment:
+      - SERVICE_ROLE=api
+      - MIGRATE_ON_START=true
+    ports:
+      - "8080:8080"
+  worker:
+    build: { context: ., dockerfile: Dockerfile }
+    environment:
+      - SERVICE_ROLE=worker
+      # Unverified: if Aiven requires every app to listen, this keeps the
+      # worker deployable (see docs/infrastructure-setup.md, section 4).
+      - WORKER_HEALTH_PORT=8080

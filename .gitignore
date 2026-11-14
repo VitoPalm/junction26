@@ -14,3 +14,4 @@ dist-lib/
 test-results/
 playwright-report/
 __pycache__/
+.data/

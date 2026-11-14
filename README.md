@@ -17,8 +17,10 @@ Meta challenge.
 
 Design agreed and documented. The glasses component library and the authoring
 pipeline proof (PDF → GPT-6 Luna via OpenRouter → validated JSON → rendered
-guide, ~$0.007 per manual) exist. Backend services, the glasses app shell and the
-authoring client aren't built yet. See the [implementation plan](docs/implementation-plan.md).
+guide, ~$0.007 per manual) exist. The backend skeleton (API, job worker,
+PostgreSQL schema, Verda storage, publishing, device pairing, state backup) is
+built and tested locally but not deployed. Model generation in the service,
+user sign-in, the glasses app shell and the authoring client aren't built yet. See the [implementation plan](docs/implementation-plan.md).
 
 ## Documentation
 
@@ -28,6 +30,10 @@ authoring client aren't built yet. See the [implementation plan](docs/implementa
 | [Implementation plan](docs/implementation-plan.md) | Current state, target layout, applet format v1 draft, milestones, open decisions |
 | [Backend architecture](docs/backend-architecture.md) | Contracts, data model, jobs, publishing, offline execution, sync, API |
 | [Glasses platform](docs/glasses-platform.md) | Verified Meta Ray-Ban Display facts: limits, additive display, WebMCP, install |
+| [Backend development](docs/backend-development.md) | Run, test and change the API and worker locally |
+| [API reference](docs/api.md) | Sessions, errors, idempotency, every endpoint, sync and backup protocol |
+| [Background jobs](docs/jobs.md) | Job lifecycle, leases, retries, handlers, release package format |
+| [Database](docs/database.md) | Tables, invariants, migrations |
 | [Infrastructure setup](docs/infrastructure-setup.md) | Accounts, env vars, Verda, Aiven PostgreSQL + Runtime, OpenRouter, local dev, device setup, costs |
 | [Verda setup](docs/verda.md) | The provisioned bucket |
 | [Authoring instructions](docs/authoring-instructions.md) | Policy given to the authoring model |
@@ -50,6 +56,11 @@ enabled, and set Background Blur to 0. Use the arrow keys, Enter and Esc.
 
 ```text
 docs/                 specs and setup guides
+apps/api/             HTTP API (Hono): projects, uploads, revisions, publishing, sync, pairing, state
+apps/worker/          durable PostgreSQL job runner: upload prep, packaging, (generation, soon)
+packages/db/          SQL migrations + typed queries
+packages/storage/     object storage adapter (Verda S3, fs, memory)
+packages/server-common/ config, logging, shutdown
 packages/glasses-ui/  canonical display component library (@wearables-ui-toolkit/mrbd 130.33.0)
 experiments/          frozen authoring trials with prompts, outputs, evaluations, demo apps
 .env.*.example        credential templates (real values live in git-ignored .env.*.local)
