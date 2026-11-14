@@ -20,6 +20,8 @@ Band and by "Hey Meta" voice through WebMCP.
 10. External assistants (Claude/ChatGPT MCP, Clerk OAuth):
    [docs/assistant-integrations.md](docs/assistant-integrations.md), then
    [docs/assistant-mcp.md](docs/assistant-mcp.md).
+11. Voice without Meta AI (contingency if WebMCP stays broken):
+   [docs/voice-fallback.md](docs/voice-fallback.md).
 
 ## Commands
 

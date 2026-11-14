@@ -108,6 +108,10 @@ and kept forever (they live on the job row).
 | `POST /v1/devices/pair` | **none** | 201 | `{ code, label? }` → `{ token, device }` |
 | `GET /v1/devices` | user | 200 | Paired devices, including revoked |
 | `DELETE /v1/devices/:id` | user | 200 | Revokes; idempotent |
+| `PUT /v1/voice/context` | device | 200 | Open applet's tools and values for the voice bridge; see [voice bridge](#voice-bridge) |
+| `DELETE /v1/voice/context` | device | 200 | Applet closed |
+| `GET /v1/voice/events` | device | 200 | Server-sent `command` events |
+| `POST /v1/voice/utterances` | user, device | 200 | One utterance (`audio/wav`, `audio/mpeg` or JSON `{ text }`) → outcome |
 | `GET /v1/authoring/models` | any | 200 | `{ default, models: [{ id, label, provider, free, default }] }` for the model picker |
 | `GET /v1/authoring/capabilities` | any | 200 | The capability catalog (`capabilities`, `limitations`) the authoring model is given |
 | `GET /glasses/*`, `GET /author/*` | none | 200 | Built web apps when `WEB_ROOT` is set; unknown paths fall back to `index.html`; `assets/` immutable, HTML `no-cache` |
@@ -206,6 +210,43 @@ message.
 
 There's no attempt limit on pairing yet. With 10-minute codes the guessing odds
 are tiny, but add per-IP rate limiting before a public launch.
+
+### Voice bridge
+
+Fallback for "Hey Meta" (plan: [voice-fallback.md](voice-fallback.md)). An
+always-listening phone bridge posts speech; the API resolves it against the
+applet open on the same owner's glasses and pushes the action there.
+
+1. Glasses (voice switched on, applet open): `PUT /v1/voice/context`
+   `{ projectId, title, view, tools, state }`. `tools` are the WebMCP tool
+   declarations (`name`, `description`, `parameters`; ≤64), `state` is the
+   `describeState` text (≤8000 chars). Re-sent only when it changes; it expires
+   after 10 minutes. Then `GET /v1/voice/events` (SSE): `ready`, then
+   `command` events `{ id, tool, args, heard }`, with a keepalive comment every
+   25 s. The glasses close the stream when hidden.
+2. Bridge: `POST /v1/voice/utterances` with up to 512 KB of `audio/wav` /
+   `audio/mpeg`, or `{ text, id? }` (≤500 chars). Send `X-Utterance-Id`
+   (8–64 of `[A-Za-z0-9_-]`) to make retries safe: a repeated id returns the
+   first answer for 2 minutes and never acts twice.
+3. Answer `200 { id, outcome, … }`, sent after delivery:
+   - `command`: delivered. Includes `tool`, `args` and `heard`.
+   - `ignored`: the model chose not to act. `reason` is `not_for_applet`,
+     `unknown_tool`, `bad_arguments` or `no_tool_call`.
+   - `no_glasses`: no glasses are listening with an open applet. This is
+     checked before any model call.
+   - `undelivered`: the glasses closed or switched applet while the model ran.
+
+   Errors: `415 unsupported_media_type`, `413 payload_too_large`,
+   `422 voice_unsupported_input` (audio sent to a text-only `VOICE_MODEL`),
+   `503 voice_model_unavailable` (model failed or took over 10 s).
+
+The model (`VOICE_MODEL`, default `google/gemini-3.5-flash-lite`; `fake:voice`
+is a free keyword matcher) must call exactly one applet tool or `ignore`. Only
+tools in the current context are deliverable. The glasses look the tool up
+again and the runtime validates its arguments. Audio and transcripts are never
+logged or stored. Logs carry the id, outcome, tool name, model, cost and
+timing. Fan-out is in-process, so the API must run as a single instance until
+it moves to `LISTEN/NOTIFY`.
 
 ### State backup
 

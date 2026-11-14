@@ -35,7 +35,9 @@ export class OpenAICompatibleProvider implements ModelProvider {
   capabilities(model: string): ModelCapabilities {
     // Conservative defaults; refine per model as they're tested.
     const vision = /gpt|claude|gemini|luna|vision|vl|llava|qwen.*vl/i.test(model);
-    return { images: vision, files: this.o.openRouter === true, structuredOutput: true };
+    // Models OpenRouter lists with audio input (checked 2026-11-14); unknown models say no.
+    const audio = /gemini|gpt-audio|gpt-4o-audio|omni|mimo|voxtral/i.test(model);
+    return { images: vision, files: this.o.openRouter === true, audio, structuredOutput: true };
   }
 
   async complete(req: CompletionRequest): Promise<CompletionResult> {
@@ -64,7 +66,10 @@ export class OpenAICompatibleProvider implements ModelProvider {
       ],
       max_tokens: req.maxOutputTokens,
     };
-    if (req.tools?.length) body.tools = req.tools.map((t) => ({ type: 'function', function: t }));
+    if (req.tools?.length) {
+      body.tools = req.tools.map((t) => ({ type: 'function', function: t }));
+      if (req.toolChoice) body.tool_choice = req.toolChoice;
+    }
     if (req.webSearch && !this.o.openRouter) throw new ModelError('bad_request', 'Web search requires OpenRouter');
     if (req.responseSchema) {
       body.response_format = {
@@ -181,6 +186,8 @@ function toWire(p: Part): unknown {
       return { type: 'image_url', image_url: { url: `data:${p.mediaType};base64,${p.data}` } };
     case 'file':
       return { type: 'file', file: { filename: p.filename, file_data: `data:${p.mediaType};base64,${p.data}` } };
+    case 'audio':
+      return { type: 'input_audio', input_audio: { data: p.data, format: p.format } };
   }
 }
 

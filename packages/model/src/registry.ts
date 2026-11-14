@@ -1,5 +1,5 @@
 import { OpenAICompatibleProvider } from './openai-compatible.ts';
-import { ModelError, type CompletionRequest, type CompletionResult, type ModelProvider } from './types.ts';
+import { ModelError, type CompletionRequest, type CompletionResult, type ModelProvider, type ToolCall } from './types.ts';
 
 /**
  * Model specs are "provider:model", e.g. "openrouter:openai/gpt-6-luna" or
@@ -25,23 +25,29 @@ export function parseModelSpec(spec: string, knownProviders: Iterable<string> = 
   return { provider: 'openrouter', model: s, id: `openrouter:${s}` };
 }
 
+/** A fake reply: plain text, or text plus tool calls. */
+export type FakeResponder = (req: CompletionRequest, call: number) => FakeReply | Promise<FakeReply>;
+export type FakeReply = string | { text?: string; toolCalls?: ToolCall[] };
+
 /** Deterministic, free provider for local development, demos without credit, and tests. */
 export class FakeProvider implements ModelProvider {
   readonly id = 'fake';
   readonly calls: CompletionRequest[] = [];
-  private readonly respond: (req: CompletionRequest, call: number) => string | Promise<string>;
-  constructor(respond: (req: CompletionRequest, call: number) => string | Promise<string>) {
+  private readonly respond: FakeResponder;
+  constructor(respond: FakeResponder) {
     this.respond = respond;
   }
   capabilities() {
-    return { images: true, files: true, structuredOutput: true };
+    return { images: true, files: true, audio: true, structuredOutput: true };
   }
   async complete(req: CompletionRequest): Promise<CompletionResult> {
     req.signal?.throwIfAborted();
     this.calls.push(req);
-    const text = await this.respond(req, this.calls.length);
+    const out = await this.respond(req, this.calls.length);
+    const text = typeof out === 'string' ? out : (out.text ?? '');
     return {
       text,
+      ...(typeof out === 'string' || !out.toolCalls ? {} : { toolCalls: out.toolCalls }),
       finishReason: 'stop',
       usage: { inputTokens: Math.ceil(req.system.length / 4), outputTokens: Math.ceil(text.length / 4), costUsd: 0 },
       provider: 'fake',
@@ -55,7 +61,7 @@ export interface ProviderConfig {
   openRouter?: { apiKey: string | undefined; baseUrl: string };
   /** Any OpenAI-compatible endpoint (OpenAI, a local vLLM/Ollama...). */
   openAI?: { apiKey: string | undefined; baseUrl: string };
-  fake?: (req: CompletionRequest, call: number) => string | Promise<string>;
+  fake?: FakeResponder;
 }
 
 export class ModelRegistry {

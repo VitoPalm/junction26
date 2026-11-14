@@ -58,6 +58,8 @@ const EnvSchema = z.object({
   /** Extra model specs users may pick, comma-separated. The default is always allowed. */
   AUTHORING_MODELS: z.string().optional(),
   AUTHORING_REASONING_EFFORT: z.enum(['low', 'medium', 'high']).optional(),
+  /** Voice-bridge resolver: audio/text utterance + open applet tools → one action. "fake:voice" is free. */
+  VOICE_MODEL: z.string().default('google/gemini-3.5-flash-lite'),
   /** Any OpenAI-compatible endpoint, used by "openai:<model>" specs. */
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
@@ -122,6 +124,8 @@ export interface Config {
     reasoningEffort: 'low' | 'medium' | 'high' | undefined;
     openAI: { apiKey: string | undefined; baseUrl: string };
   };
+  /** Always-listening voice fallback (docs/voice-fallback.md). */
+  voice: { model: string };
   corsOrigins: string[];
   webRoot: string | undefined;
   worker: {
@@ -270,6 +274,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       reasoningEffort: e.AUTHORING_REASONING_EFFORT,
       openAI: { apiKey: e.OPENAI_API_KEY, baseUrl: e.OPENAI_BASE_URL },
     },
+    voice: { model: e.VOICE_MODEL },
     corsOrigins: e.CORS_ORIGINS !== undefined ? list(e.CORS_ORIGINS) : e.NODE_ENV === 'production' ? [] : DEV_CORS_ORIGINS,
     webRoot: e.WEB_ROOT,
     worker: {

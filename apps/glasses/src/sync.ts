@@ -3,8 +3,10 @@ import { initialState, migrateState, type AppletState } from '@junction26/applet
 import { store, type InstalledApplet, type Pairing, type SavedState } from './store.ts';
 
 /**
- * The only network code on the glasses. Runs on explicit actions (pair, sync),
- * never on open, navigation or state changes. Contract: docs/api.md.
+ * Library network code on the glasses. Runs on explicit actions (pair, sync),
+ * never on open, navigation or state changes. Contract: docs/api.md. The one
+ * exception is the opt-in voice bridge (voice.ts), which streams while an
+ * applet is open and the app is visible.
  */
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '';

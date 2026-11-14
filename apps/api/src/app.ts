@@ -15,6 +15,9 @@ import { stateRoutes } from './routes/state.ts';
 import { uploadRoutes } from './routes/uploads.ts';
 import { deviceRoutes, healthRoutes, jobRoutes, pairRoute } from './routes/misc.ts';
 import { authoringMetaRoutes, webRoutes } from './routes/web.ts';
+import { voiceRoutes } from './routes/voice.ts';
+import { fakeVoice, VoiceHub } from './voice.ts';
+import { createModelRegistry } from '@junction26/model';
 
 /**
  * Builds the HTTP application. Pure: no listening socket, so tests call
@@ -22,6 +25,14 @@ import { authoringMetaRoutes, webRoutes } from './routes/web.ts';
  */
 export function createApp(deps: Deps) {
   const app = new Hono<AppEnv>();
+  const voiceHub = deps.voice ?? new VoiceHub();
+  const models =
+    deps.models ??
+    createModelRegistry({
+      openRouter: { apiKey: deps.config.model.apiKey, baseUrl: deps.config.model.baseUrl },
+      openAI: deps.config.model.openAI,
+      fake: fakeVoice,
+    });
 
   app.use('*', async (c, next) => {
     const incoming = c.req.header('x-request-id');
@@ -64,7 +75,7 @@ export function createApp(deps: Deps) {
       cors({
         origin: deps.config.corsOrigins,
         allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-        allowHeaders: ['authorization', 'content-type', 'idempotency-key', 'if-none-match', 'x-request-id'],
+        allowHeaders: ['authorization', 'content-type', 'idempotency-key', 'if-none-match', 'x-request-id', 'x-utterance-id'],
         exposeHeaders: ['x-request-id', 'etag', 'x-content-sha256'],
         maxAge: 600,
       }),
@@ -76,7 +87,8 @@ export function createApp(deps: Deps) {
     maxSize: Math.max(deps.config.limits.maxDefinitionBytes, deps.config.limits.maxStateBytes) + 64 * 1024,
     onError: (c) => c.json(errorBody('payload_too_large', 'The request body is too large'), 413),
   });
-  app.use('/v1/*', async (c, next) => (c.req.path.startsWith('/v1/uploads') ? next() : jsonLimit(c, next)));
+  // Uploads and voice clips enforce their own limits.
+  app.use('/v1/*', async (c, next) => (c.req.path.startsWith('/v1/uploads') || c.req.path === '/v1/voice/utterances' ? next() : jsonLimit(c, next)));
 
   app.route('/v1/devices/pair', pairRoute(deps));
 
@@ -93,6 +105,7 @@ export function createApp(deps: Deps) {
   v1.route('/devices', deviceRoutes(deps));
   v1.route('/authoring', authoringMetaRoutes(deps));
   v1.route('/assistant', assistantRoutes(deps));
+  v1.route('/voice', voiceRoutes(deps, voiceHub, models));
   app.route('/v1', v1);
 
   if (deps.config.webRoot) app.route('/', webRoutes(deps.config.webRoot));

@@ -13,3 +13,17 @@
   text-transform: uppercase;
 }
 .j26-code:focus { outline: 4px solid #fff; outline-offset: 2px; }
+
+/* Voice bridge feedback: emitted light only, no plate (additive display). */
+.j26-voice-chip {
+  position: fixed;
+  inset-inline: 24px;
+  inset-block-start: 12px;
+  z-index: 100;
+  pointer-events: none;
+  text-align: center;
+  font-family: system-ui, sans-serif;
+}
+.j26-voice-heard { font: 600 26px/1.2 system-ui, sans-serif; color: #fff; }
+.j26-voice-result { font: 800 30px/1.2 system-ui, sans-serif; color: var(--g-ink-accent); }
+.j26-voice-error { color: #ffd27a; }

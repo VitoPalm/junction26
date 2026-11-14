@@ -8,6 +8,7 @@ import type { AppletDefinition } from '@junction26/applet-format';
 import type { AppletState } from '@junction26/applet-runtime';
 import { store, type InstalledApplet } from './store.ts';
 import { installDemos, library, loadState, markOpened, pair, pairing, saveState, sync } from './sync.ts';
+import { setVoiceEnabled, startVoiceBridge, useVoiceChip, useVoicePref } from './voice.ts';
 
 const HOME_COUNT = 3;
 
@@ -29,6 +30,8 @@ function useCanonicalHomeUrl() {
 export function GlassesApp() {
   useCanonicalHomeUrl();
   return (
+    <>
+    <VoiceChipView />
     <ReactRouterPageTransition>
       {({ location }) => (
         <Routes location={location}>
@@ -41,6 +44,19 @@ export function GlassesApp() {
         </Routes>
       )}
     </ReactRouterPageTransition>
+    </>
+  );
+}
+
+/** What the voice bridge heard and did; bright text only (additive display). */
+function VoiceChipView() {
+  const chip = useVoiceChip();
+  if (!chip) return null;
+  return (
+    <div className="j26-voice-chip" role="status" aria-live="polite">
+      <div className="j26-voice-heard">“{chip.heard}”</div>
+      <div className={chip.ok ? 'j26-voice-result' : 'j26-voice-result j26-voice-error'}>{chip.result}</div>
+    </div>
   );
 }
 
@@ -76,6 +92,7 @@ function Home() {
   const navigate = useNavigate();
   const { items, paired, reload } = useLibrary();
   const [status, setStatus] = useState<string | null>(null);
+  const voice = useVoicePref();
   const busy = useRef(false);
 
   const doSync = async () => {
@@ -98,6 +115,8 @@ function Home() {
   const actions: GlassesAction[] = [];
   if (items.length > HOME_COUNT) actions.push({ id: 'home.older', label: 'Older', onActivate: () => navigate('/older') });
   actions.push(paired ? { id: 'home.sync', label: 'Sync', onActivate: () => void doSync() } : { id: 'home.pair', label: 'Pair phone', onActivate: () => navigate('/pair') });
+  // Phone voice bridge (docs/voice-fallback.md): needs a paired device session.
+  if (paired) actions.push({ id: 'home.voice', label: voice ? 'Voice off' : 'Voice on', onActivate: () => { setVoiceEnabled(!voice); setStatus(voice ? 'Voice bridge off' : 'Voice bridge on'); } });
 
   return (
     <ContentScreen title={status ?? 'Your applets'} actions={actions}>
@@ -237,6 +256,8 @@ function useAppletTools(projectId: string, def: AppletDefinition, host: ToolHost
         currentView: () => activeTools.hosts.at(-1)?.currentView() ?? null,
       };
       registerAppletTools(def, latest, activeTools.ac.signal);
+      // Same tools, same single owner: the phone voice bridge, when switched on.
+      startVoiceBridge(projectId, def, latest, activeTools.ac.signal);
     }
     activeTools.hosts.push(proxy);
     return () => {

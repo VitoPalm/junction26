@@ -56,10 +56,11 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | Variable | Used by | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | api, worker | Injected by the Aiven service integration (full URI, includes `sslmode`) |
-| `OPENROUTER_API_KEY` | worker | Runtime secret. Never in a frontend bundle |
+| `OPENROUTER_API_KEY` | api, worker | Runtime secret. Never in a frontend bundle. The api needs it for the voice bridge unless `VOICE_MODEL=fake:voice` |
 | `OPENROUTER_BASE_URL` | worker | `https://openrouter.ai/api/v1` |
 | `AUTHORING_MODEL` | api, worker | Default model spec, `openai/gpt-6-luna` (bare name = OpenRouter; `provider:model` otherwise). See [apps.md](apps.md#models-swappable) |
 | `AUTHORING_MODELS` | api, worker | Extra specs users may pick, comma-separated (e.g. `fake:demo`) |
+| `VOICE_MODEL` | api | Voice-bridge resolver, default `google/gemini-3.5-flash-lite` (needs audio input + tools); `fake:voice` is free. See [voice-fallback.md](voice-fallback.md) |
 | `AUTHORING_REASONING_EFFORT` | worker | Optional `low`/`medium`/`high` |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` | worker | For `openai:<model>` specs (any OpenAI-compatible endpoint) |
 | `CORS_ORIGINS` | api | Browser origins allowed to call `/v1` (native shells: `capacitor://localhost,https://localhost`). Dev default includes those and the Vite ports; production default is none |
@@ -319,6 +320,32 @@ servers on 4180/4181) and in `experiments/openrouter-ikea-v2/app` (needs the
 Gotcha: Vite can cache a half-written file if you `cp` over a source it is
 watching (empty CSS, missing exports). Write to a temp file and `mv` it, or
 touch the file again.
+
+### Onboarding a teammate
+
+Goal: a teammate tests against the real external services without touching the
+shared production database.
+
+1. Add them as a collaborator on `VitoPalm/junction26` (private). For redeploy
+   rights, also invite them to the Aiven project `vitopalm1982-7b23`.
+2. Hand over the secret files over a private channel (password manager,
+   Signal), never through chat with an agent or git: `.env.backend.local`,
+   `.env.verda.local`, `.env.openrouter.local`, `apps/author/.env.local`.
+   In the copy of `.env.backend.local`, keep `DATABASE_URL`/`TEST_DATABASE_URL`
+   on the local `dev:db` server (`127.0.0.1:55432`). Don't share the Aiven
+   `avnadmin` URI or `DATABASE_CA_CERT`.
+3. They sign up with their own account in the Clerk development instance (the
+   live `/author/` sign-in). Local Vite origins are already in
+   `CLERK_AUTHORIZED_PARTIES`; add any other origin they use.
+4. Two ways to test:
+   - **Live**: `https://humorous-active-ladybird.eur-1.aiven.app` (`/author/`,
+     `/glasses/`, `/v1`). Call `/v1` with `authorization: Bearer <Clerk session token>`
+     copied from the signed-in browser.
+   - **Local, real services**: section 6 plus [backend-development.md](backend-development.md),
+     with `STORAGE_DRIVER=s3` (shared Verda bucket; keys are per user id) and
+     `AUTH_MODE=clerk`. `AUTH_MODE=dev` with `Bearer dev:me` is the offline shortcut.
+5. Budget: use `fake:demo` / `fake:voice` for routine runs. The OpenRouter key
+   is capped at $17 and expires 2026-11-21; `experiments/*/run.py` spends money.
 
 ## 7. Glasses device setup **[todo, needs hardware]**
 

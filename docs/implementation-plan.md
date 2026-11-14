@@ -152,6 +152,20 @@ Each milestone ends with its acceptance checks passing and the docs updated.
 
 ### M0. Feasibility on real glasses (half a day, when hardware is available)
 
+**Status 2026-11-14: voice read logged; actual app success confirmed by owner.**
+After the diagnostic retry, the owner installed the actual Applets build and
+reported that it worked. Exact commands/results were not supplied; repeated
+write/readback checks and the remaining M0 checks are still open.
+A later Scoreboard diagnostic retry logged `scoreboard_read_score({})` on
+hardware at 15:38:06 UTC after renaming and simplifying the command phrases.
+Earlier, on the team's device (v130, en-US),
+`document.modelContext` exists and tools register and enumerate, but Meta AI
+did not invoke them, with Meta's own sample too. Details in
+[webmcp-audit.md](webmcp-audit.md#hardware-result-2026-11-14-registered-never-invoked).
+Storage, band and download checks are still to do. Contingency: an
+always-listening phone bridge over the glasses' beamformed HFP mic, see
+[voice-fallback.md](voice-fallback.md).
+
 Deploy a static "hello" page (any HTTPS host) that registers one WebMCP tool and
 writes to IndexedDB. Verify "Hey Meta" invokes it, IndexedDB survives a close
 and a reboot, `navigator.storage.estimate()` reports a quota, band focus/select

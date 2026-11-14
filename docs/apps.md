@@ -91,6 +91,37 @@ leaving an applet. Tool reads use the latest persisted session state even before
 React renders an acknowledged write. This is local browser evidence; it does
 not test Meta AI, the simulator extension's agent, or glasses voice routing.
 
+### Full local browser flow checked, 2026-11-14
+
+Manual browser run against a throwaway migrated PostgreSQL database, the real
+API and worker, memory object storage, dev authentication and only `fake:demo`:
+
+- Created a crochet row counter through the authoring UI; its generated preview
+  rendered at zero, and publishing completed through the UI.
+- Requested a pairing code through the authoring UI, entered it in the glasses
+  browser app, and confirmed pairing downloaded the published counter.
+- At 600×600, pressed Add row three times. Reopening showed three saved rows.
+- Pressing Add row in the author's preview showed one there; the glasses copy
+  stayed at three.
+- Submitted revision 2 through the revisions API (the fake model cannot edit
+  layouts): renamed the view label to Finished rows and reversed the two docked
+  actions, preserving state/action/view IDs. Previewed and published via the UI.
+- Before explicit Sync the glasses retained the old layout. Sync reported one
+  update; opening showed the new label/button order and three rows. A full
+  reload still showed three, with no fit-guard alert.
+- Both releases were ready; the server backup contained `values.rows = 3`.
+
+Follow-up found by inspecting that backup: during update sync, its envelope
+`revisionId` named revision 2 while `snapshot.revision` still named revision 1.
+`sync()` installs the new package before backing up old saved state; migration
+is currently deferred to `loadState()`. Local progress survived this test, but
+backup revision consistency and recovery after a schema-changing update need a
+dedicated regression test/fix. This run did not establish those behaviors.
+
+No paid model, Clerk login, Aiven deployment, Meta agent, hardware or offline
+cold start was tested. The temporary API/worker and author dev server were
+stopped, their test tabs closed and the throwaway database dropped afterwards.
+
 ## Authoring app (`apps/author`)
 
 One React codebase: web build served at `/author/`, and Capacitor 8.5 shells
