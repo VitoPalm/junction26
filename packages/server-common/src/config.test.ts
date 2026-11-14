@@ -66,6 +66,15 @@ test('Clerk configuration fails closed for missing verification settings or unsa
   assert.equal(loadConfig({ ...base, ...clerk, CLERK_JWT_KEY: '', CLERK_SECRET_KEY: 'sk_test_example' }).authMode, 'clerk');
 });
 
+test('production accepts a Clerk development instance only with the explicit opt-in', () => {
+  const s3 = { STORAGE_DRIVER: 's3', AWS_ACCESS_KEY_ID: 'a', AWS_SECRET_ACCESS_KEY: 'b', AWS_ENDPOINT_URL: 'https://s3.example.com', AWS_REGION: 'r', VERDA_S3_BUCKET: 'b' };
+  const devInstance = { ...clerk, ...s3, NODE_ENV: 'production', CLERK_ISSUER: 'https://example.clerk.accounts.dev', CLERK_JWT_KEY: '', CLERK_SECRET_KEY: 'sk_test_example' };
+  assert.throws(() => loadConfig({ ...base, ...devInstance }), ConfigError);
+  assert.equal(loadConfig({ ...base, ...devInstance, CLERK_ALLOW_DEVELOPMENT_INSTANCE: 'true' }).authMode, 'clerk');
+  assert.throws(() => loadConfig({ ...base, ...devInstance, CLERK_ALLOW_DEVELOPMENT_INSTANCE: 'true', CLERK_AUTHORIZED_PARTIES: 'http://localhost:5173' }), ConfigError);
+  assert.throws(() => loadConfig({ ...base, ...s3, NODE_ENV: 'production', AUTH_MODE: 'dev', CLERK_ALLOW_DEVELOPMENT_INSTANCE: 'true' }), ConfigError);
+});
+
 test('checkDefinition accepts minimal definitions and reports every issue', () => {
   assert.deepEqual(checkDefinition({ formatVersion: 1, title: 'Row counter' }, 1000), {
     ok: true,

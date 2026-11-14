@@ -5,6 +5,7 @@
 **/playwright-report
 .env*
 !.env*.example
+!apps/author/.env.production
 .data
 .git
 experiments

@@ -5,7 +5,9 @@ import { createApi, defaultServer, isNative, type Session } from './api.ts';
 
 export function ClerkApp() {
   const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
-  if (!publishableKey || (import.meta.env.PROD && !publishableKey.startsWith('pk_live_'))) {
+  // VITE_CLERK_ALLOW_DEVELOPMENT=true is the hackathon opt-in for a pk_test_ key in a release build.
+  const allowDevelopment = import.meta.env.VITE_CLERK_ALLOW_DEVELOPMENT === 'true';
+  if (!publishableKey || (import.meta.env.PROD && !allowDevelopment && !publishableKey.startsWith('pk_live_'))) {
     return <main className="page narrow"><h1>Sign-in is not configured</h1><p>Set the Clerk publishable key for this build. Release builds require a production Clerk instance.</p></main>;
   }
   if (isNative) {

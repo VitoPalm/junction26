@@ -13,6 +13,12 @@ and focus next on delegated MCP account linking. Native sign-in remains on the
 backlog; phone users can use web authoring. Production provisioning is deferred,
 and the production configuration safeguards remain in place.
 
+Deployment decision (owner, 2026-11-14): the first Aiven deployment uses the Clerk
+development instance through the explicit opt-ins `CLERK_ALLOW_DEVELOPMENT_INSTANCE=true`
+(backend) and `VITE_CLERK_ALLOW_DEVELOPMENT=true` (`apps/author/.env.production`).
+Development instances are capped at 100 users and show a development badge. Switch
+to a production instance (own domain) and remove both opt-ins for a real release.
+
 ## Configure web accounts
 
 1. Create a Clerk application and enable the desired sign-in methods. Use a

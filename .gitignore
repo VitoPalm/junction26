@@ -3,6 +3,7 @@
 .env*
 !.env.example
 !.env.*.example
+!apps/author/.env.production
 .venv/
 
 # JavaScript dependencies and build output

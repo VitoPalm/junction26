@@ -18,6 +18,7 @@ COPY apps/glasses apps/glasses
 # Only the web build of the authoring app (native shells are built separately).
 COPY apps/author/package.json apps/author/index.html apps/author/preview.html apps/author/vite.config.ts apps/author/tsconfig.json apps/author/
 COPY apps/author/src apps/author/src
+COPY apps/author/.env.production apps/author/
 COPY apps/author/public apps/author/public
 ENV BACKEND="-w @junction26/server-common -w @junction26/storage -w @junction26/db -w @junction26/applet-format -w @junction26/model -w @junction26/worker -w @junction26/assistant-mcp -w @junction26/api"
 ENV WEB="-w @junction26/glasses-ui -w @junction26/applet-runtime -w @junction26/applet-renderer -w @junction26/glasses -w @junction26/author"

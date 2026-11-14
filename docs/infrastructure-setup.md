@@ -85,6 +85,8 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `CLERK_AUTHORIZED_PARTIES` | api, worker config | Required in Clerk mode: comma-separated frontend origins; HTTPS in production, loopback HTTP also allowed in development. Separate from CORS |
 | `CLERK_SECRET_KEY` | api, worker config | Backend-only Clerk key for signing-key retrieval; required unless `CLERK_JWT_KEY` is set |
 | `CLERK_JWT_KEY` | api, worker config | Optional PEM RSA public key for networkless verification, instead of a secret key; literal `\n` separators supported. Takes precedence; rotate manually |
+| `CLERK_ALLOW_DEVELOPMENT_INSTANCE` | api, worker config | Hackathon opt-in (default `false`): lets production accept a Clerk development instance (`sk_test_…`, `*.clerk.accounts.dev`). Dev auth, HTTP origins and non-S3 storage stay refused. Remove once a production Clerk instance exists |
+| `VITE_CLERK_ALLOW_DEVELOPMENT` | author build | Matching build-time opt-in for a `pk_test_…` key in a release build. Set in the committed, public `apps/author/.env.production` |
 | `VITE_AUTH_MODE`, `VITE_CLERK_PUBLISHABLE_KEY` | author build | `clerk` + public `pk_live_…` for release; local Vite defaults to dev login. `pk_test_…` only with the dev server. Never pass a secret key to Vite |
 | `LOG_LEVEL` | api, worker | `debug`, `info` (default), `warn`, `error` |
 | `WORKER_CONCURRENCY`, `WORKER_POLL_MS`, `WORKER_LEASE_MS`, `WORKER_ID` | worker | Defaults 2, 1000, 60000, generated |

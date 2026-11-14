@@ -37,6 +37,8 @@ const EnvSchema = z.object({
   CLERK_SECRET_KEY: z.string().optional(),
   CLERK_JWT_KEY: z.string().optional(),
   CLERK_PUBLISHABLE_KEY: z.string().optional(),
+  /** Hackathon opt-in: accept a Clerk development instance in production (dev auth stays refused). */
+  CLERK_ALLOW_DEVELOPMENT_INSTANCE: bool.default(false),
   MCP_RESOURCE_URL: z.string().url().optional(),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
   PUBLIC_ORIGIN: z.string().url().default('http://127.0.0.1:8080'),
@@ -190,10 +192,11 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
         if (createPublicKey(jwtKey).asymmetricKeyType !== 'rsa') throw new Error('not RSA');
       } catch { problems.push('CLERK_JWT_KEY must be a PEM RSA public key'); }
     }
-    if (e.NODE_ENV === 'production' && e.CLERK_SECRET_KEY?.startsWith('sk_test_')) {
+    const strictInstance = e.NODE_ENV === 'production' && !e.CLERK_ALLOW_DEVELOPMENT_INSTANCE;
+    if (strictInstance && e.CLERK_SECRET_KEY?.startsWith('sk_test_')) {
       problems.push('Production requires a Clerk production instance, not CLERK_SECRET_KEY=sk_test_…');
     }
-    if (e.NODE_ENV === 'production' && e.CLERK_ISSUER && new URL(e.CLERK_ISSUER).hostname.endsWith('.clerk.accounts.dev')) {
+    if (strictInstance && e.CLERK_ISSUER && new URL(e.CLERK_ISSUER).hostname.endsWith('.clerk.accounts.dev')) {
       problems.push('Production requires a Clerk production issuer, not a development instance');
     }
     clerk = { issuer: e.CLERK_ISSUER ?? '', authorizedParties: parties, secretKey: e.CLERK_SECRET_KEY, jwtKey };
