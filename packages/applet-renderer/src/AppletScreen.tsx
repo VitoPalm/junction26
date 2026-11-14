@@ -1,7 +1,7 @@
 import { Component, type ReactNode } from 'react';
 import { Button } from '@wearables-ui-toolkit/mrbd';
-import { ChecklistScreen, ChoiceScreen, ContentScreen, Diagram, TextBlock, ValueReadout, type GlassesAction } from '@junction26/glasses-ui';
-import type { AppletDefinition, ListItem, View } from '@junction26/applet-format';
+import { ChecklistScreen, ChoiceScreen, ContentScreen, Diagram, GifScreen, TextBlock, ValueReadout, type GlassesAction } from '@junction26/glasses-ui';
+import type { AppletDefinition, Asset, ListItem, View } from '@junction26/applet-format';
 import { formatScalar, formatValue } from '@junction26/applet-runtime';
 import type { AppletSession } from './session.ts';
 
@@ -110,10 +110,13 @@ function ViewScreen({ session, view }: { session: AppletSession; view: View }) {
         { id: 'sequence.next', label: 'Next', disabled: index === total - 1, onActivate: () => void session.step(view.id, 1) },
       ];
       const asset = s.image ? def.assets.find((a) => a.id === s.image) : undefined;
+      if (asset?.data && asset.mediaType === 'image/gif')
+        return <GifScreen key={s.id} title={s.title ?? view.title} src={assetUrl(asset.mediaType, asset.data)}
+          alt={s.alt ?? `Step ${index + 1}`} instruction={s.text} hint={s.hint} actions={actions} />;
       return (
         <ContentScreen key={s.id} title={s.title ?? view.title} actions={actions}>
           {asset?.data ? (
-            <Diagram src={assetUrl(asset.mediaType, asset.data)} alt={s.alt ?? `Step ${index + 1}`} />
+            <AssetImage asset={asset} alt={s.alt ?? `Step ${index + 1}`} />
           ) : (
             <TextBlock label={`Step ${index + 1} of ${total}`} text={s.text ?? 'This step has no content.'} hint={s.hint} />
           )}
@@ -122,13 +125,20 @@ function ViewScreen({ session, view }: { session: AppletSession; view: View }) {
     }
     case 'image': {
       const asset = def.assets.find((a) => a.id === view.asset);
+      if (asset?.data && asset.mediaType === 'image/gif')
+        return <GifScreen title={view.title} src={assetUrl(asset.mediaType, asset.data)} alt={view.alt} actions={docked(session, view)} />;
       return (
         <ContentScreen title={view.title} actions={docked(session, view)}>
-          {asset?.data ? <Diagram src={assetUrl(asset.mediaType, asset.data)} alt={view.alt} /> : <TextBlock text="This picture isn't downloaded yet." />}
+          {asset?.data ? <AssetImage asset={asset} alt={view.alt} /> : <TextBlock text="This picture isn't downloaded yet." />}
         </ContentScreen>
       );
     }
   }
+}
+
+function AssetImage({ asset, alt }: { asset: Asset; alt: string }) {
+  const src = assetUrl(asset.mediaType, asset.data!);
+  return <Diagram src={src} alt={alt} />;
 }
 
 const assetUrl = (type: string, data: string) => (data.startsWith('data:') ? data : `data:${type};base64,${data}`);

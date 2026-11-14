@@ -258,3 +258,20 @@ pages: Capacitor release notes published after the model's training (8.6.2,
 ## Real-model source pipeline (2026-11-14)
 
 Managed generation now prepares PDF pages and images, accepts text/Markdown/CSV/JSON/HTML/Word sources, reads public links, searches source material and Commons images, and crops known diagrams. Referenced image bytes are resolved server-side into revision definitions and offline packages. Generated candidates pass canonical headless-Chromium fit checks with bounded repair. See [model-pipeline.md](model-pipeline.md), [paid evidence](model-pipeline-results.md), and [adjacent follow-ups](model-pipeline-followups.md). These checks are local desktop/backend evidence, not on-device verification.
+
+## Looping motion (2026-11-14)
+
+Runtime `0.2.0` adds `image/gif` assets in image views and sequence image steps.
+GIFs play automatically with no playback controls and bypass static diagram ink
+conversion. Upload preparation preserves motion (bounded to 8 s / 96 frames /
+360 px / 512 KiB per GIF), with a PNG preview for the builder. Managed generation
+caps total motion at 2 MiB. Playback uses embedded offline bytes. The local
+YouTube/snippet CLI and remaining automatic builder integration are documented in
+[video-tutorials.md](video-tutorials.md). Video links are not yet imported by chat.
+
+The canonical library exports `GifImage` and `GifScreen` from
+`packages/glasses-ui/src/lib/gif.tsx`. `GifScreen` contains the fitted loop, an
+optional essential instruction/hint and the host's guide navigation. GIF sequence
+steps now display their `text` and `hint`, so stitch counts remain visible beside
+the demonstration. Decode failures show a recovery message and fail generation
+fit validation. `LoopingImage` remains an export alias for compatibility.

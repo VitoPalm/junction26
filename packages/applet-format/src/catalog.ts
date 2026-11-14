@@ -14,6 +14,12 @@ export interface Capability {
 
 export const CAPABILITIES: Capability[] = [
   {
+    id: 'motion',
+    title: 'Looping demonstrations',
+    description: 'Short uploaded GIFs play automatically inside a guide step or on their own page. No playback controls; move to the next step when ready.',
+    examples: ['Repeat a crochet stitch demonstration', 'Show one dance movement on a loop'],
+  },
+  {
     id: 'guide',
     title: 'Step-by-step guides',
     description: 'One step per page that remembers where you are. Good for manuals, recipes, patterns and repairs.',

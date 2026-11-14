@@ -45,6 +45,7 @@ No authoring requests originate from the glasses in this implementation.
 | --- | --- | --- |
 | PDF | Poppler text extraction and PNG rendering of every page; scanned pages reach Luna as images | 24 pages; encrypted/malformed PDFs fail; no automatic OCR text layer |
 | PNG, JPEG, WebP uploads | Apply orientation, flatten to white and normalize to PNG | 40 million input pixels; longest side at most 1200 px |
+| GIF upload or direct GIF URL | Preserve bounded looping motion; separate first-frame PNG for model context | 8 s, 96 frames, 360 px, 512 KiB per GIF; 2 MiB total motion per generated applet |
 | Plain text, Markdown | UTF-8 source text | 120,000 characters; UTF-16 is not supported |
 | CSV | UTF-8 source text, interpreted by Luna | Preserve quantities in state/copy; no spreadsheet calculation engine |
 | JSON | Parse to check validity, then provide original text | Same text budget |
@@ -55,6 +56,8 @@ No authoring requests originate from the glasses in this implementation.
 The phone's picker and extension fallback include these upload types. XLS/XLSX,
 legacy `.doc`, HEIC, audio and video are not supported. These require an explicit
 conversion/import path rather than pretending that the model read them.
+The local video-to-GIF prototype is described in [video-tutorials.md](video-tutorials.md);
+it is not yet an automatic chat video importer.
 
 ## Source tools and network boundaries
 

@@ -18,6 +18,18 @@ test('every fixture is valid', () => {
   }
 });
 
+test('GIF instructions remain visible alongside motion; static diagrams retain separate steps', () => {
+  const def = {
+    formatVersion: 1, minimumRuntimeVersion: '0.2.0', title: 'Heart', toolPrefix: 'heart', actions: [],
+    state: [{ id: 'position', type: 'cursor', label: 'Position', over: 'guide', default: 0 }],
+    views: [{ id: 'guide', kind: 'sequence', cursor: 'position', steps: [{ id: 'trebles', image: 'demo', text: 'Make 3 treble crochets.', hint: 'Work into the magic ring.' }] }],
+    assets: [{ id: 'demo', mediaType: 'image/gif', uploadId: 'source_demo' }],
+  };
+  assert.equal(validateDefinition(def).ok, true);
+  assert.ok(validateDefinition({ ...def, assets: [{ id: 'demo', mediaType: 'image/png', uploadId: 'source_demo' }] }).issues.some(i => i.code === 'mixed'));
+  assert.ok(validateDefinition({ ...def, views: [{ ...def.views[0], steps: [{ id: 'long', image: 'demo', text: 'x'.repeat(121) }] }] }).issues.some(i => i.code === 'too_long'));
+});
+
 test('broken references are reported with paths', () => {
   const d = clone(FIXTURES.characterSheet) as any;
   d.views[0].field = 'nope';

@@ -31,6 +31,12 @@ frozen at trial time. **`packages/glasses-ui` is canonical.** Keep the
 
 ## Target repository layout
 
+Motion follow-up (2026-11-14): short looping GIFs now work in image/sequence
+components, with bounded GIF upload preparation and a local video-snippet CLI.
+Owner priority is YouTube links, with no on-glasses playback controls. Automated
+YouTube import and model-selected snippets remain to integrate; see
+[video-tutorials.md](video-tutorials.md).
+
 ```text
 apps/
   api/            [exists] Node HTTP server: /v1 API (+ will serve glasses/ and author/ static builds)

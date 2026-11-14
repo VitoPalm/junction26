@@ -239,7 +239,12 @@ snapshot with its `serverVersion`, `deviceId`, `sequence`, `revisionId`,
 
 Upload support now includes `text/csv`, `application/json`, `text/html`, and
 `application/vnd.openxmlformats-officedocument.wordprocessingml.document` in
-addition to PDF, PNG, JPEG, WebP, plain text and Markdown. The API upload ceiling
+addition to PDF, PNG, JPEG, WebP, GIF, plain text and Markdown. GIF uploads use
+`Content-Type: image/gif` with a checked GIF87a/GIF89a signature. Preparation
+preserves bounded looping motion and supplies a separate first-frame PNG for
+model context; oversized motion fails with `source_motion_limit`. See
+[video-tutorials.md](video-tutorials.md). No YouTube import endpoint is exposed.
+The API upload ceiling
 still defaults to 50 MiB; current authoring preparation accepts at most 12 MiB
 per source and asks for an excerpt when a source exceeds its processing budget.
 JSON and Word content receive deeper validity checks in preparation. See
@@ -255,7 +260,7 @@ canonical 600×600 rendering checks. This does not strengthen validation on dire
 client revision submissions or add server-side change acceptance.
 
 Generated `assets` retain `uploadId` (the prepared image ref), normalized PNG
-`data`, `source` (file/page or URL), and optional `attribution`. The renderer
+`data` (or preserved GIF data for motion), `source` (file/page or URL), and optional `attribution`. The renderer
 consumes image data offline. These source refs are checked against owner-filtered
 attachments, tool imports and base assets before the worker saves a revision.
 

@@ -17,7 +17,7 @@ import { z } from 'zod';
 
 export const FORMAT_VERSION = 1;
 /** Bump when the runtime learns new kinds/ops; definitions declare the minimum they need. */
-export const RUNTIME_VERSION = '0.1.0';
+export const RUNTIME_VERSION = '0.2.0';
 
 /** Copy budgets (code points). Mirrors COPY_LIMITS in packages/glasses-ui. */
 export const LIMITS = {
@@ -206,7 +206,7 @@ export const View = z.discriminatedUnion('kind', [
 export const Asset = z
   .object({
     id,
-    mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+    mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
     /** Source upload (authoring) or inlined data (package). Packaging resolves uploads to data. */
     uploadId: z.string().optional(),
     /** Original source/page for authoring inspection, not task-view copy. */

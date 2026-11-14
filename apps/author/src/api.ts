@@ -113,7 +113,7 @@ export type Api = ReturnType<typeof createApi>;
 
 function guessType(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase();
-  return ext === 'csv' ? 'text/csv' : ext === 'json' ? 'application/json' : ext === 'html' || ext === 'htm' ? 'text/html' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : ext === 'pdf' ? 'application/pdf' : ext === 'md' ? 'text/markdown' : ext === 'txt' ? 'text/plain' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'application/octet-stream';
+  return ext === 'csv' ? 'text/csv' : ext === 'json' ? 'application/json' : ext === 'html' || ext === 'htm' ? 'text/html' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : ext === 'pdf' ? 'application/pdf' : ext === 'md' ? 'text/markdown' : ext === 'txt' ? 'text/plain' : ext === 'gif' ? 'image/gif' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'application/octet-stream';
 }
 
 export interface Project {

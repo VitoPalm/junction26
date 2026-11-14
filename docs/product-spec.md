@@ -59,6 +59,13 @@ are the core reason to use glasses at all. Input from company schematics,
 manuals, documentation and videos was in the original idea; treat complex
 industrial machinery as a later expansion because of its verification burden.
 
+Motion tutorials (owner direction, 2026-11-14): prioritize YouTube links for
+crochet and dance demonstrations. The builder selects meaningful short source
+intervals and crops; the glasses show automatically looping GIFs, with no playback
+controls. Ordinary guide navigation keeps the wearer's place. GIF components
+and a local extraction prototype exist; automatic YouTube authoring remains
+planned. Details: [video-tutorials.md](video-tutorials.md).
+
 ### Explicitly out of scope
 
 - **Dice rolling.** Rejected. The reason is *not* "dice are fun": **a roll shown

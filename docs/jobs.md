@@ -185,3 +185,15 @@ source/attribution metadata. The legacy reserved top-level `assets` object remai
 empty. Publication performs no live image fetch. See
 [model-pipeline.md](model-pipeline.md) for processing and network limits and local
 Poppler/Chromium prerequisites.
+
+GIF source preparation preserves an infinite loop and a separate PNG first-frame
+model preview. It rejects motion exceeding 8 seconds / 96 frames or 512 KiB after
+resizing to 360 px with `source_motion_limit`. Managed generation checks a 2 MiB
+aggregate GIF budget (`motion_budget` validation issue). Runtime 0.2.0 consumes
+the embedded GIF directly. No video import job is registered; the YouTube/FFmpeg
+prototype is local-only. See [video-tutorials.md](video-tutorials.md).
+
+GIF steps with essential instruction text are measured together in the canonical
+`GifScreen`. GIF decode recovery messages also produce an `image_decode` issue
+in generation checks, so a broken animation cannot pass merely because the
+component replaces it with fallback text.

@@ -71,6 +71,8 @@ export function validateDefinition(input: unknown): ValidationResult {
   const requested = version(def.minimumRuntimeVersion),
     installed = version(RUNTIME_VERSION);
   const first = requested.findIndex((n, i) => n !== installed[i]);
+  if (def.assets.some((a) => a.mediaType === 'image/gif') && requested[0] === 0 && requested[1]! < 2)
+    add('minimumRuntimeVersion', 'runtime_version', 'Looping GIF assets require runtime 0.2.0 or newer.');
   if (first >= 0 && requested[first]! > installed[first]!)
     add(
       'minimumRuntimeVersion',
@@ -158,7 +160,8 @@ export function validateDefinition(input: unknown): ValidationResult {
   def.actions.forEach((a, i) => validateAction(a, `actions[${i}]`, fields, views, add, copy));
 
   // ---- views
-  def.views.forEach((v, i) => validateView(v, `views[${i}]`, fields, actions, assets, add, copy));
+  const gifAssets = new Set(def.assets.filter(a => a.mediaType === 'image/gif').map(a => a.id));
+  def.views.forEach((v, i) => validateView(v, `views[${i}]`, fields, actions, assets, gifAssets, add, copy));
   if (def.home.entryView && !views.has(def.home.entryView))
     add('home.entryView', 'reference', `No view "${def.home.entryView}"`);
   if (def.home.primaryAction && !actions.has(def.home.primaryAction))
@@ -306,6 +309,7 @@ function validateView(
   fields: Map<string, StateField>,
   actions: Map<string, Action>,
   assets: Set<string>,
+  gifAssets: Set<string>,
   add: Add,
   copy: Copy,
 ) {
@@ -388,7 +392,8 @@ function validateView(
         ids.add(s.id);
         if (!s.text && !s.image) add(q, 'empty', 'A step needs text or an image');
         if (s.image && !assets.has(s.image)) add(`${q}.image`, 'reference', `No asset "${s.image}"`);
-        if (s.image && s.text) add(q, 'mixed', 'Put a diagram and its text on separate steps');
+        if (s.image && s.text && !gifAssets.has(s.image))
+          add(q, 'mixed', 'Put a static diagram and its text on separate steps');
         copy(`${q}.title`, s.title, LIMITS.title);
         copy(`${q}.text`, s.text, LIMITS.body);
         copy(`${q}.hint`, s.hint, LIMITS.hint);

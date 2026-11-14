@@ -79,7 +79,7 @@ Do not manufacture base64 or refer to arbitrary uploads. Prefer complete source
 diagrams; add close-ups when needed and preserve their context. Word import is
 text-only; request a PDF when its drawings matter.
 
-Use the installed runtime version (`0.1.0`). Every state field needs an explicit
+Use the installed runtime version (`0.2.0`). Every state field needs an explicit
 default, every list a maxItems/item schema, and every text field a maxLength.
 List and sequence views use built-in controls and must not dock custom actions;
 voice-only actions remain in the registry. Checklists need onSelect wired to a
@@ -90,3 +90,14 @@ Generation now performs canonical headless-Chromium fit checks and returns
 precise schema, copy, source or fit errors for up to two repair attempts. Preserve
 facts by splitting pages. Describe the finished applet to the user, rather than
 narrating internal repairs. Full limits: [model-pipeline.md](model-pipeline.md).
+
+Short GIF sources marked `motion:image/gif` can be embedded through existing
+image views or sequence image steps using `mediaType:"image/gif"` and their exact
+source ref. They loop automatically with no playback controls. The PNG preview
+only shows the first frame: do not claim to have inspected the complete movement.
+GIF sequence steps may include a short `text` instruction and optional `hint`
+beneath the loop. Preserve essential stitch counts and repeat conditions there;
+an animation alone does not encode how many times to perform the action. Static
+diagram steps still replace text. Split pages when measured fit fails.
+Do not use `crop_image` on motion sources. For video snippet selection and the
+planned YouTube-first builder flow, see [video-tutorials.md](video-tutorials.md).

@@ -206,7 +206,7 @@ function Chat({ projectId, messages, onSent, onDone }: { projectId: string; mess
         />
         <div className="row">
           <button className="ghost" onClick={() => fileInput.current?.click()} aria-label="Attach files">📎</button>
-          <input ref={fileInput} type="file" hidden multiple accept="application/pdf,image/png,image/jpeg,image/webp,text/plain,text/markdown,text/csv,text/html,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.md,.txt,.csv,.json,.html,.docx" onChange={(e) => { void attach(e.target.files); e.target.value = ''; }} />
+          <input ref={fileInput} type="file" hidden multiple accept="application/pdf,image/gif,.gif,image/png,image/jpeg,image/webp,text/plain,text/markdown,text/csv,text/html,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.md,.txt,.csv,.json,.html,.docx" onChange={(e) => { void attach(e.target.files); e.target.value = ''; }} />
           {models.length > 1 && (
             <select value={model} onChange={(e) => setModel(e.target.value)} aria-label="Model">
               {models.map((m) => (
