@@ -22,6 +22,8 @@ export interface AppletState {
   nextItem: Record<string, number>;
   /** Task coach progress, requests and recovery branch (guides made from a manual). See coach.ts. */
   coach?: CoachState;
+  /** Progress owned by the definition's task module (`definition.task.kind`); opaque to the runtime. */
+  task?: Record<string, unknown>;
 }
 
 export type DispatchResult =
@@ -85,7 +87,7 @@ export function migrateState(def: AppletDefinition, prev: AppletState, revision:
   }
   const view = def.views.some((v) => v.id === prev.view) ? prev.view : entryView(def);
   // Coach progress is never dropped: step IDs that a revision removed stay listed.
-  return { revision, values, orphaned, view, nextItem, ...(prev.coach ? { coach: prev.coach } : {}) };
+  return { revision, values, orphaned, view, nextItem, ...(prev.coach ? { coach: prev.coach } : {}), ...(prev.task ? { task: prev.task } : {}) };
 }
 
 function coerceStored(f: StateField, v: Scalar | ListItem[]): Scalar | ListItem[] | undefined {

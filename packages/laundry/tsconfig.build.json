@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "customConditions": []
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/ui.tsx",
+    "src/assets.d.ts"
+  ]
+}

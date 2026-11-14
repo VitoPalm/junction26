@@ -98,6 +98,10 @@ export function createApi(session: Session, getToken: () => Promise<string | nul
     publish: (id: string, revisionId: string, expectedCurrentReleaseId: string | null) =>
       req<{ release: Release; job: Job }>('POST', `/v1/projects/${id}/releases`, { body: { revisionId, expectedCurrentReleaseId }, headers: { 'idempotency-key': key() } }),
     job: (id: string) => req<{ job: Job }>('GET', `/v1/jobs/${id}`),
+    saveRevision: (id: string, definition: unknown, baseRevisionId?: string | null) =>
+      req<{ revision: RevisionSummary }>('POST', `/v1/projects/${id}/revisions`, { body: { definition, ...(baseRevisionId ? { baseRevisionId } : {}) } }),
+    /** Laundry: read a care-label photo (docs/laundry.md); poll the job for the result. */
+    readLabel: (uploadId: string, region: 'iso' | 'us' = 'us') => req<{ job: Job; replayed: boolean }>('POST', '/v1/laundry/labels', { body: { uploadId, region } }),
     cancelJob: (id: string) => req<{ job: Job }>('POST', `/v1/jobs/${id}/cancel`),
     upload: (file: File, projectId: string) =>
       req<{ upload: Upload; job: Job }>('POST', `/v1/uploads?projectId=${projectId}&filename=${encodeURIComponent(file.name)}`, {

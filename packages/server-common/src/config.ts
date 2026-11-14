@@ -80,6 +80,8 @@ const EnvSchema = z.object({
    * unless configured; set a real spec (e.g. google/gemini-3.5-flash-lite) to enable.
    */
   COACH_MODEL: z.string().default('fake:coach'),
+  /** Laundry care-label reading (docs/laundry.md). Needs image input. Free "fake:labels" by default. */
+  LABEL_MODEL: z.string().default('fake:labels'),
   /**
    * Voice notes (docs/voice-notes.md): final transcription of the whole recording.
    * Chosen by published word error rate (Artificial Analysis AA-WER, 2026-11-14):
@@ -172,6 +174,7 @@ export interface Config {
   /** Always-listening voice fallback (docs/voice-fallback.md). */
   voice: { model: string };
   coach: { model: string };
+  laundry: { labelModel: string };
   /** Voice notes on applet pages (docs/voice-notes.md). */
   notes: { transcribeModel: string; liveModel: string; maxSeconds: number; maxAudioBytes: number; mistral: { apiKey: string | undefined; baseUrl: string } };
   corsOrigins: string[];
@@ -336,6 +339,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     },
     voice: { model: e.VOICE_MODEL },
     coach: { model: e.COACH_MODEL },
+    laundry: { labelModel: e.LABEL_MODEL },
     // 16 kHz mono PCM16 WAV is 32 KB/s; allow 25% headroom over the longest note.
     notes: { transcribeModel: e.NOTES_TRANSCRIBE_MODEL, liveModel: e.NOTES_LIVE_MODEL, maxSeconds: e.NOTES_MAX_SECONDS, maxAudioBytes: Math.ceil(e.NOTES_MAX_SECONDS * 32_000 * 1.25) + 4096, mistral: { apiKey: e.MISTRAL_API_KEY, baseUrl: e.MISTRAL_BASE_URL } },
     corsOrigins: e.CORS_ORIGINS !== undefined ? list(e.CORS_ORIGINS) : e.NODE_ENV === 'production' ? [] : DEV_CORS_ORIGINS,

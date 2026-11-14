@@ -1,6 +1,6 @@
 import { chooseModel, modelSummary } from './model-selection.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { diffDefinitions, validateDefinition, type AppletDefinition, type ChangeFinding } from '@junction26/applet-format';
 import { ApiError, waitForJob, type Job, type Message, type ModelOption, type Project, type Release, type RevisionSummary, type Upload } from './api.ts';
 import { useApp, useAutosize } from './App.tsx';
@@ -84,6 +84,9 @@ export function ProjectScreen() {
       </main>
     );
   const hasPreview = revisions.some((r) => r.validationStatus === 'valid');
+
+  // Laundry sessions have their own screen (docs/laundry.md).
+  if (selected && (definitions[selected] as { task?: { kind?: string } } | undefined)?.task?.kind === 'laundry') return <Navigate to={`/laundry/${projectId}`} replace />;
 
   return (
     <main className="page project">

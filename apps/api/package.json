@@ -17,6 +17,7 @@
     "@junction26/applet-runtime": "*",
     "@junction26/assistant-mcp": "*",
     "@junction26/db": "*",
+    "@junction26/laundry": "*",
     "@junction26/model": "*",
     "@junction26/server-common": "*",
     "@junction26/storage": "*",

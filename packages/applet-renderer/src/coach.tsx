@@ -137,8 +137,7 @@ export function CoachScreen({ session, sequenceTitle, image }: { session: Applet
     const c = coach.clarify;
     const req = coach.requests.find((r) => r.id === c.requestId);
     return (
-      <ChoiceScreen
-        title={c.question.slice(0, 32)}
+      <ChoiceScreen key="cs1"         title={c.question.slice(0, 32)}
         items={[...c.options.map((o, i) => ({ id: `opt${i}`, label: o })), { id: 'cancel', label: 'Cancel' }]}
         onChoose={(id) => {
           if (id === 'cancel' || !req) return update((x) => dismissAnswer({ ...x, coach: { ...coachOf(x), clarify: null } }));
@@ -165,8 +164,7 @@ export function CoachScreen({ session, sequenceTitle, image }: { session: Applet
   }
   if (coach.panel === 'parts') {
     return (
-      <ChoiceScreen
-        title={`Parts for step ${cur.index + 1}`}
+      <ChoiceScreen key="cs2"         title={`Parts for step ${cur.index + 1}`}
         emptyText="The manual lists no parts for this step."
         items={[...cur.parts.map((p) => ({ id: `part_${p.id}`, label: p.label, hint: [p.quantity ? `×${p.quantity}` : '', p.detail ?? ''].filter(Boolean).join(' · ').slice(0, 48) || undefined })), { id: 'back', label: 'Back to step' }]}
         onChoose={(id) => id === 'back' && update((x) => setPanel(x, null))}
@@ -186,7 +184,7 @@ export function CoachScreen({ session, sequenceTitle, image }: { session: Applet
       { id: 'back', label: 'Back to step' },
     ];
     return (
-      <ChoiceScreen title="Coach" items={items} onChoose={(id) => {
+      <ChoiceScreen key="cs3" title="Coach" items={items} onChoose={(id) => {
         setLocalPanel(id === 'ask' ? 'ask' : id === 'report' ? 'report' : null);
         if (id === 'repeat') void repeatStep(session);
         if (id === 'parts') update((x) => setPanel(x, 'parts'));
@@ -199,7 +197,7 @@ export function CoachScreen({ session, sequenceTitle, image }: { session: Applet
     const kind: CoachRequestKind = panel === 'ask' ? 'question' : 'problem';
     const presets = panel === 'ask' ? ASK_PRESETS : REPORT_PRESETS;
     return (
-      <ChoiceScreen title={panel === 'ask' ? 'Ask about this step' : 'What went wrong?'}
+      <ChoiceScreen key="cs4" title={panel === 'ask' ? 'Ask about this step' : 'What went wrong?'}
         items={[...presets.map((p, i) => ({ id: `p${i}`, label: p })), { id: 'type', label: panel === 'ask' ? 'Type a question' : 'Describe it' }, { id: 'back', label: 'Back' }]}
         onChoose={(id) => {
           if (id === 'back') return setLocalPanel('menu');

@@ -78,6 +78,7 @@ attempts and tokens rather than assume exactly-once inference.
 | `generate_revision` | `POST /v1/projects/:id/messages` | 2 | Implemented (`apps/worker/src/generate.ts`) |
 | `transcribe_voice_note` | `PUT /v1/notes/:id/audio`, `POST /v1/notes/:id/transcribe` | 4 | Implemented (`apps/worker/src/transcribe.ts`) |
 | `coach_request` | `POST /v1/coach/requests` | 2 | Implemented (`apps/worker/src/coach.ts`) |
+| `extract_care_label` | `POST /v1/laundry/labels` | 2 | Implemented (`apps/worker/src/laundry.ts`) |
 
 ### `prepare_upload`
 
@@ -101,6 +102,21 @@ An incomplete package can never become live: the pointer moves only after the
 upload has succeeded. If the job fails permanently, the release is marked
 `failed`. Objects left by superseded or failed releases aren't cleaned up yet
 (a later sweep job).
+
+### `extract_care_label`
+
+Laundry label reading ([laundry.md](laundry.md)). Input `{ uploadId, region: iso|us }`;
+idempotency key `label:<uploadId>:<region>`.
+
+1. Load the upload; it must belong to the job's owner and be an image.
+2. Prepare the image (bounded, normalized) and a 96×96 WebP thumbnail.
+3. Call `LABEL_MODEL` (default free `fake:labels`, which recognizes fixture file
+   names) with the `care_label` JSON schema.
+4. Normalize: invalid values become `unreadable`, nothing is confirmed. Result
+   `{ uploadId, region, extraction: { label, fibers, needsClearerImage, note }, thumbnail }`.
+
+No side effects besides the job result, so a repeat is harmless. The original photo
+stays in storage as the source of every instruction.
 
 ### `coach_request`
 

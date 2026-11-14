@@ -1,0 +1,13 @@
+/* Laundry task module: small garment thumbnails under the step (bright label
+   photos read well on the additive display; no dark panels). */
+.l-thumbs {
+  display: flex;
+  gap: var(--uit-spacing-small, 8px);
+  padding: 0 var(--uit-spacing-large, 24px);
+}
+.l-thumbs img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--uit-corner-radius-xsmall, 16px);
+}

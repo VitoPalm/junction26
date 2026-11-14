@@ -18,6 +18,7 @@ import { prepareUploadSource } from './sources.ts';
 import { generateRevisionHandler } from './generate.ts';
 import { transcribeVoiceNoteHandler } from './transcribe.ts';
 import { coachRequestHandler } from './coach.ts';
+import { extractCareLabelHandler } from './laundry.ts';
 import { JobError, type HandlerRegistry, type JobHandler } from './types.ts';
 
 // ---------------------------------------------------------------- prepare_upload
@@ -141,5 +142,6 @@ export function createHandlers(models: ModelRegistry, transcribers?: Transcripti
     generate_revision: generateRevisionHandler(models),
     transcribe_voice_note: transcribeVoiceNoteHandler(models, transcribers),
     coach_request: coachRequestHandler(models),
+    extract_care_label: extractCareLabelHandler(models),
   };
 }
