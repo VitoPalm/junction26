@@ -83,7 +83,7 @@ recorded on the job. Failures post a plain-language reply in the thread.
   restore server state for new installs → batched state backup → last-opened.
 - WebMCP: one tool per action (`j26_<prefix>_<action>`) plus `read_state`,
   `open_view`, `next_step`/`previous_step`. Registered once per open applet
-  (page transitions keep two routes mounted, and duplicate names are rejected).
+  (routes switch instantly without a slide transition; WebMCP rejects duplicate names).
 - Service worker precaches the shell and every asset it references at install
   (runtime caching alone misses the first load's assets), and refreshes shell +
   assets together in the background. The router keeps home at `/glasses/` so

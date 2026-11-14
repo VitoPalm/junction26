@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
-import { ReactRouterNavigationProvider, ReactRouterPageTransition } from '@wearables-ui-toolkit/mrbd/react-router';
+import { ReactRouterNavigationProvider } from '@wearables-ui-toolkit/mrbd/react-router';
 import { App } from '@wearables-ui-toolkit/mrbd';
 import { ChoiceScreen, ChecklistScreen, InstructionScreen, ContentScreen, ValueReadout } from './lib/index.js';
 import './lib/styles.css';
@@ -22,11 +22,11 @@ function ExamplesMenu() {
 }
 
 function Demo() {
-  // Outside retained route transitions: navigation cannot erase domain state.
+  // Outside the routes: navigation cannot erase domain state.
   const [step, setStep] = useState(1);
   const [packed, setPacked] = useState<Record<string, boolean>>({});
   const [health, setHealth] = useState(12);
-  return <BrowserRouter><ReactRouterNavigationProvider><App><ReactRouterPageTransition>{({ location }) => <Routes location={location}>
+  return <BrowserRouter><ReactRouterNavigationProvider><App><Routes>
     <Route path="/" element={<ExamplesMenu />} />
     <Route path="/guide" element={<InstructionScreen title="First chain" step={step} total={steps.length}
       text={steps[step - 1]} actions={[
@@ -42,7 +42,7 @@ function Demo() {
       { id: 'damage', label: 'Lose 1 HP', disabled: health === 0, onActivate: () => setHealth(h => Math.max(0, h - 1)) },
       { id: 'heal', label: 'Heal 1 HP', disabled: health === 20, onActivate: () => setHealth(h => Math.min(20, h + 1)) },
     ]}><ValueReadout label="Health" value={`${health} / 20`} hint="Changes stay in this demo session." /></ContentScreen>} />
-  </Routes>}</ReactRouterPageTransition></App></ReactRouterNavigationProvider></BrowserRouter>;
+  </Routes></App></ReactRouterNavigationProvider></BrowserRouter>;
 }
 
 createRoot(document.getElementById('root')!).render(

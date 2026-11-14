@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { ReactRouterNavigationProvider, ReactRouterPageTransition } from '@wearables-ui-toolkit/mrbd/react-router';
+import { BrowserRouter, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ReactRouterNavigationProvider } from '@wearables-ui-toolkit/mrbd/react-router';
 import { App } from '@wearables-ui-toolkit/mrbd';
 import { ChoiceScreen, ContentScreen, TextBlock, Diagram } from './lib/index.js';
 import { readPositions, resumeIndex, moveIndex } from './progress.js';
@@ -51,11 +51,16 @@ function Guide() {
       : <TextBlock text={item.text ?? ''} hint={item.hint ?? undefined} />}
   </ContentScreen>;
 }
+/** Remount the guide per URL so its state starts fresh for each guide. */
+function KeyedGuide() {
+  const { pathname } = useLocation();
+  return <Guide key={pathname} />;
+}
 function Root() {
-  return <BrowserRouter><ReactRouterNavigationProvider><App><ReactRouterPageTransition>{({ location }) => <Routes location={location}>
+  return <BrowserRouter><ReactRouterNavigationProvider><App><Routes>
     <Route path="/" element={<Menu />} />
-    <Route path="/guide/:id" element={<Guide key={location.pathname} />} />
+    <Route path="/guide/:id" element={<KeyedGuide />} />
     <Route path="*" element={<Menu />} />
-  </Routes>}</ReactRouterPageTransition></App></ReactRouterNavigationProvider></BrowserRouter>;
+  </Routes></App></ReactRouterNavigationProvider></BrowserRouter>;
 }
 createRoot(document.getElementById('root')!).render(<Root />);
