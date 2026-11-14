@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Authoring app (web + iOS + Android via Capacitor): library, chat, uploads, preview, publish, glasses pairing.",
   "scripts": {
+    "test": "node --test src/api.test.ts",
     "dev": "vite --host 127.0.0.1 --port 5173",
     "build": "tsc --noEmit && vite build",
     "build:native": "tsc --noEmit && vite build --mode native",
@@ -17,6 +18,7 @@
     "@capacitor/android": "8.5.3",
     "@capacitor/core": "8.5.3",
     "@capacitor/ios": "8.5.3",
+    "@clerk/react": "6.18.8",
     "@junction26/applet-format": "*",
     "@junction26/applet-renderer": "*",
     "@junction26/applet-runtime": "*",

@@ -12,6 +12,8 @@ COPY experiments/openrouter-ikea/app/package.json experiments/openrouter-ikea/ap
 COPY experiments/openrouter-ikea-v2/app/package.json experiments/openrouter-ikea-v2/app/
 COPY packages packages
 COPY apps/api apps/api
+# Local MCP adapter is not shipped, but npm needs its workspace manifest.
+COPY apps/assistant-mcp/package.json apps/assistant-mcp/
 COPY apps/worker apps/worker
 COPY apps/glasses apps/glasses
 # Only the web build of the authoring app (native shells are built separately).

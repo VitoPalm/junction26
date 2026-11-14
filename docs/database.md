@@ -41,7 +41,13 @@ PostgreSQL 18.
 
 What's not here on purpose: chat transcripts and documents in packages; any
 "conversation" table (there's one thread per project until the UX needs more);
-sessions for users (owned by the future identity provider).
+sessions for users (owned by Clerk).
+
+Clerk identities use `external_id = 'clerk:' + JSON.stringify([issuer, subject])`.
+Web sessions from the same instance/user reuse one internal user, independent of
+session ID and email. Dev identities remain separate; there is no automatic
+account merge or transfer of their projects/devices. No schema migration is
+needed for this identity mapping.
 
 ## Migrations
 
@@ -78,3 +84,15 @@ success or failure. Generation saves resolved image bytes and provenance in the
 revision definition; published packages use that immutable definition. Future
 upload/object garbage collection must remove the preparation sidecar as well as
 the original source. See [model-pipeline.md](model-pipeline.md).
+
+### External assistant operation receipts (2026-11-14)
+
+Migration `0002_assistant_drafts.sql` adds `assistant_draft_operations`, keyed by
+`(owner_id, operation_id)`. It stores the canonical request fingerprint and the
+public draft response (no definition, credentials or wearer state). A
+transaction-scoped advisory lock on owner/key serializes concurrent retries before
+project creation. Receipt, project/revision and change-review inserts commit
+atomically; failures roll back together. Receipts have no automatic expiry, so
+retrying an old operation cannot unexpectedly create a new draft. Owner deletion
+cascades receipts. Revision creation still uses the existing project lock and
+numbering functions. Keys are independent from the durable job key namespace.

@@ -1,11 +1,23 @@
 # Authoring from Claude, ChatGPT and other assistants
 
 Research date and last source/code recheck: 2026-11-14 (code baseline
-`e76b1c8`). **Proposal, not an implemented or client-tested
-integration.** This expands the agreed bring-your-own-assistant direction in
+`e76b1c8`). **Architecture proposal with a private local implementation; not yet a
+provider-client-tested or hosted integration.** This expands the agreed
+bring-your-own-assistant direction in
 [product-spec.md](product-spec.md#authoring-and-model-strategy) and
 [implementation-plan.md](implementation-plan.md#m7-bring-your-own-assistant-stretch).
 It does not change the applet format or the managed authoring path.
+
+## Implementation started (2026-11-14)
+
+The shared MCP adapter and private text-only draft API now exist. They expose
+capabilities, owned applet reads, full definition validation, atomic create and
+revision submission with durable retry protection. See
+[local MCP setup and remaining work](assistant-mcp.md). They do not route through
+managed generation. Change findings are stored for publication enforcement;
+assistant-side publish, review acceptance, measured fit, OAuth and hosted provider
+tests remain unfinished. The design discussion below describes the target flow,
+not a claim that all proposed tools are available.
 
 ## Intended experience
 
@@ -77,7 +89,9 @@ planned; uploading a file alone does not complete diagram delivery. See
 
 ## Proposed authoring tools
 
-Names and payloads below are design suggestions, not published contracts.
+The complete target tool set below remains a design proposal. The implemented
+subset and its API contract are documented in [assistant-mcp.md](assistant-mcp.md)
+and [api.md](api.md#external-assistant-drafts-private-local-proof).
 Expose essential guidance through tools so the flow does not depend on a host
 supporting MCP resources, prompts, sampling, or a provider-specific skill.
 
@@ -131,8 +145,10 @@ app's recorded browser/emulator checks or real model generation.
 The direct revision API still calls the interim
 [`checkDefinition`](../packages/server-common/src/definition.ts). It checks a
 few envelope fields and size, not the complete runtime contract or measured fit.
-Connect that API path to the existing full validator before exposing assistant
-submissions. Change diff and a review checkbox exist in the authoring client,
+The private external draft endpoint now uses the full validator. The older
+direct revision endpoint still needs migration before it can be treated as an
+equivalent production submission path. Change diff and a review checkbox exist
+in the authoring client,
 but the review-acceptance endpoint and measured fit at publish are unfinished.
 The release route has a review check, but external submissions must also create
 the findings and support server-side acceptance; the client checkbox alone is
@@ -142,8 +158,8 @@ does not establish readiness for glasses.
 Suggested implementation boundary: an MCP transport adapter over shared
 authoring services. Either extract those services from routes or call the
 authenticated HTTP API; never write a second persistence/publication pipeline.
-New create/revise tools need durable retry protection: existing project and
-revision creation endpoints do not provide publish-style idempotency. A retry
+The private external draft endpoint now provides durable create/revise retry
+protection; the older project and revision endpoints still lack it. A retry
 after a lost response must not create duplicate projects or revisions.
 
 ## Account linking and deployment

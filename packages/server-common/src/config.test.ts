@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadConfig, ConfigError } from './config.ts';
 import { checkDefinition } from './definition.ts';
+import { generateKeyPairSync } from 'node:crypto';
 
 const base = { DATABASE_URL: 'postgres://x', SESSION_SECRET: 'x'.repeat(32), STORAGE_DRIVER: 'memory' };
 
@@ -35,6 +36,34 @@ test('production refuses dev auth and non-s3 storage', () => {
 
 test('short session secret is rejected', () => {
   assert.throws(() => loadConfig({ ...base, SESSION_SECRET: 'short' }), ConfigError);
+});
+
+const publicKey = generateKeyPairSync('rsa', { modulusLength: 2048 }).publicKey.export({ type: 'spki', format: 'pem' }).toString();
+const clerk = { AUTH_MODE: 'clerk', CLERK_ISSUER: 'https://auth.example.com', CLERK_AUTHORIZED_PARTIES: 'https://example.com', CLERK_JWT_KEY: publicKey };
+
+test('production accepts configured Clerk and S3, with escaped PEM newlines', () => {
+  const c = loadConfig({ ...base, ...clerk, CLERK_JWT_KEY: publicKey.replace(/\n/g, '\\n'), NODE_ENV: 'production', STORAGE_DRIVER: 's3',
+    AWS_ACCESS_KEY_ID: 'test', AWS_SECRET_ACCESS_KEY: 'test', AWS_ENDPOINT_URL: 'https://s3.example.com', AWS_REGION: 'test', VERDA_S3_BUCKET: 'test' });
+  assert.equal(c.authMode, 'clerk');
+  assert.equal(c.clerk?.jwtKey, publicKey);
+  assert.deepEqual(c.clerk?.authorizedParties, ['https://example.com']);
+});
+
+test('Clerk configuration fails closed for missing verification settings or unsafe origins', () => {
+  for (const env of [
+    { AUTH_MODE: 'clerk' },
+    { ...clerk, CLERK_ISSUER: 'http://auth.example.com' },
+    { ...clerk, CLERK_JWT_KEY: 'not a key' },
+    { ...clerk, CLERK_JWT_KEY: '' },
+    { ...clerk, CLERK_AUTHORIZED_PARTIES: '' },
+    { ...clerk, CLERK_AUTHORIZED_PARTIES: '*' },
+    { ...clerk, CLERK_AUTHORIZED_PARTIES: 'https://example.com/path' },
+    { ...clerk, CLERK_AUTHORIZED_PARTIES: 'http://example.com' },
+    { ...clerk, NODE_ENV: 'production', CLERK_AUTHORIZED_PARTIES: 'http://localhost:5173' },
+    { ...clerk, NODE_ENV: 'production', CLERK_ISSUER: 'https://example.clerk.accounts.dev' },
+  ]) assert.throws(() => loadConfig({ ...base, ...env }), ConfigError);
+  assert.equal(loadConfig({ ...base, ...clerk, CLERK_AUTHORIZED_PARTIES: 'http://localhost:5173' }).authMode, 'clerk');
+  assert.equal(loadConfig({ ...base, ...clerk, CLERK_JWT_KEY: '', CLERK_SECRET_KEY: 'sk_test_example' }).authMode, 'clerk');
 });
 
 test('checkDefinition accepts minimal definitions and reports every issue', () => {

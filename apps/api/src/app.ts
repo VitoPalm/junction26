@@ -6,6 +6,7 @@ import { cors } from 'hono/cors';
 import type { AppEnv, Deps } from './context.ts';
 import { authenticate } from './auth.ts';
 import { ApiError, errorBody } from './errors.ts';
+import { assistantRoutes } from './routes/assistant.ts';
 import { projectRoutes } from './routes/projects.ts';
 import { authoringRoutes } from './routes/authoring.ts';
 import { projectReleaseRoutes, releaseRoutes } from './routes/releases.ts';
@@ -89,6 +90,7 @@ export function createApp(deps: Deps) {
   v1.route('/jobs', jobRoutes(deps));
   v1.route('/devices', deviceRoutes(deps));
   v1.route('/authoring', authoringMetaRoutes(deps));
+  v1.route('/assistant', assistantRoutes(deps));
   app.route('/v1', v1);
 
   if (deps.config.webRoot) app.route('/', webRoutes(deps.config.webRoot));

@@ -15,16 +15,22 @@ Send `Authorization: Bearer <token>` on every `/v1` request except
 
 | Session | Token | Issued by | Can do |
 | --- | --- | --- | --- |
-| User (authoring) | `dev:<name>` (dev mode only, see below) | the identity provider (not chosen yet) | everything except writing state backups |
+| User (authoring) | Clerk session JWT (`AUTH_MODE=clerk`); `dev:<name>` only in dev mode | Clerk; local placeholder in dev | everything except writing state backups |
 | Device (glasses) | `j26d_<43 chars>` | `POST /v1/devices/pair` | read the library, sync releases, download packages, back up and restore state, update `lastOpenedAt` |
 
-**User auth is a placeholder.** The identity provider is open decision #1 in
-[implementation-plan.md](implementation-plan.md#open-decisions-owner-input-needed).
-Until then `AUTH_MODE=dev` trusts `dev:<name>` (`<name>` matches
-`[A-Za-z0-9_-]{1,64}`) and creates that user on first use. The config loader
-**refuses dev mode when `NODE_ENV=production`**, so the backend can't be
-deployed with it by accident. Adding a provider means resolving its token to an
-external ID in `resolveUser` (`apps/api/src/auth.ts`); nothing else changes.
+**Clerk web accounts:** `AUTH_MODE=clerk` verifies the JWT signature, expiration,
+activation time, exact configured issuer and allowed frontend origin (`azp`).
+Tokens must identify a user and a session, with no pending account tasks. OAuth
+access tokens and machine credentials are rejected; delegated connector access
+is not implemented. Use `getToken()` from the frontend SDK for each request.
+Missing/invalid credentials return the same `401 unauthenticated` response.
+Ownership uses the verified issuer and subject, never an email or display name.
+Setup and verification limits: [authentication-plan.md](authentication-plan.md).
+
+`AUTH_MODE=dev` still trusts `dev:<name>` (`[A-Za-z0-9_-]{1,64}`) locally.
+The config loader **refuses dev mode when `NODE_ENV=production`**. Switching to
+Clerk creates a separate identity; local dev libraries are not automatically
+merged into a real account.
 
 **Device sessions are real.** Tokens are 32 random bytes, shown once, and stored
 only as `HMAC-SHA256(SESSION_SECRET, token)`. Revoking a device invalidates its
@@ -252,3 +258,41 @@ Generated `assets` retain `uploadId` (the prepared image ref), normalized PNG
 `data`, `source` (file/page or URL), and optional `attribution`. The renderer
 consumes image data offline. These source refs are checked against owner-filtered
 attachments, tool imports and base assets before the worker saves a revision.
+
+## External assistant drafts (private local proof)
+
+The shared MCP adapter uses these authoring-user-only endpoints. Device sessions
+are refused. See [assistant-mcp.md](assistant-mcp.md) for transports and setup.
+These are separate from the interim direct revision submission contract above;
+external assistant drafts always use the full `packages/applet-format` validator.
+
+- `GET /v1/assistant/capabilities`: current schema, catalog, versions, copy limits,
+  authoring policy and text-only restrictions. `contractVersion: 1`.
+- `POST /v1/assistant/validate` with `{ definition }`: returns `{ valid, issues,
+  measuredFit: "not_checked", sourceFidelity: "not_checked" }`. No persistence.
+- `POST /v1/assistant/drafts`, required `Idempotency-Key`:
+  - create body: `{ mode: "create", title, definition }`;
+  - revise body: `{ mode: "revise", projectId, baseRevisionId, definition }`.
+
+A create atomically saves a project and immutable revision. Revise requires the
+latest exact base, computes change findings against both that base and the current
+published revision, and saves a pending `change_reviews` row. It never changes
+wearer state or queues managed generation. Text-only: nonempty assets are rejected.
+Structural validation is not a rendered-fit check. Publication remains a separate
+operation, with the existing review block enforced.
+
+First success returns 201; replay returns 200 with the original result (project,
+revision summary, findings, project `previewUrl`, `reviewRequired`,
+`measuredFit: "not_checked"`, `published: false`). The preview URL opens the project;
+select the returned revision in its Preview tab. No credentials are embedded.
+Retries with the same owner/key and canonical JSON content return the same IDs,
+including after restart. Different content under that key returns 409
+`idempotency_key_reused`. Failed requests roll back and do not reserve the key.
+Keys are scoped to this endpoint, separately from job idempotency keys.
+
+Other errors: 422 `invalid_definition` with full validator issues (including
+`external_assets_unsupported`); 404 for foreign/missing projects or revisions;
+409 `stale_revision` with `latestRevisionId`; 409 `unsupported_base_revision` if a
+base/published definition cannot be safely interpreted by the current validator.
+Malformed bodies/missing or invalid idempotency keys return 400. Pending findings
+cannot currently be accepted through an MCP tool or the existing client checkbox.

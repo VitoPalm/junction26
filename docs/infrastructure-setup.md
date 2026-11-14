@@ -80,7 +80,12 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `MIGRATION_DATABASE_URL` | api, worker | Optional direct (non-PgBouncer) URI for migrations; defaults to `DATABASE_URL` |
 | `DATABASE_POOL_MAX` | api | Connections per API process (default 10) |
 | `STORAGE_DRIVER` | api, worker | `s3` (default, required in production), `fs` or `memory` for development |
-| `AUTH_MODE` | api | Only `dev` exists until the identity provider is chosen |
+| `AUTH_MODE` | api, worker config | `clerk` for real web accounts; `dev` is local-only and refused in production |
+| `CLERK_ISSUER` | api, worker config | Required in Clerk mode: exact HTTPS issuer of the configured instance |
+| `CLERK_AUTHORIZED_PARTIES` | api, worker config | Required in Clerk mode: comma-separated frontend origins; HTTPS in production, loopback HTTP also allowed in development. Separate from CORS |
+| `CLERK_SECRET_KEY` | api, worker config | Backend-only Clerk key for signing-key retrieval; required unless `CLERK_JWT_KEY` is set |
+| `CLERK_JWT_KEY` | api, worker config | Optional PEM RSA public key for networkless verification, instead of a secret key; literal `\n` separators supported. Takes precedence; rotate manually |
+| `VITE_AUTH_MODE`, `VITE_CLERK_PUBLISHABLE_KEY` | author build | `clerk` + public `pk_live_…` for release; local Vite defaults to dev login. `pk_test_…` only with the dev server. Never pass a secret key to Vite |
 | `LOG_LEVEL` | api, worker | `debug`, `info` (default), `warn`, `error` |
 | `WORKER_CONCURRENCY`, `WORKER_POLL_MS`, `WORKER_LEASE_MS`, `WORKER_ID` | worker | Defaults 2, 1000, 60000, generated |
 | `WORKER_HEALTH_PORT` | worker | If set, serves `GET /healthz` (for hosts that need a listening port) |
@@ -211,9 +216,13 @@ service becomes its own Runtime app. `compose.yaml` already sets
 `WORKER_HEALTH_PORT=8080`, so the worker answers `GET /healthz` on 8080 and can
 be deployed like the API if needed (don't route public traffic to it).
 
-**Before the first deploy, decide user authentication.** The image runs with
-`NODE_ENV=production`, which refuses the dev auth placeholder. Overriding
-`NODE_ENV=development` on a public URL would let anyone act as any user.
+**Before the first deploy, configure Clerk.** Build the author app with its
+production publishable key, and set `AUTH_MODE=clerk`, issuer, allowed frontend
+origins and a verification key in the backend runtime. Both API and worker use
+the shared config parser. The image runs with `NODE_ENV=production`, which
+refuses dev auth and Clerk development instances. Overriding it on a public URL
+would remove those safeguards. See [authentication-plan.md](authentication-plan.md)
+for setup and the remaining native/connector work.
 
 ### Deploy steps
 

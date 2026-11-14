@@ -231,8 +231,10 @@ not implemented or tested in assistant clients).
 
 ## Open decisions (owner input needed)
 
-1. Authentication for the authoring client (passkeys / OAuth provider / magic
-   link) and the glasses pairing UX.
+1. Authentication provider **decided: Clerk**. Web sign-in and session verification
+   are implemented and verified locally with the development instance; production
+   configuration, native sign-in and delegated MCP OAuth remain.
+   See [authentication-plan.md](authentication-plan.md).
 2. Aiven region and exact plans (Startup PG recommended); when to upgrade for HA.
 3. Whether to subsidize the first applet and with which credits.
 4. Package size limit and whether to downscale or WebP-encode diagrams at

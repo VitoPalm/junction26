@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createPublicKey } from 'node:crypto';
 
 /**
  * Environment contract for the API and the worker. Every variable is documented
@@ -30,7 +31,11 @@ const EnvSchema = z.object({
   VERDA_S3_BUCKET: z.string().optional(),
   S3_FORCE_PATH_STYLE: bool.default(true),
 
-  AUTH_MODE: z.enum(['dev']).default('dev'),
+  AUTH_MODE: z.enum(['dev', 'clerk']).default('dev'),
+  CLERK_ISSUER: z.string().url().optional(),
+  CLERK_AUTHORIZED_PARTIES: z.string().optional(),
+  CLERK_SECRET_KEY: z.string().optional(),
+  CLERK_JWT_KEY: z.string().optional(),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
   PUBLIC_ORIGIN: z.string().url().default('http://127.0.0.1:8080'),
 
@@ -87,7 +92,8 @@ export interface Config {
   databasePoolMax: number;
   migrateOnStart: boolean;
   storage: StorageConfig;
-  authMode: 'dev';
+  authMode: 'dev' | 'clerk';
+  clerk?: { issuer: string; authorizedParties: string[]; secretKey?: string; jwtKey?: string };
   sessionSecret: string;
   publicOrigin: string;
   limits: {
@@ -150,6 +156,34 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
   const e = parsed.data;
   const problems: string[] = [];
+  let clerk: Config['clerk'];
+  if (e.AUTH_MODE === 'clerk') {
+    const parties = list(e.CLERK_AUTHORIZED_PARTIES);
+    if (!e.CLERK_ISSUER || new URL(e.CLERK_ISSUER).protocol !== 'https:') {
+      problems.push('AUTH_MODE=clerk requires CLERK_ISSUER (the exact HTTPS issuer of your Clerk instance)');
+    }
+    if (!parties.length || parties.some((party) => {
+      try {
+        const url = new URL(party);
+        return url.origin !== party || !(url.protocol === 'https:' ||
+          (e.NODE_ENV !== 'production' && url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)));
+      } catch { return true; }
+    })) problems.push('CLERK_AUTHORIZED_PARTIES requires exact HTTPS frontend origins (loopback HTTP is allowed outside production)');
+    if (!e.CLERK_SECRET_KEY && !e.CLERK_JWT_KEY) problems.push('AUTH_MODE=clerk requires CLERK_SECRET_KEY or CLERK_JWT_KEY');
+    const jwtKey = e.CLERK_JWT_KEY?.replace(/\\n/g, '\n');
+    if (jwtKey) {
+      try {
+        if (createPublicKey(jwtKey).asymmetricKeyType !== 'rsa') throw new Error('not RSA');
+      } catch { problems.push('CLERK_JWT_KEY must be a PEM RSA public key'); }
+    }
+    if (e.NODE_ENV === 'production' && e.CLERK_SECRET_KEY?.startsWith('sk_test_')) {
+      problems.push('Production requires a Clerk production instance, not CLERK_SECRET_KEY=sk_test_…');
+    }
+    if (e.NODE_ENV === 'production' && e.CLERK_ISSUER && new URL(e.CLERK_ISSUER).hostname.endsWith('.clerk.accounts.dev')) {
+      problems.push('Production requires a Clerk production issuer, not a development instance');
+    }
+    clerk = { issuer: e.CLERK_ISSUER ?? '', authorizedParties: parties, secretKey: e.CLERK_SECRET_KEY, jwtKey };
+  }
 
   let storage: StorageConfig;
   if (e.STORAGE_DRIVER === 's3') {
@@ -190,6 +224,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     migrateOnStart: e.MIGRATE_ON_START,
     storage,
     authMode: e.AUTH_MODE,
+    clerk,
     sessionSecret: e.SESSION_SECRET,
     publicOrigin: e.PUBLIC_ORIGIN.replace(/\/$/, ''),
     limits: {

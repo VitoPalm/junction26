@@ -13,10 +13,10 @@ interface Ctx {
 const AppCtx = createContext<Ctx | null>(null);
 export const useApp = () => useContext(AppCtx)!;
 
-export function App() {
+export function App({ account }: { account?: Ctx } = {}) {
   const [session, setSession] = useState<Session | null>(loadSession);
   // Stable per session: screens depend on `api` in effects.
-  const ctx = useMemo<Ctx | null>(
+  const devCtx = useMemo<Ctx | null>(
     () =>
       session && {
         session,
@@ -28,7 +28,8 @@ export function App() {
       },
     [session],
   );
-  if (!session || !ctx) {
+  const ctx = account ?? devCtx;
+  if (!ctx) {
     return (
       <SignIn
         onDone={(s) => {

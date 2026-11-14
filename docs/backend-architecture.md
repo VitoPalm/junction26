@@ -40,7 +40,7 @@ We do not build or deploy a separate executable application for every applet.
 | HTTP framework | Hono 4.13 on `@hono/node-server` (small, streaming request bodies, in-process test requests) |
 | Database access | `pg` 8.23 with plain SQL migrations and typed query functions; no ORM |
 | Request validation | zod 4.6 |
-| User authentication | **Open.** `AUTH_MODE=dev` placeholder, refused in production. Device sessions via pairing are implemented |
+| User authentication | **Clerk** for web accounts (`AUTH_MODE=clerk`); local-only dev mode retained. Device pairing implemented; native Clerk and delegated MCP OAuth remain pending |
 
 Start with modest capacity. Managed plan upgrades provide a growth path; automatic
 horizontal scaling is not an initial requirement. Do not provision GPUs, Redis,
@@ -308,7 +308,7 @@ sync. No per-action server endpoint is required by normal glasses use.
 
 ## Authentication, operations, and deployment
 
-Choose the identity/session mechanism before implementation. Aim for ordinary
+Clerk is the selected identity/session provider. Aim for ordinary
 sign-in in the authoring interface and simple glasses pairing, without entering
 provider keys on the glasses. Any pairing code must be short-lived, one-use, and
 exchange for a revocable device session. Do not implement a password database as

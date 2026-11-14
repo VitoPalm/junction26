@@ -88,8 +88,11 @@ recorded on the job. Failures post a plain-language reply in the thread.
 One React codebase: web build served at `/author/`, and Capacitor 8.5 shells
 (`android/`, `ios/`). Hash routing so it works identically in both.
 
-- Sign-in (dev placeholder: a name becomes `dev:<name>`; native also asks for
-  the server URL). Library + `+`. First-run "what you can make" from the
+- Sign-in: Clerk accounts on the web, with a fresh session token per API request.
+  The Vite dev server retains optional name-based `dev:<name>` login. Native
+  Clerk sign-in remains pending; Clerk-mode native builds point to the web app.
+  Setup: [authentication-plan.md](authentication-plan.md). Library + `+`.
+  First-run "what you can make" from the
   capability catalog. Chat with attachments and model picker. Preview: the real
   renderer in a 600×600 iframe (`preview.html`), separate in-memory state, plus
   "Try a voice command" (calls the same WebMCP tools). Change review: the

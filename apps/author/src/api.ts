@@ -1,8 +1,8 @@
 /**
  * Backend client. The base URL is the same origin on the web; native shells
  * (Capacitor) use the server chosen at sign-in or VITE_API_BASE. Auth is a
- * pluggable token source: dev tokens today, a real identity provider later
- * (docs/implementation-plan.md, open decision 1) without touching callers.
+ * pluggable token source: fresh Clerk session JWTs on the web, or dev tokens
+ * for local placeholder login. Callers do not manage token refresh.
  */
 import { Capacitor } from '@capacitor/core';
 
@@ -60,9 +60,11 @@ export class ApiError extends Error {
   }
 }
 
-export function createApi(session: Session) {
+export function createApi(session: Session, getToken: () => Promise<string | null> = async () => session.token) {
   async function req<T>(method: string, path: string, opts: { body?: unknown; raw?: Blob; headers?: Record<string, string> } = {}): Promise<T> {
-    const headers: Record<string, string> = { authorization: `Bearer ${session.token}`, ...opts.headers };
+    const token = await getToken();
+    if (!token) throw new ApiError(401, 'unauthenticated', 'Please sign in again.');
+    const headers: Record<string, string> = { ...opts.headers, authorization: `Bearer ${token}` };
     let body: BodyInit | undefined;
     if (opts.raw) body = opts.raw;
     else if (opts.body !== undefined) {
