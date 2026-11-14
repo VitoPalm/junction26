@@ -83,6 +83,38 @@ export class MistralTranscriptionProvider implements TranscriptionProvider {
   }
 }
 
+/** OpenRouter's dedicated STT endpoint; uses the existing backend OpenRouter key. */
+export class OpenRouterTranscriptionProvider implements TranscriptionProvider {
+  readonly id = 'openrouter-stt';
+  private readonly o: { apiKey: string | undefined; baseUrl: string; timeoutMs?: number; fetch?: typeof fetch };
+  constructor(o: { apiKey: string | undefined; baseUrl: string; timeoutMs?: number; fetch?: typeof fetch }) { this.o = o; }
+  async transcribe(req: TranscriptionRequest): Promise<TranscriptionResult> {
+    if (!this.o.apiKey) throw new ModelError('not_configured', 'OPENROUTER_API_KEY is required for transcription');
+    const timeout = AbortSignal.timeout(this.o.timeoutMs ?? 180_000);
+    let res: Response;
+    try {
+      res = await (this.o.fetch ?? fetch)(`${this.o.baseUrl.replace(/\/$/, '')}/audio/transcriptions`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${this.o.apiKey}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: req.model,
+          input_audio: { data: Buffer.from(req.audio.data).toString('base64'), format: req.audio.mediaType === 'audio/mpeg' ? 'mp3' : 'wav' },
+          language: req.language,
+          provider: { options: Object.fromEntries(['mistral', 'mistral/zdr', 'mistral/us', 'mistral/eu'].map(tag => [tag, { context_bias: (req.vocabulary ?? []).slice(0, MAX_VOCABULARY) }])) },
+        }),
+        signal: req.signal ? AbortSignal.any([req.signal, timeout]) : timeout,
+      });
+    } catch (e) {
+      if (req.signal?.aborted) throw e;
+      throw new ModelError(timeout.aborted ? 'timeout' : 'unavailable', 'OpenRouter transcription request failed');
+    }
+    const json = await res.json().catch(() => null) as { text?: unknown; usage?: { cost?: number; seconds?: number }; error?: { message?: string } } | null;
+    if (!res.ok) throw statusError(res.status, json?.error?.message ?? 'OpenRouter transcription failed');
+    if (typeof json?.text !== 'string') throw new ModelError('invalid_response', 'The transcription response had no text');
+    return { text: json.text, provider: this.id, model: req.model, audioSeconds: json.usage?.seconds ?? null, costUsd: json.usage?.cost ?? null };
+  }
+}
+
 function statusError(s: number, m: string): ModelError {
   if (s === 401 || s === 403) return new ModelError('auth', `The transcription provider refused the key: ${m}`, s);
   if (s === 402) return new ModelError('insufficient_credits', 'The transcription budget is used up', s);
@@ -124,10 +156,12 @@ export class TranscriptionRegistry {
 }
 
 export function createTranscriptionRegistry(config: {
+  openRouter?: { apiKey: string | undefined; baseUrl: string };
   mistral?: { apiKey: string | undefined; baseUrl: string };
   fake?: (req: TranscriptionRequest) => string;
 }): TranscriptionRegistry {
   const r = new TranscriptionRegistry();
+  if (config.openRouter) r.register(new OpenRouterTranscriptionProvider(config.openRouter));
   if (config.mistral) r.register(new MistralTranscriptionProvider(config.mistral));
   if (config.fake) r.register(new FakeTranscriptionProvider(config.fake));
   return r;

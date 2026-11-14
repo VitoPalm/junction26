@@ -426,3 +426,21 @@ Origin are checked against configuration. Proxy the canonical Host unchanged.
 Responses are not cached; JSON body limits apply. Local signed-token tests and a
 real Clerk consent/draft flow have passed; public Claude/ChatGPT clients remain
 unverified. Setup and revocation limits: [assistant-mcp.md](assistant-mcp.md).
+
+### Native background recorder sessions
+
+- `POST /v1/notes/recorder/session` (full user session) returns
+  `{ token, ownerId, expiresAt }` with HTTP 201. The random `j26r_` token expires
+  after 12 hours. It is kept in native memory, never frontend storage or logs;
+  the database stores only its keyed HMAC.
+- `DELETE /v1/notes/recorder/session` revokes that token when called with a
+  recorder credential; a full user session revokes all recorder credentials
+  for that owner. Returns `{ ok: true }`. Turning the recorder off/signing out
+  invokes revocation. Offline revocation may fail; expiry remains enforced.
+- Recorder credentials can only GET `/v1/notes/recorder/events`, POST
+  `/:id/recording`, `/:id/discard`, `/:id/live`, PUT `/:id/audio`, or revoke
+  themselves. They cannot list/play/edit/delete notes, author, pair glasses,
+  or issue more sessions. Note ownership checks still apply. Expired/revoked
+  event streams close on the next event or heartbeat (at most 25 seconds).
+- Successful audio upload responses include `note.audio.sha256`; all recorders
+  compare it against the local WAV before deleting their queued copy.

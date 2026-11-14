@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { Api } from './api.ts';
+import { isNative, type Api } from './api.ts';
+import { NativeNoteRecorder } from './native-recorder.ts';
 import { concat, Downsampler, encodeWav, endsWithStopPhrase, findStopCut, frameRms, hasSpeech, RATE } from './audio.ts';
 
 /**
@@ -73,7 +74,7 @@ type SpeechRec = {
 const SpeechRecognitionCtor = (): (new () => SpeechRec) | null =>
   typeof window === 'undefined' ? null : ((window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition ?? null);
 
-export const deviceRecognitionAvailable = () => SpeechRecognitionCtor() !== null;
+export const deviceRecognitionAvailable = () => isNative || SpeechRecognitionCtor() !== null;
 
 // ------------------------------------------------------- pending uploads
 
@@ -440,7 +441,10 @@ export class NoteRecorder {
 
   private async upload(item: Pending): Promise<boolean> {
     try {
-      await this.api.uploadNoteAudio(item.id, item.wav, item.durationMs, item.endReason);
+      const result = await this.api.uploadNoteAudio(item.id, item.wav, item.durationMs, item.endReason);
+      const digest = await crypto.subtle.digest('SHA-256', await item.wav.arrayBuffer());
+      const hash = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+      if (result.note.audio?.sha256 !== hash) throw new Error('The server did not confirm this recording.');
       await queue.delete(item.id).catch(() => {});
       this.set({ lastSaved: { pageLabel: item.pageLabel, at: Date.now() }, message: null });
       this.flushDelay = 3000;
@@ -490,19 +494,24 @@ function readMode(): LiveMode {
   }
 }
 
-let instance: { api: Api; recorder: NoteRecorder } | null = null;
+let instance: { api: Api; recorder: NoteRecorder | NativeNoteRecorder } | null = null;
 /** One recorder per signed-in session; it keeps running across screens. */
-export function recorderFor(api: Api): NoteRecorder {
+export function recorderFor(api: Api): NoteRecorder | NativeNoteRecorder {
   if (instance?.api !== api) {
     void instance?.recorder.turnOff();
-    instance = { api, recorder: new NoteRecorder(api) };
+    instance = { api, recorder: isNative ? new NativeNoteRecorder(api) : new NoteRecorder(api) };
   }
   return instance.recorder;
 }
 
-export function useRecorder(api: Api): [RecorderState, NoteRecorder] {
+export function useRecorder(api: Api): [RecorderState, NoteRecorder | NativeNoteRecorder] {
   const recorder = recorderFor(api);
   const [state, setState] = useState(recorder.state);
   useEffect(() => recorder.subscribe(setState), [recorder]);
   return [state, recorder];
+}
+
+export async function stopSessionRecorder() {
+  const current = instance; instance = null;
+  await current?.recorder.turnOff();
 }

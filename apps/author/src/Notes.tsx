@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { VoiceNote } from './api.ts';
+import { isNative, type VoiceNote } from './api.ts';
 import { useApp } from './App.tsx';
 import { deviceRecognitionAvailable, useRecorder, type LiveMode } from './recorder.ts';
 
@@ -63,7 +63,7 @@ export function RecorderScreen() {
           </select>
         </label>
         <p className="tiny muted">
-          Keep this app open with the screen on while recording: a web page can’t record in the background. Notes are capped at 5 minutes.
+          {isNative ? 'Turn on the recorder before locking your phone. It runs in the background for up to 12 hours; reopen the app to renew it. Bluetooth routing depends on your phone.' : 'Keep this app open with the screen on while recording: a web page can’t record in the background.'} Notes are capped at 5 minutes.
           The live check only listens for the stop phrase and is thrown away; the saved recording is transcribed properly afterwards.
         </p>
       </section>

@@ -4,6 +4,7 @@ import { CAPABILITIES, LIMITATIONS } from '@junction26/applet-format';
 import { createApi, defaultServer, devToken, isNative, loadSession, saveSession, type Api, type Project, type Session } from './api.ts';
 import { ProjectScreen } from './ProjectScreen.tsx';
 import { GlassesScreen } from './GlassesScreen.tsx';
+import { stopSessionRecorder } from './recorder.ts';
 import { RecorderPill, RecorderScreen } from './Notes.tsx';
 
 interface Ctx {
@@ -23,8 +24,7 @@ export function App({ account }: { account?: Ctx } = {}) {
         session,
         api: createApi(session),
         signOut: () => {
-          saveSession(null);
-          setSession(null);
+          void stopSessionRecorder().finally(() => { saveSession(null); setSession(null); });
         },
       },
     [session],

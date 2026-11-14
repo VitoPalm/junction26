@@ -79,6 +79,32 @@ describe('voice notes api', { skip: skipWithoutDatabase }, () => {
   const start = (device: string, project: string, id = crypto.randomUUID()) =>
     h.call('POST', '/v1/notes', { token: device, body: { id, projectId: project, viewId: 'recipe', stepId: 'heat', pageLabel: 'Pancakes · Step 3', noteLabel: 'Notes on this step', stateSnapshot: { Step: '3 of 5' } } });
 
+  test('native recorder credentials are owner scoped, bounded, revocable and cannot author or read notes', async () => {
+    const { project, device } = await setup();
+    const session = await h.call('POST', '/v1/notes/recorder/session', { token: ALICE });
+    assert.equal(session.status, 201);
+    const token = session.body.token;
+    assert.match(token, /^j26r_/);
+    assert.ok(Date.parse(session.body.expiresAt) <= Date.now() + 12 * 60 * 60 * 1000);
+    assert.equal((await h.call('POST', '/v1/notes/recorder/session', { token: device })).status, 403);
+    for (const [method, path] of [['GET', '/v1/projects'], ['POST', '/v1/projects'], ['GET', `/v1/notes?projectId=${project}`], ['POST', '/v1/notes/recorder/session']]) {
+      assert.equal((await h.call(method!, path!, { token })).status, 403);
+    }
+    const recorder = await sse('/v1/notes/recorder/events', token);
+    await recorder.next('ready');
+    const note = await start(device, project); const id = note.body.note.id;
+    assert.equal((await h.call('POST', `/v1/notes/${id}/recording`, { token })).status, 200);
+    const bobSession = await h.call('POST', '/v1/notes/recorder/session', { token: BOB });
+    assert.equal((await h.call('POST', `/v1/notes/${id}/recording`, { token: bobSession.body.token })).status, 404);
+    assert.equal((await h.call('GET', `/v1/notes/${id}/audio`, { token })).status, 403);
+    assert.equal((await h.call('DELETE', '/v1/notes/recorder/session', { token })).status, 200);
+    assert.equal((await h.call('POST', `/v1/notes/${id}/recording`, { token })).status, 401);
+    const expired = await h.call('POST', '/v1/notes/recorder/session', { token: ALICE });
+    await h.db.pool.query("UPDATE note_recorder_sessions SET expires_at = now() - interval '1 second' WHERE owner_id = $1", [expired.body.ownerId]);
+    assert.equal((await h.call('POST', `/v1/notes/${id}/recording`, { token: expired.body.token })).status, 401);
+    await recorder.close();
+  });
+
   test('full loop: glasses start → phone records → audio saved → transcription queued', async () => {
     const { project, device } = await setup();
     // No recorder open: refused, nothing created.

@@ -109,7 +109,7 @@ export function fakeTranscribe(req: CompletionRequest): FakeReply {
 
 /** Transcription registry from config: Mistral (Voxtral) plus the free fake. */
 export function transcriptionRegistryFromConfig(config: Config): TranscriptionRegistry {
-  return createTranscriptionRegistry({ mistral: config.notes.mistral, fake: fakeTranscribeFile });
+  return createTranscriptionRegistry({ openRouter: { apiKey: config.model.apiKey, baseUrl: config.model.baseUrl }, mistral: config.notes.mistral, fake: fakeTranscribeFile });
 }
 
 /** `fake:` for the transcription API: same rule as fakeTranscribe, on the raw file bytes. */

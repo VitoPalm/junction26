@@ -5,7 +5,7 @@ export { extractJson } from './json.ts';
 export {
   createTranscriptionRegistry,
   FakeTranscriptionProvider,
-  MistralTranscriptionProvider,
+  MistralTranscriptionProvider, OpenRouterTranscriptionProvider,
   TranscriptionRegistry,
   type TranscriptionProvider,
   type TranscriptionRequest,

@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+import { hmac } from '../auth.ts';
 import { Readable } from 'node:stream';
 import { Hono, type Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
@@ -71,7 +73,7 @@ export const noteView = (n: VoiceNote) => ({
   startedAt: n.startedAt,
   endedAt: n.endedAt,
   durationMs: n.durationMs,
-  audio: n.audioKey ? { url: `/v1/notes/${n.id}/audio`, mediaType: n.audioMediaType, bytes: n.audioBytes } : null,
+  audio: n.audioKey ? { url: `/v1/notes/${n.id}/audio`, mediaType: n.audioMediaType, bytes: n.audioBytes, sha256: n.audioSha256 } : null,
   transcript: n.transcript,
   transcriptEdited: n.transcriptEdited,
   transcriptModel: n.transcriptModel,
@@ -95,7 +97,7 @@ async function ownNote(deps: Deps, c: Context<AppEnv>): Promise<VoiceNote> {
 }
 
 /** Writes SSE events from an in-process subscription until the client goes away or `done` says so. */
-function sse<E extends { type: string }>(c: Context<AppEnv>, subscribe: (push: (e: E) => void) => () => void, first: E[] = [], done: (e: E) => boolean = () => false) {
+function sse<E extends { type: string }>(c: Context<AppEnv>, subscribe: (push: (e: E) => void) => () => void, first: E[] = [], done: (e: E) => boolean = () => false, authorized: () => Promise<boolean> = async () => true) {
   return streamSSE(c, async (stream) => {
     const queue: E[] = [...first];
     let wake: (() => void) | null = null;
@@ -111,6 +113,7 @@ function sse<E extends { type: string }>(c: Context<AppEnv>, subscribe: (push: (
     try {
       await stream.writeSSE({ event: 'ready', data: '{}' });
       while (open) {
+        if (!(await authorized())) return;
         while (queue.length) {
           const e = queue.shift()!;
           await stream.writeSSE({ event: e.type, data: JSON.stringify(e) });
@@ -138,11 +141,35 @@ export function noteRoutes(deps: Deps, hub: NoteHub, models: ModelRegistry) {
   const app = new Hono<AppEnv>();
   const maxMs = deps.config.notes.maxSeconds * 1000;
 
+  /** Short Clerk JWTs cannot be refreshed by a suspended web view. Mint a bounded, recorder-only token. */
+  app.post('/recorder/session', async (c) => {
+    const p = c.get('principal');
+    requireUser(p);
+    const token = 'j26r_' + randomBytes(32).toString('base64url');
+    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
+    await deps.pool.query('DELETE FROM note_recorder_sessions WHERE owner_id = $1 AND expires_at <= now()', [p.userId]);
+    await deps.pool.query('INSERT INTO note_recorder_sessions(token_hash, owner_id, expires_at) VALUES ($1, $2, $3)', [hmac(deps.config.sessionSecret, 'recorder', token), p.userId, expiresAt]);
+    return c.json({ token, ownerId: p.userId, expiresAt: expiresAt.toISOString() }, 201);
+  });
+  app.delete('/recorder/session', async (c) => {
+    const p = c.get('principal');
+    requireUser(p);
+    const token = (c.req.header('authorization') ?? '').replace(/^Bearer\s+/i, '');
+    if (token.startsWith('j26r_')) await deps.pool.query('DELETE FROM note_recorder_sessions WHERE owner_id = $1 AND token_hash = $2', [p.userId, hmac(deps.config.sessionSecret, 'recorder', token)]);
+    else await deps.pool.query('DELETE FROM note_recorder_sessions WHERE owner_id = $1', [p.userId]);
+    return c.json({ ok: true });
+  });
+
   /** Phone recorder: `start`/`stop` events for this user's notes. Keep it open while the recorder is on. */
   app.get('/recorder/events', (c) => {
     const p = c.get('principal');
     requireUser(p);
-    return sse<RecorderEvent>(c, (push) => hub.subscribeRecorder(p.userId, push));
+    const token = (c.req.header('authorization') ?? '').replace(/^Bearer\s+/i, '');
+    return sse<RecorderEvent>(c, (push) => hub.subscribeRecorder(p.userId, push), [], () => false, async () => {
+      if (!token.startsWith('j26r_')) return true;
+      const { rows } = await deps.pool.query('SELECT 1 FROM note_recorder_sessions WHERE owner_id = $1 AND token_hash = $2 AND expires_at > now()', [p.userId, hmac(deps.config.sessionSecret, 'recorder', token)]);
+      return rows.length > 0;
+    });
   });
 
   /** Glasses: start a note on the page that is open. Idempotent on the client-generated `id`. */

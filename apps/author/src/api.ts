@@ -107,6 +107,9 @@ export function createApi(session: Session, getToken: () => Promise<string | nul
     pairingCode: () => req<{ code: string; expiresAt: string; pairUrl: string }>('POST', '/v1/devices/pairing-codes'),
     devices: () => req<{ devices: Device[] }>('GET', '/v1/devices'),
     revokeDevice: (id: string) => req<{ device: Device }>('DELETE', `/v1/devices/${id}`),
+    nativeRecorderSession: () => req<{ token: string; ownerId: string; expiresAt: string }>('POST', '/v1/notes/recorder/session'),
+    stopNativeRecorderSession: () => req<{ ok: true }>('DELETE', '/v1/notes/recorder/session'),
+    recorderServer: session.server,
     // Voice notes (docs/voice-notes.md)
     notes: (projectId: string) => req<{ notes: VoiceNote[] }>('GET', `/v1/notes?projectId=${projectId}`),
     editNote: (id: string, transcript: string) => req<{ note: VoiceNote }>('PATCH', `/v1/notes/${id}`, { body: { transcript } }),
@@ -213,7 +216,7 @@ export interface VoiceNote {
   startedAt: string;
   endedAt: string | null;
   durationMs: number | null;
-  audio: { url: string; mediaType: string; bytes: number } | null;
+  audio: { url: string; mediaType: string; bytes: number; sha256: string } | null;
   transcript: string | null;
   transcriptEdited: boolean;
   transcriptModel: string | null;

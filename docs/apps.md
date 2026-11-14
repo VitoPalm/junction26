@@ -286,6 +286,10 @@ event stream, counts from sync), `/v1/notes` in the API, the
 `transcribe_voice_note` job, and in the authoring app a Recorder screen
 (`#/recorder`, `src/recorder.ts`) plus a Notes tab per applet.
 `node scripts/voice/recorder.ts` stands in for the phone recorder.
+Capacitor shells select `src/native-recorder.ts`: Android's microphone foreground
+service and iOS's continuous audio session own capture, recognition, event
+transport and disk uploads independently of the web view. Build and device
+verification details: [native-voice-notes.md](native-voice-notes.md).
 
 ## Known gaps (next)
 

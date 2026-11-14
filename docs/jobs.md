@@ -108,9 +108,9 @@ Input `{ noteId, sha256, force? }`; idempotency key `note:<id>:<sha256>`.
    upload): finish as a no-op. Already transcribed for this hash and not
    `force`: no-op.
 2. Mark it `transcribing`, read the audio from storage, and call
-   `NOTES_TRANSCRIBE_MODEL`. Default: Mistral's `/v1/audio/transcriptions`
-   (`voxtral-mini-transcribe-3`, `language=en`, `context_bias` = up to 100
-   words from the applet, as spelling hints), through
+   `NOTES_TRANSCRIBE_MODEL`. Default: OpenRouter's `/api/v1/audio/transcriptions`
+   (`openrouter-stt:mistralai/voxtral-mini-transcribe-3-0`, `language=en`, `context_bias` = up to 100
+   words from the applet, passed in Mistral provider options as spelling hints), through
    `packages/model/src/transcription.ts`. A chat-model spec instead gets the
    audio as a message part with a verbatim-transcript prompt.
    `cleanTranscript` strips a trailing "stop recording meta" either way.

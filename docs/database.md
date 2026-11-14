@@ -40,6 +40,8 @@ PostgreSQL 18.
 | `project_state` | Pointer to the current accepted backup + `server_version` | One row per project |
 | `voice_notes` | Voice notes on applet pages ([voice-notes.md](voice-notes.md)): anchor (`view_id`, `step_id`), page label, values at start, status, audio key/type/hash/size, transcript | Client-generated `id`; audio key ⇔ hash (CHECK); `uploaded`/`transcribing`/`transcribed`/`failed` need audio; only notes without audio can be `discarded`; edited transcripts are never overwritten (`transcript_edited`) |
 
+| `note_recorder_sessions` | Native background recorder credentials (`0004_note_recorder_sessions.sql`) | Token HMAC only; owner FK; 12-hour expiry; owner-scoped revocation; API permits only recorder events, confirmation, discard, live check and upload |
+
 What's not here on purpose: chat transcripts and documents in packages; any
 "conversation" table (there's one thread per project until the UX needs more);
 sessions for users (owned by Clerk).
@@ -97,3 +99,14 @@ atomically; failures roll back together. Receipts have no automatic expiry, so
 retrying an old operation cannot unexpectedly create a new draft. Owner deletion
 cascades receipts. Revision creation still uses the existing project lock and
 numbering functions. Keys are independent from the durable job key namespace.
+
+### Voice note migrations (2026-11-14)
+
+`0003_voice_notes.sql` creates the notes table and allows the transcription job
+kind. This file was accidentally excluded from the initial feature push by a
+local Git exclusion; it is now tracked. `0004_note_recorder_sessions.sql` adds
+bounded native recorder sessions. Only HMACs are stored, not bearer tokens.
+Expired rows are removed for the owner when issuing another session; DELETE
+revokes the current recorder token, or all of the owner's recorder tokens when
+called with a full user session. Every lookup includes expiry and every
+revocation filters by owner. User deletion cascades both tables.

@@ -1,5 +1,6 @@
 import { ClerkProvider, SignInButton, SignUpButton, useAuth, useClerk, useUser } from '@clerk/react';
 import { useMemo } from 'react';
+import { stopSessionRecorder } from './recorder.ts';
 import { App } from './App.tsx';
 import { createApi, defaultServer, isNative, type Session } from './api.ts';
 
@@ -28,7 +29,7 @@ function ClerkAccount() {
     if (!isSignedIn || !userId) return undefined;
     // No Clerk credentials are persisted by our application. The SDK owns session lifecycle.
     const session: Session = { server: defaultServer(), token: '', name: user?.fullName ?? user?.username ?? 'My account' };
-    return { session, api: createApi(session, getToken), signOut: () => { void signOut(); } };
+    return { session, api: createApi(session, getToken), signOut: () => { void stopSessionRecorder().finally(() => signOut()); } };
   }, [isSignedIn, userId, user?.fullName, user?.username, getToken, signOut]);
   if (!isLoaded) return <main className="page narrow"><p>Loading your account…</p></main>;
   if (!account) return <main className="page narrow">

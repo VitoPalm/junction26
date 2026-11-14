@@ -1,12 +1,14 @@
 # Voice notes on applet pages
 
-Status (2026-11-14): **M1 built, plus a web version of the phone recorder.**
+Status (2026-11-14): **M1 built; web and native recorder implementations added.**
 Checked in headless Chrome only: the glasses app at 600×600 (WebMCP stub and
 band clicks), the authoring app at phone size, and the real recorder code
-against Chrome's fake microphone fed with a spoken WAV. **Nothing has been
-tried on the glasses or a phone yet**, and no real (paid) model has been run;
-every model call in these checks was a free `fake:` one. Owner decisions are
-recorded below. The native background recorder (M2/M3) is not built.
+against Chrome's fake microphone fed with a spoken WAV. **Nothing has been tried on the glasses or a physical phone.** Android builds, JVM tests and lint pass;
+the Android emulator crashed twice before boot. iOS source and project wiring
+are present but **not compiled** (no macOS/Xcode host available). A separate
+3-second synthetic clip was transcribed by real Voxtral through OpenRouter for
+$0.000175; this is endpoint evidence, not a Bluetooth quality benchmark. Owner
+decisions are recorded below. See [native-voice-notes.md](native-voice-notes.md).
 
 ### What exists now
 
@@ -160,14 +162,15 @@ the library manifest) plus the notes this device started since the last sync.
 - **Voice command mode:** if the always-listening command resolver is on,
   it pauses during a note, so dictation can't trigger applet actions.
 - **Live stop detection (cheap):**
-  - iOS: `SpeechAnalyzer` / `SFSpeechRecognizer` with
+  - iOS: `SFSpeechRecognizer` with
     `requiresOnDeviceRecognition`, `en-US`, contextual strings
     `["stop recording meta"]`.
   - Android: `SpeechRecognizer.createOnDeviceSpeechRecognizer` (API 31+), en-US.
-    Fallback on phones without it: Vosk small English model with a grammar
-    limited to the phrase plus `[unk]`.
+    The implementation injects the same captured PCM into the recognizer on
+    API 33+; older or unsupported devices use the cloud fallback. Vosk is not
+    bundled.
   - Last resort if on-device is unreliable: short VAD clips to the cheapest
-    cloud STT. Measure first; don't build it upfront.
+    cloud STT. Implemented as short, pause-triggered windows.
   - Match tolerantly at the end of a partial transcript: "stop recording"
     followed by something that sounds like "meta" (meta/metta/better/medal), within
     the last ~2 s. The live text is never uploaded or stored.
@@ -224,13 +227,18 @@ price per 1,000 minutes of audio):
 
 | Role | Model | AA-WER | Price | Why |
 | --- | --- | --- | --- | --- |
-| Final transcript | `mistral:voxtral-mini-transcribe-3` | 2.2% | $3.50 | Top-6 overall, almost the same WER as Voxtral Small Transcribe 3 (2.1%, $4.00); supports `context_bias` for applet words. A 5-minute note ≈ $0.02 |
+| Final transcript | `openrouter-stt:mistralai/voxtral-mini-transcribe-3-0` | 2.2% | $3.50 | Top-6 overall, almost the same WER as Voxtral Small Transcribe 3 (2.1%, $4.00); uses the existing OpenRouter key; forwards `context_bias` in provider options. A 5-minute note ≈ $0.02 |
 | Live stop check | `google/gemini-3.1-flash-lite` (OpenRouter) | 3.4% (Flash-Lite Preview, minimal) | $1.10 | Cheapest model with a decent published WER that our chat path already supports; it only has to spot one phrase in a 5 s window |
 
+The default requires only `OPENROUTER_API_KEY`, already used by the backend.
+OpenRouter's [model listing](https://openrouter.ai/mistralai/voxtral-mini-transcribe-3-0)
+and [STT contract](https://openrouter.ai/docs/guides/overview/multimodal/stt)
+were checked on 2026-11-14. Direct `mistral:` specs remain optional and need
+`MISTRAL_API_KEY`; they are not the default.
+
 The models chosen earlier (`gemini-3.8-flash`, `gemini-3.5-flash-lite`) had no
-published WER. More accurate options exist outside our providers
-(ElevenLabs Scribe v3 1.9%, MAI-Transcribe-2 2.0%); adding one is a new
-`TranscriptionProvider` in `packages/model`. AA-WER is measured on agent
+published WER. Other models can be configured through the dedicated OpenRouter transcription
+provider; benchmark rankings alone do not establish API availability. AA-WER is measured on agent
 talk, parliament speech and earnings calls, not on 8–16 kHz Bluetooth audio
 from glasses, so real error rates on our notes are unknown until tested.
 
@@ -280,9 +288,13 @@ Record the results here with firmware and app versions.
 - **M1 no-phone end to end (no spend): done** (headless Chrome, not the
   simulator extension). Also done beyond M1: the web recorder in the
   authoring app.
-- **M2 Android bridge** (no Mac needed): on-demand recording, on-device stop
-  phrase, trim, offline upload queue.
-- **M3 iOS bridge:** continuous session, SpeechAnalyzer stop phrase. Needs a Mac.
+- **M2 Android bridge implemented:** on-demand recording from a microphone
+  foreground service, shared-PCM on-device stop recognition on API 33+ where
+  supported, cloud fallback, trim and durable upload queue. Builds/tests/lint
+  pass; physical device verification pending.
+- **M3 iOS bridge source implemented:** continuous AVAudioEngine session,
+  on-device SFSpeechRecognizer, native SSE, trim and durable upload queue.
+  Needs a Mac/Xcode build and physical device verification.
 - **M4 models: chosen from published WER** (see [Model choice](#model-choice));
   no own bench. Still worth one real note through each before relying on it.
 - **Later:** more languages, re-transcribe, export, notes in the authoring

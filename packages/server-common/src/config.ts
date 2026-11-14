@@ -66,7 +66,7 @@ const EnvSchema = z.object({
    * Voxtral Mini Transcribe 3 = 2.2% at $3.50 / 1000 min. "fake:notes" is free.
    * A chat model with audio input (e.g. "google/gemini-3.1-flash-lite") also works.
    */
-  NOTES_TRANSCRIBE_MODEL: z.string().default('mistral:voxtral-mini-transcribe-3'),
+  NOTES_TRANSCRIBE_MODEL: z.string().default('openrouter-stt:mistralai/voxtral-mini-transcribe-3-0'),
   /** Voice notes: cheap cloud fallback that only listens for the stop phrase (AA-WER 3.4%, $1.10 / 1000 min). */
   NOTES_LIVE_MODEL: z.string().default('google/gemini-3.1-flash-lite'),
   /** Mistral API (Voxtral transcription). Runtime secret, worker only. */
