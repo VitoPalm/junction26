@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { ReactRouterNavigationProvider, ReactRouterPageTransition } from '@wearables-ui-toolkit/mrbd/react-router';
+import { ReactRouterNavigationProvider } from '@wearables-ui-toolkit/mrbd/react-router';
 import { App } from '@wearables-ui-toolkit/mrbd';
 import { ChoiceScreen, ContentScreen, TextBlock } from './lib/index.js';
 import './lib/styles.css';
@@ -99,11 +99,11 @@ function Guide() {
 }
 
 function Demo() {
-  return <BrowserRouter><ReactRouterNavigationProvider><App><ReactRouterPageTransition>{({ location }) => <Routes location={location}>
+  return <BrowserRouter><ReactRouterNavigationProvider><App><Routes>
     <Route path="/" element={<SizeMenu />} />
     <Route path="/guide/:size" element={<Guide />} />
     <Route path="*" element={<SizeMenu />} />
-  </Routes>}</ReactRouterPageTransition></App></ReactRouterNavigationProvider></BrowserRouter>;
+  </Routes></App></ReactRouterNavigationProvider></BrowserRouter>;
 }
 
 createRoot(document.getElementById('root')!).render(<Demo />);
