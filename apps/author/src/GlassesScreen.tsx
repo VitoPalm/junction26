@@ -87,7 +87,7 @@ export function GlassesScreen() {
         <li className="step">
           <span className="step-num">1</span>
           <div className="step-body">
-            <h2>Add the app to your glasses</h2>
+            <h2>Add Solutions to your glasses</h2>
             <p className="muted">First turn on Developer Mode in the Meta AI app: Settings → App info → tap the version 5 times.</p>
             <a className="secondary lg" href={installLink}>Open in Meta AI app</a>
             <details className="manual">

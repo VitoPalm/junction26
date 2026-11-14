@@ -68,8 +68,8 @@ export function Welcome({ children, footnote }: { children: ReactNode; footnote?
       <div className="welcome-inner">
         <div className="welcome-hero">
           <BrandMark size={64} />
-          <h1 className="display">Little apps for your glasses.</h1>
-          <p className="lede">Describe what you need, or bring a pattern, recipe or manual. Use it hands-free on your Meta Ray-Ban Display.</p>
+          <h1 className="display">For the moments your hands are full.</h1>
+          <p className="lede">Describe what you need, or bring a pattern, recipe or manual. Follow along on your Meta Ray-Ban Display while you cook, build, craft or play.</p>
         </div>
         <div className="welcome-card">{children}</div>
         {footnote && <p className="tiny muted center">{footnote}</p>}

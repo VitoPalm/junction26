@@ -124,7 +124,7 @@ function Home() {
       {latest.length ? (
         <ButtonList items={latest.map((a) => ({ id: a.projectId, label: a.title, hint: a.demo ? 'Example' : undefined, onActivate: () => void openApplet(navigate, a) }))} />
       ) : (
-        <TextBlock text="Nothing here yet. Make a solution in the phone app, then choose Sync." />
+        <TextBlock text="Nothing here yet. Make a solution on your phone, then choose Sync." />
       )}
     </ContentScreen>
   );
@@ -172,7 +172,7 @@ function Pair() {
   }, []);
   return (
     <ContentScreen title="Pair with your phone">
-      <TextBlock text="In the phone app, open Glasses and get a code. Enter it here." hint={msg ?? undefined} />
+      <TextBlock text="On your phone, open Glasses for a code. Enter it here." hint={msg ?? undefined} />
       <div data-g-fit-content className="j26-pair">
         {/* Focusing and selecting opens Meta's dictation/handwriting composer. */}
         <input className="j26-code" value={code} aria-label="Pairing code" placeholder="ABCD-EFGH" autoComplete="off" onChange={(e) => setCode(e.target.value)} onInput={(e) => setCode((e.target as HTMLInputElement).value)} />
