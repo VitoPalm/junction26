@@ -1,4 +1,4 @@
-import { AppletDefinition, LIMITS, type Action, type StateField, type View } from './schema.ts';
+import { AppletDefinition, LIMITS, RUNTIME_VERSION, type Action, type StateField, type View } from './schema.ts';
 
 export interface Issue {
   /** JSON-ish path, e.g. `views[2].field`. */
@@ -7,12 +7,18 @@ export interface Issue {
   message: string;
 }
 
-export type ValidationResult =
-  | { ok: true; definition: AppletDefinition; issues: [] }
-  | { ok: false; issues: Issue[] };
+export type ValidationResult = { ok: true; definition: AppletDefinition; issues: [] } | { ok: false; issues: Issue[] };
 
 /** WebMCP names reserved by the platform (silently rejected if registered). */
-const RESERVED_TOOL_NAMES = new Set(['openUrl', 'goBack', 'goForward', 'reload', 'getCurrentUrl', 'getPageTitle', 'getPageText']);
+const RESERVED_TOOL_NAMES = new Set([
+  'openUrl',
+  'goBack',
+  'goForward',
+  'reload',
+  'getCurrentUrl',
+  'getPageTitle',
+  'getPageText',
+]);
 /** Tools the glasses runtime adds to every applet. */
 export const BUILTIN_TOOLS = ['read_state', 'open_view', 'next_step', 'previous_step'] as const;
 
@@ -33,7 +39,11 @@ export function validateDefinition(input: unknown): ValidationResult {
     return {
       ok: false,
       issues: parsed.error.issues.map((i) => ({
-        path: i.path.map((p) => (typeof p === 'number' ? `[${p}]` : `.${String(p)}`)).join('').replace(/^\./, '') || '$',
+        path:
+          i.path
+            .map((p) => (typeof p === 'number' ? `[${p}]` : `.${String(p)}`))
+            .join('')
+            .replace(/^\./, '') || '$',
         code: 'schema',
         message: i.message,
       })),
@@ -49,8 +59,24 @@ export function validateDefinition(input: unknown): ValidationResult {
       else add(path, 'empty', 'Omit the property instead of leaving it empty');
       return;
     }
-    if (len(text) > limit) add(path, 'too_long', `At most ${limit} characters (got ${len(text)}). Split the content into another view or step.`);
+    if (len(text) > limit)
+      add(
+        path,
+        'too_long',
+        `At most ${limit} characters (got ${len(text)}). Split the content into another view or step.`,
+      );
   };
+
+  const version = (v: string) => v.split('.').map(Number);
+  const requested = version(def.minimumRuntimeVersion),
+    installed = version(RUNTIME_VERSION);
+  const first = requested.findIndex((n, i) => n !== installed[i]);
+  if (first >= 0 && requested[first]! > installed[first]!)
+    add(
+      'minimumRuntimeVersion',
+      'runtime_version',
+      `Installed runtime is ${RUNTIME_VERSION}; do not require a newer runtime.`,
+    );
 
   // Titles appear as library/menu buttons, so they share the label budget.
   copy('title', def.title, LIMITS.label, true);
@@ -63,10 +89,22 @@ export function validateDefinition(input: unknown): ValidationResult {
       seen.add(id);
     });
   };
-  unique('state', def.state.map((s) => s.id));
-  unique('actions', def.actions.map((a) => a.id));
-  unique('views', def.views.map((v) => v.id));
-  unique('assets', def.assets.map((a) => a.id));
+  unique(
+    'state',
+    def.state.map((s) => s.id),
+  );
+  unique(
+    'actions',
+    def.actions.map((a) => a.id),
+  );
+  unique(
+    'views',
+    def.views.map((v) => v.id),
+  );
+  unique(
+    'assets',
+    def.assets.map((a) => a.id),
+  );
 
   const fields = new Map(def.state.map((s) => [s.id, s]));
   const actions = new Map(def.actions.map((a) => [a.id, a]));
@@ -79,10 +117,12 @@ export function validateDefinition(input: unknown): ValidationResult {
     copy(`${p}.label`, f.label, LIMITS.label, true);
     if (f.type === 'number') {
       if (f.min !== undefined && f.max !== undefined && f.min > f.max) add(p, 'range', 'min is greater than max');
-      if ((f.min !== undefined && f.default < f.min) || (f.max !== undefined && f.default > f.max)) add(`${p}.default`, 'range', 'default is outside min/max');
+      if ((f.min !== undefined && f.default < f.min) || (f.max !== undefined && f.default > f.max))
+        add(`${p}.default`, 'range', 'default is outside min/max');
       if (f.integer && !Number.isInteger(f.default)) add(`${p}.default`, 'type', 'default must be an integer');
     }
-    if (f.type === 'text' && len(f.default) > f.maxLength) add(`${p}.default`, 'too_long', 'default is longer than maxLength');
+    if (f.type === 'text' && len(f.default) > f.maxLength)
+      add(`${p}.default`, 'too_long', 'default is longer than maxLength');
     if (f.type === 'cursor') {
       const v = views.get(f.over);
       if (!v || v.kind !== 'sequence') add(`${p}.over`, 'reference', `"${f.over}" is not a sequence view`);
@@ -105,8 +145,10 @@ export function validateDefinition(input: unknown): ValidationResult {
           if (k === 'id') continue;
           const def = f.item.find((x) => x.key === k);
           if (!def) add(`${p}.default[${j}].${k}`, 'reference', `Unknown item key "${k}"`);
-          else if (typeof v !== (def.type === 'string' ? 'string' : def.type)) add(`${p}.default[${j}].${k}`, 'type', `Must be a ${def.type}`);
-          else if (typeof v === 'string' && len(v) > (def.maxLength ?? LIMITS.label)) add(`${p}.default[${j}].${k}`, 'too_long', 'Longer than the key allows');
+          else if (typeof v !== (def.type === 'string' ? 'string' : def.type))
+            add(`${p}.default[${j}].${k}`, 'type', `Must be a ${def.type}`);
+          else if (typeof v === 'string' && len(v) > (def.maxLength ?? LIMITS.label))
+            add(`${p}.default[${j}].${k}`, 'too_long', 'Longer than the key allows');
         }
       });
     }
@@ -117,18 +159,22 @@ export function validateDefinition(input: unknown): ValidationResult {
 
   // ---- views
   def.views.forEach((v, i) => validateView(v, `views[${i}]`, fields, actions, assets, add, copy));
-  if (def.home.entryView && !views.has(def.home.entryView)) add('home.entryView', 'reference', `No view "${def.home.entryView}"`);
-  if (def.home.primaryAction && !actions.has(def.home.primaryAction)) add('home.primaryAction', 'reference', `No action "${def.home.primaryAction}"`);
+  if (def.home.entryView && !views.has(def.home.entryView))
+    add('home.entryView', 'reference', `No view "${def.home.entryView}"`);
+  if (def.home.primaryAction && !actions.has(def.home.primaryAction))
+    add('home.primaryAction', 'reference', `No action "${def.home.primaryAction}"`);
 
   // ---- WebMCP names
   const names = [...def.actions.map((a) => a.id), ...BUILTIN_TOOLS];
   def.actions.forEach((a, i) => {
-    if ((BUILTIN_TOOLS as readonly string[]).includes(a.id)) add(`actions[${i}].id`, 'reserved', `"${a.id}" is a built-in tool`);
+    if ((BUILTIN_TOOLS as readonly string[]).includes(a.id))
+      add(`actions[${i}].id`, 'reserved', `"${a.id}" is a built-in tool`);
   });
   const seen57 = new Map<string, string>();
   for (const n of names) {
     const full = toolName(def.toolPrefix, n);
-    if (full.length > LIMITS.toolName) add('toolPrefix', 'tool_name', `Tool name ${full} exceeds ${LIMITS.toolName} characters`);
+    if (full.length > LIMITS.toolName)
+      add('toolPrefix', 'tool_name', `Tool name ${full} exceeds ${LIMITS.toolName} characters`);
     if (RESERVED_TOOL_NAMES.has(full)) add('toolPrefix', 'tool_name', `${full} is reserved`);
     const k = full.slice(0, LIMITS.toolName);
     if (seen57.has(k) && seen57.get(k) !== n) add('actions', 'tool_name', `Tools ${n} and ${seen57.get(k)} collide`);
@@ -146,7 +192,14 @@ export function validateDefinition(input: unknown): ValidationResult {
 type Add = (path: string, code: string, message: string) => void;
 type Copy = (path: string, text: string | undefined, limit: number, required?: boolean) => void;
 
-function validateAction(a: Action, p: string, fields: Map<string, StateField>, views: Map<string, View>, add: Add, copy: Copy) {
+function validateAction(
+  a: Action,
+  p: string,
+  fields: Map<string, StateField>,
+  views: Map<string, View>,
+  add: Add,
+  copy: Copy,
+) {
   copy(`${p}.label`, a.label, LIMITS.label, true);
   const args = new Map(a.args.map((x) => [x.name, x]));
   if (args.size !== a.args.length) add(`${p}.args`, 'duplicate_id', 'Duplicate argument names');
@@ -164,12 +217,15 @@ function validateAction(a: Action, p: string, fields: Map<string, StateField>, v
       add(path, 'reference', `No state field "${id}"`);
       return undefined;
     }
-    if (!types.includes(f.type)) add(path, 'type', `"${id}" is a ${f.type} field; this operation needs ${types.join(' or ')}`);
+    if (!types.includes(f.type))
+      add(path, 'type', `"${id}" is a ${f.type} field; this operation needs ${types.join(' or ')}`);
     return f;
   };
   const checkItemKeys = (path: string, f: StateField | undefined, keys: string[], allowId = false) => {
     if (f?.type !== 'list') return;
-    for (const k of keys) if (!(allowId && k === 'id') && !f.item.some((x) => x.key === k)) add(path, 'reference', `List "${f.id}" has no item key "${k}"`);
+    for (const k of keys)
+      if (!(allowId && k === 'id') && !f.item.some((x) => x.key === k))
+        add(path, 'reference', `List "${f.id}" has no item key "${k}"`);
   };
   a.effects.forEach((op, j) => {
     const q = `${p}.effects[${j}]`;
@@ -181,7 +237,14 @@ function validateAction(a: Action, p: string, fields: Map<string, StateField>, v
         break;
       case 'set': {
         const f = needField(`${q}.field`, op.field, ['number', 'text', 'boolean']);
-        const want = f?.type === 'text' ? 'string' : f?.type === 'number' ? 'number' : f?.type === 'boolean' ? 'boolean' : undefined;
+        const want =
+          f?.type === 'text'
+            ? 'string'
+            : f?.type === 'number'
+              ? 'number'
+              : f?.type === 'boolean'
+                ? 'boolean'
+                : undefined;
         if (typeof op.value === 'object') refArg(`${q}.value`, op.value, want as 'number');
         else if (want && typeof op.value !== want) add(`${q}.value`, 'type', `Value must be a ${want}`);
         break;
@@ -247,16 +310,28 @@ function validateView(
   copy: Copy,
 ) {
   copy(`${p}.title`, v.title, LIMITS.label);
+  if ((v.kind === 'sequence' || v.kind === 'list') && v.actions?.length)
+    add(
+      `${p}.actions`,
+      'unsupported_dock',
+      'DELETE the actions property from this view only. Keep the actions in the top-level registry for voice. Sequence and list views never render custom dock actions.',
+    );
   (v.actions ?? []).forEach((id, j) => {
     const a = actions.get(id);
     if (!a) return add(`${p}.actions[${j}]`, 'reference', `No action "${id}"`);
     const missing = a.args.filter((x) => x.required && x.default === undefined).map((x) => x.name);
-    if (missing.length) add(`${p}.actions[${j}]`, 'not_dockable', `"${id}" needs ${missing.join(', ')}; a button can't supply arguments. Give them defaults or use a separate action.`);
+    if (missing.length)
+      add(
+        `${p}.actions[${j}]`,
+        'not_dockable',
+        `"${id}" needs ${missing.join(', ')}; a button can't supply arguments. Give them defaults or use a separate action.`,
+      );
   });
   const field = (id: string, types: StateField['type'][]) => {
     const f = fields.get(id);
     if (!f) add(`${p}.field`, 'reference', `No state field "${id}"`);
-    else if (!types.includes(f.type)) add(`${p}.field`, 'type', `"${id}" is a ${f.type} field; a ${v.kind} view needs ${types.join(' or ')}`);
+    else if (!types.includes(f.type))
+      add(`${p}.field`, 'type', `"${id}" is a ${f.type} field; a ${v.kind} view needs ${types.join(' or ')}`);
     return f;
   };
   switch (v.kind) {
@@ -272,12 +347,15 @@ function validateView(
       if (v.format) {
         for (const m of v.format.matchAll(/\{([a-z0-9_]+)\}/g)) {
           const f = fields.get(m[1]!);
-          if (!f || f.type === 'list' || f.type === 'cursor') add(`${p}.format`, 'reference', `"{${m[1]}}" is not a number/text/boolean field`);
+          if (!f || f.type === 'list' || f.type === 'cursor')
+            add(`${p}.format`, 'reference', `"{${m[1]}}" is not a number/text/boolean field`);
         }
       }
       break;
     }
     case 'list': {
+      if (v.check && !v.onSelect)
+        add(`${p}.onSelect`, 'not_interactive', 'A checklist needs an onSelect action that toggles its check field.');
       const f = field(v.field, ['list']);
       if (f?.type === 'list') {
         const key = (k: string | undefined, path: string, type?: string) => {
@@ -293,14 +371,16 @@ function validateView(
       if (v.onSelect) {
         const a = actions.get(v.onSelect.action);
         if (!a) add(`${p}.onSelect.action`, 'reference', `No action "${v.onSelect.action}"`);
-        else if (!a.args.some((x) => x.name === v.onSelect!.arg)) add(`${p}.onSelect.arg`, 'reference', `Action "${a.id}" has no argument "${v.onSelect.arg}"`);
+        else if (!a.args.some((x) => x.name === v.onSelect!.arg))
+          add(`${p}.onSelect.arg`, 'reference', `Action "${a.id}" has no argument "${v.onSelect.arg}"`);
       }
       copy(`${p}.emptyText`, v.emptyText, LIMITS.body);
       break;
     }
     case 'sequence': {
       const f = field(v.cursor, ['cursor']);
-      if (f?.type === 'cursor' && f.over !== v.id) add(`${p}.cursor`, 'reference', `Cursor "${f.id}" belongs to view "${f.over}"`);
+      if (f?.type === 'cursor' && f.over !== v.id)
+        add(`${p}.cursor`, 'reference', `Cursor "${f.id}" belongs to view "${f.over}"`);
       const ids = new Set<string>();
       v.steps.forEach((s, j) => {
         const q = `${p}.steps[${j}]`;

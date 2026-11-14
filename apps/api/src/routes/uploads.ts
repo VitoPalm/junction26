@@ -16,6 +16,10 @@ export const UPLOAD_TYPES: Record<string, (head: Buffer) => boolean> = {
   'image/webp': (h) => h.subarray(0, 4).toString('latin1') === 'RIFF' && h.subarray(8, 12).toString('latin1') === 'WEBP',
   'text/plain': (h) => !h.includes(0),
   'text/markdown': (h) => !h.includes(0),
+  'text/csv': (h) => !h.includes(0),
+  'application/json': (h) => !h.includes(0),
+  'text/html': (h) => !h.includes(0),
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': (h) => h[0] === 0x50 && h[1] === 0x4b,
 };
 
 const SNIFF_BYTES = 16;

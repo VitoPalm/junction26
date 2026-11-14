@@ -243,3 +243,7 @@ pages: Capacitor release notes published after the model's training (8.6.2,
 - Measured fit at publish time (headless render at 600/480); today the fit guard
   catches overflow on the device/preview only.
 - Hardware verification: WebMCP via Meta AI, IndexedDB persistence, band focus.
+
+## Real-model source pipeline (2026-11-14)
+
+Managed generation now prepares PDF pages and images, accepts text/Markdown/CSV/JSON/HTML/Word sources, reads public links, searches source material and Commons images, and crops known diagrams. Referenced image bytes are resolved server-side into revision definitions and offline packages. Generated candidates pass canonical headless-Chromium fit checks with bounded repair. See [model-pipeline.md](model-pipeline.md), [paid evidence](model-pipeline-results.md), and [adjacent follow-ups](model-pipeline-followups.md). These checks are local desktop/backend evidence, not on-device verification.

@@ -157,3 +157,31 @@ packages. Size limits and image re-encoding are open decision #4.
 3. Enqueue it from the API with `enqueueJob`, inside the transaction that
    creates the records it works on.
 4. Document it in the table above.
+
+## Source preparation and generation checks (2026-11-14)
+
+`prepare_upload` now caches extracted source text and normalized image/page PNGs
+as JSON at `<upload.objectKey>.prepared-v1.json`, then marks the upload ready.
+Its result includes `images` and `warnings`. Unsupported, malformed, encrypted or
+oversized sources fail with a source error and mark the upload failed. Source
+preparation is repeatable; it does not mutate the uploaded object or user state.
+Generation can prepare a `stored` attachment itself if it wins the job race.
+
+`generate_revision` retains source tool context through up to two validation
+repairs. It supports eight source tool executions, two bounded web searches and
+canonical renderer fit checking before saving a model revision. Fit failures,
+unresolvable source refs and unsupported action docking feed exact paths back to
+the model. Progress may include `{stage:"repairing", model, repair:1|2}`. A valid
+clarification or unsupported-feature response saves a reply with no revision.
+
+Usage includes `searches` and `toolUses` in addition to `inputTokens`,
+`outputTokens`, `costUsd`, and `model`. Source-tool web search uses the model
+adapter and its reported cost is included. Terminal invalid-output errors include
+known usage and up to 20 final issues in `error.details`. Ambiguous provider
+failures and cancellations still require cost reconciliation.
+
+Package format remains 1: image bytes live in `definition.assets[].data` with
+source/attribution metadata. The legacy reserved top-level `assets` object remains
+empty. Publication performs no live image fetch. See
+[model-pipeline.md](model-pipeline.md) for processing and network limits and local
+Poppler/Chromium prerequisites.

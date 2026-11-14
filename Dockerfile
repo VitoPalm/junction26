@@ -28,6 +28,7 @@ RUN npm ci $BACKEND $WEB --include-workspace-root \
  && npm prune --omit=dev $BACKEND
 
 FROM node:26-alpine
+RUN apk add --no-cache poppler-utils chromium
 WORKDIR /app
 ENV NODE_ENV=production PORT=8080 WEB_ROOT=/app/web
 COPY --from=build /app/package.json ./
@@ -48,6 +49,7 @@ COPY --from=build /app/apps/api/package.json /app/apps/api/
 COPY --from=build /app/apps/api/dist /app/apps/api/dist
 COPY --from=build /app/apps/worker/package.json /app/apps/worker/
 COPY --from=build /app/apps/worker/dist /app/apps/worker/dist
+COPY --from=build /app/apps/worker/fit /app/apps/worker/fit
 COPY scripts/entrypoint.sh /app/entrypoint.sh
 USER node
 EXPOSE 8080

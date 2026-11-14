@@ -99,7 +99,7 @@ export function createApi(session: Session) {
     upload: (file: File, projectId: string) =>
       req<{ upload: Upload; job: Job }>('POST', `/v1/uploads?projectId=${projectId}&filename=${encodeURIComponent(file.name)}`, {
         raw: file,
-        headers: { 'content-type': file.type || guessType(file.name) },
+        headers: { 'content-type': guessType(file.name) !== 'application/octet-stream' ? guessType(file.name) : file.type || 'application/octet-stream' },
       }),
     models: () => req<{ default: string; models: ModelOption[] }>('GET', '/v1/authoring/models'),
     pairingCode: () => req<{ code: string; expiresAt: string; pairUrl: string }>('POST', '/v1/devices/pairing-codes'),
@@ -111,7 +111,7 @@ export type Api = ReturnType<typeof createApi>;
 
 function guessType(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase();
-  return ext === 'pdf' ? 'application/pdf' : ext === 'md' ? 'text/markdown' : ext === 'txt' ? 'text/plain' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'application/octet-stream';
+  return ext === 'csv' ? 'text/csv' : ext === 'json' ? 'application/json' : ext === 'html' || ext === 'htm' ? 'text/html' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : ext === 'pdf' ? 'application/pdf' : ext === 'md' ? 'text/markdown' : ext === 'txt' ? 'text/plain' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'application/octet-stream';
 }
 
 export interface Project {

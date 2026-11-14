@@ -43,7 +43,7 @@ export const CAPABILITIES: Capability[] = [
 export const LIMITATIONS: { id: string; description: string }[] = [
   { id: 'private', description: 'Applets are personal to one wearer: no sharing, multiplayer or syncing with other people.' },
   { id: 'dice', description: 'No dice or random results: a roll only you can see can\'t be checked by the table.' },
-  { id: 'external', description: 'No connections to other services (calendars, accounts, the internet) and no live data.' },
+  { id: 'external', description: 'The running applet has no connections to services or live data. During authoring, public links and images can be imported as an offline snapshot.' },
   { id: 'sensors', description: 'No camera, microphone recording, timers that run in the background, or notifications.' },
   { id: 'scroll', description: 'Every page must fit the display without scrolling, so long content is split into pages.' },
   { id: 'code', description: 'Applets are built from fixed building blocks, not custom code.' },

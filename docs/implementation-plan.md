@@ -22,7 +22,7 @@ For an engineer or agent starting cold. Read in this order:
 | Model adapter (`packages/model`) + real `generate_revision` | **Built**: OpenRouter / OpenAI-compatible / free `fake` provider, swappable by spec. Luna not yet run against the format |
 | Glasses app (`apps/glasses`): library, runtime host, IndexedDB, sync, pairing, WebMCP, SW | **Built (MVP)**, checked in headless Chrome at 600×600; not on hardware |
 | Authoring app (`apps/author`): web + Capacitor iOS/Android | **Built (MVP)**, checked in Chrome and the Android emulator; iOS project generated, not built |
-| Ingest (PDF rendering, diagram assets), change-review endpoint, measured fit at publish | Not implemented |
+| Model-side source ingest, public links/image search, generated-image packaging, measured fit | Built and paid-tested locally; [pipeline and evidence](model-pipeline.md). Server-side change review and direct-publish fit validation remain open |
 | Hardware verification (WebMCP, storage, band, readability) | Not done |
 
 The experiments contain copies of the component library (`experiments/*/app/src/lib`)

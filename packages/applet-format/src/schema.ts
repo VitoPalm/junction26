@@ -209,6 +209,9 @@ export const Asset = z
     mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
     /** Source upload (authoring) or inlined data (package). Packaging resolves uploads to data. */
     uploadId: z.string().optional(),
+    /** Original source/page for authoring inspection, not task-view copy. */
+    source: z.string().max(2000).optional(),
+    attribution: z.string().max(2000).optional(),
     data: z.string().optional(),
   })
   .strict();

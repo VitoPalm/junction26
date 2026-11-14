@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FIXTURES, validateDefinition, diffDefinitions, authoringResponseJsonSchema, systemPrompt, type AppletDefinition } from './index.ts';
+import {
+  FIXTURES,
+  validateDefinition,
+  diffDefinitions,
+  authoringResponseJsonSchema,
+  systemPrompt,
+  type AppletDefinition,
+} from './index.ts';
 
 const clone = <T>(v: T): T => structuredClone(v);
 
@@ -62,4 +69,12 @@ test('prompt and JSON schema build', () => {
   assert.equal(schema.type, 'object');
   assert.ok(JSON.stringify(schema).length > 1000);
   assert.match(systemPrompt(), /No dice/);
+});
+
+test('refuses newer runtime and nonfunctional checklist declarations', () => {
+  const def = structuredClone(FIXTURES.rowCounter) as any;
+  def.minimumRuntimeVersion = '1.0.0';
+  const r = validateDefinition(def);
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.ok(r.issues.some((i) => i.code === 'runtime_version'));
 });

@@ -66,3 +66,15 @@ sessions for users (owned by the future identity provider).
 server in `TEST_DATABASE_URL`, migrates it and drops it afterwards. Without
 that variable, database tests are **skipped with a visible reason**, not
 silently passed. See [backend-development.md](backend-development.md#tests).
+
+### Prepared source manifests (2026-11-14)
+
+Source ingest adds no SQL migration or mutable wearer state. Each immutable
+upload can have a versioned JSON preparation object next to its original object
+(`<object_key>.prepared-v1.json`), carrying text, page/image refs, normalized PNGs
+and warnings. Both use the upload's existing owner-scoped object-key prefix.
+The normal `stored` → `ready` / `failed` status transition records preparation
+success or failure. Generation saves resolved image bytes and provenance in the
+revision definition; published packages use that immutable definition. Future
+upload/object garbage collection must remove the preparation sidecar as well as
+the original source. See [model-pipeline.md](model-pipeline.md).

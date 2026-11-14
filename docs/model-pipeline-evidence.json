@@ -1,0 +1,1534 @@
+{
+  "date": "2026-11-14",
+  "model": "openai/gpt-6-luna",
+  "reasoningEffort": "medium",
+  "accounting": {
+    "initialKeyUsageUsd": 0.03510775,
+    "finalKeyUsageUsd": 0.12935001,
+    "keyUsageDeltaUsd": 0.09424226,
+    "reportedCallCostUsd": 0.09557149499999995,
+    "paidCalls": 188,
+    "checkedAt": "2026-11-14T09:23:13.132Z"
+  },
+  "acceptanceRuns": [
+    {
+      "run": "results-1794647307543.json",
+      "count": 48,
+      "passed": 48,
+      "medianMs": 6764,
+      "rows": [
+        {
+          "case": "counter",
+          "passed": true,
+          "ms": 6795,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00075455,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4121,
+            "outputTokens": 479
+          },
+          "packageBytes": 1489,
+          "assetCount": 0,
+          "definitionSha256": "e3914ab4c92bda6e3a8cfd5e5fb1ed9ddaffdcf25344cbdbc1a1914df91662ea",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "counter",
+          "passed": true,
+          "ms": 7883,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "migration": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000479665,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4494,
+            "outputTokens": 773
+          },
+          "packageBytes": 2432,
+          "assetCount": 0,
+          "definitionSha256": "0ea13fc6738145a628233580f669827e488592f53c46a741557742077ecd61ee",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "character",
+          "passed": true,
+          "ms": 16489,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00088179,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4151,
+            "outputTokens": 1663
+          },
+          "packageBytes": 3403,
+          "assetCount": 0,
+          "definitionSha256": "7b1e3bf9348b154173df1cc6b600036988e9e82165165973a0e9b386daf02e1c",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "checklist",
+          "passed": true,
+          "ms": 7784,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000350165,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4130,
+            "outputTokens": 605
+          },
+          "packageBytes": 1887,
+          "assetCount": 0,
+          "definitionSha256": "756a046e36bf2effb586831efc475522a4fa8c199c222dc92c4c1621ba96ac3d",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "recipe",
+          "passed": true,
+          "ms": 6217,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "quantities": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00028354,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4173,
+            "outputTokens": 461
+          },
+          "packageBytes": 1167,
+          "assetCount": 0,
+          "definitionSha256": "d1b12dfb9ca252e7e5d8632b4e78467530424b6ce9496d589f37ca1bfb6e249c",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "markdown",
+          "passed": true,
+          "ms": 5953,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00023454,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4189,
+            "outputTokens": 359
+          },
+          "packageBytes": 1150,
+          "assetCount": 0,
+          "definitionSha256": "79f0a93f8520a11d56ab94cabb66a3cb49b7ccf235b56815c9629def9f0a3bb5",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "csv",
+          "passed": true,
+          "ms": 5300,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000266165,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4142,
+            "outputTokens": 434
+          },
+          "packageBytes": 1547,
+          "assetCount": 0,
+          "definitionSha256": "feea2b89992e9bcd0d8bdbbb40e7720bbd22ac6cf1d97637ad11f3039116dccc",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "json",
+          "passed": true,
+          "ms": 10396,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00047304,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4169,
+            "outputTokens": 841
+          },
+          "packageBytes": 1373,
+          "assetCount": 0,
+          "definitionSha256": "1b3b697891f93dbd2fe022104857b4a19368dd973e41fe00d26bd3db3f813388",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "html",
+          "passed": true,
+          "ms": 5754,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00026754,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4193,
+            "outputTokens": 424
+          },
+          "packageBytes": 1138,
+          "assetCount": 0,
+          "definitionSha256": "aa1e170ba31c817e99a2e8b54d9125a513c3ce95c19aac954d2854de7ec2ff1c",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "word",
+          "passed": true,
+          "ms": 6296,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00027979,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4203,
+            "outputTokens": 446
+          },
+          "packageBytes": 1121,
+          "assetCount": 0,
+          "definitionSha256": "7bb4b4dbf7e50bc63327662d6910e35bc4ca9da961e21ebb366245969c3e9ec4",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "blocked_link",
+          "passed": true,
+          "ms": 1930,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 8.4915e-05,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4172,
+            "outputTokens": 64
+          },
+          "packageBytes": null,
+          "assetCount": 0,
+          "definitionSha256": null,
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "injection",
+          "passed": true,
+          "ms": 4603,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "injectionIgnored": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000211665,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4178,
+            "outputTokens": 316
+          },
+          "packageBytes": 897,
+          "assetCount": 0,
+          "definitionSha256": "0e2949c6df7fcb4e2f90933f5db433e8f896ec61897927f2032061b663fdf158",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "long_copy",
+          "passed": true,
+          "ms": 8878,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00044379,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4191,
+            "outputTokens": 777
+          },
+          "packageBytes": 1205,
+          "assetCount": 0,
+          "definitionSha256": "552ff3b4d7419bcbcd850ffd48df6cd94e0c461d24d69ef34320eb39efddd8f0",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "finnish",
+          "passed": true,
+          "ms": 6530,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00025754,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4133,
+            "outputTokens": 419
+          },
+          "packageBytes": 1238,
+          "assetCount": 0,
+          "definitionSha256": "29f4c0e179b7dbac6823ca799e1eafd3364a0cf7c58fbd2a29f066a11dada60d",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "reference",
+          "passed": true,
+          "ms": 4497,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000193165,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4142,
+            "outputTokens": 288
+          },
+          "packageBytes": 747,
+          "assetCount": 0,
+          "definitionSha256": "0bc7615ea494a158e18e8a46236a5ef94647b368dea0f0fdda4c78fb28cb995f",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "unsupported",
+          "passed": true,
+          "ms": 4728,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00011354,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4125,
+            "outputTokens": 133
+          },
+          "packageBytes": null,
+          "assetCount": 0,
+          "definitionSha256": null,
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "counter",
+          "passed": true,
+          "ms": 7543,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00033948,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4121,
+            "outputTokens": 596
+          },
+          "packageBytes": 1617,
+          "assetCount": 0,
+          "definitionSha256": "e82004a2a8d2876cd06058d86b0b3e378ef37c6ed6814be29b4ae5be6b256184",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "counter",
+          "passed": true,
+          "ms": 7954,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "migration": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000494665,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4526,
+            "outputTokens": 795
+          },
+          "packageBytes": 2748,
+          "assetCount": 0,
+          "definitionSha256": "02bdc165d3b9ce46f115cb2921a6fefa720cec89438e1af1fab7c9eb12f137f3",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "character",
+          "passed": true,
+          "ms": 17898,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00087078,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4151,
+            "outputTokens": 1658
+          },
+          "packageBytes": 3189,
+          "assetCount": 0,
+          "definitionSha256": "7044a51fcefb66425e309ce68844c9a0e9c2372a1812b08386a94247a70c3eb3",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "checklist",
+          "passed": true,
+          "ms": 6827,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00033357,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4130,
+            "outputTokens": 584
+          },
+          "packageBytes": 1877,
+          "assetCount": 0,
+          "definitionSha256": "fa16984355448268a64a3b27479fb969ce3f3cc1c19be33553cbba305b1c3d59",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "recipe",
+          "passed": true,
+          "ms": 7047,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "quantities": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000289,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4173,
+            "outputTokens": 494
+          },
+          "packageBytes": 1249,
+          "assetCount": 0,
+          "definitionSha256": "b33401fb2f49445f40acd4454307e4e9e13ef133d8f07294405883e7dbb0c182",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "markdown",
+          "passed": true,
+          "ms": 6172,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00024916,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4189,
+            "outputTokens": 414
+          },
+          "packageBytes": 1154,
+          "assetCount": 0,
+          "definitionSha256": "2cc280fc09c0a21425d1c9536831113daa842645b33ead493d02e6265d8f175c",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "csv",
+          "passed": true,
+          "ms": 14739,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.0007383800000000001,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 8712,
+            "outputTokens": 1203
+          },
+          "packageBytes": 1580,
+          "assetCount": 0,
+          "definitionSha256": "cf4291e424e2543b8f598f9da2430b3689b7acaca6590465f716374538fa0128",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "json",
+          "passed": true,
+          "ms": 18946,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00069796,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4169,
+            "outputTokens": 1312
+          },
+          "packageBytes": 1379,
+          "assetCount": 0,
+          "definitionSha256": "e01817666150c177318d0df817fb05f404c4b9d0a2cb70cddf7d7b924cebaec3",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "html",
+          "passed": true,
+          "ms": 5631,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.0002357,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4193,
+            "outputTokens": 387
+          },
+          "packageBytes": 1170,
+          "assetCount": 0,
+          "definitionSha256": "4f7ad200c3c1ba2eb177f26bad75d97409c19af298f1eb11c97d8cf72f4f3135",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "word",
+          "passed": true,
+          "ms": 7311,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.0002803,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4203,
+            "outputTokens": 476
+          },
+          "packageBytes": 1137,
+          "assetCount": 0,
+          "definitionSha256": "fe81d8562505a1ae17b7151567d4fe508bb1863c69ba58405bb26840a56244ea",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "blocked_link",
+          "passed": true,
+          "ms": 2147,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 7.549e-05,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4172,
+            "outputTokens": 67
+          },
+          "packageBytes": null,
+          "assetCount": 0,
+          "definitionSha256": null,
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "injection",
+          "passed": true,
+          "ms": 6509,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "injectionIgnored": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00019155,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4178,
+            "outputTokens": 299
+          },
+          "packageBytes": 883,
+          "assetCount": 0,
+          "definitionSha256": "84c1a5c2357521aacc60fddb18304e53c52d8ac83aa4e5eb8eec1270d4e4fe5f",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "long_copy",
+          "passed": true,
+          "ms": 9398,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00032918,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4191,
+            "outputTokens": 574
+          },
+          "packageBytes": 1215,
+          "assetCount": 0,
+          "definitionSha256": "da4b8ad046929305397eb7f88d0850421ed457db033d3b30520feae54341504d",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "finnish",
+          "passed": true,
+          "ms": 6732,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.0003116,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4133,
+            "outputTokens": 540
+          },
+          "packageBytes": 1320,
+          "assetCount": 0,
+          "definitionSha256": "71d51228ecbc853d51cd6507a1b00ab258248e013622ad7a0843a75e8e247660",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "reference",
+          "passed": true,
+          "ms": 6171,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00019719,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4142,
+            "outputTokens": 311
+          },
+          "packageBytes": 750,
+          "assetCount": 0,
+          "definitionSha256": "51e1731342bea53da15503d5a7ffef96530b7cca6ca1d4368e25f9833fa2226c",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "unsupported",
+          "passed": true,
+          "ms": 4047,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00013802,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4125,
+            "outputTokens": 193
+          },
+          "packageBytes": null,
+          "assetCount": 0,
+          "definitionSha256": null,
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "counter",
+          "passed": true,
+          "ms": 8062,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00026748,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4121,
+            "outputTokens": 452
+          },
+          "packageBytes": 1420,
+          "assetCount": 0,
+          "definitionSha256": "c05204868eeaae76db3c0419452899f4b049578d06182e4cea849a560895debf",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "counter",
+          "passed": true,
+          "ms": 7644,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "migration": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00047629,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4483,
+            "outputTokens": 769
+          },
+          "packageBytes": 2347,
+          "assetCount": 0,
+          "definitionSha256": "97e25b297c0f30f3f6b503eb98bcc080dfcbe8edcaf1beeef8c55dccb09d67a6",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "character",
+          "passed": true,
+          "ms": 21551,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00108928,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4151,
+            "outputTokens": 2095
+          },
+          "packageBytes": 3366,
+          "assetCount": 0,
+          "definitionSha256": "9fa8dc6c5c902e8cd6c9334e9e170a13a6e57727c2d491f9e57fde0eff64a652",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "checklist",
+          "passed": true,
+          "ms": 6642,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00031157,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4130,
+            "outputTokens": 540
+          },
+          "packageBytes": 1831,
+          "assetCount": 0,
+          "definitionSha256": "9460d2ff763b9c8596758f5a04f478ec4621d07b60da4b7636fd799ec1eb9d4a",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "recipe",
+          "passed": true,
+          "ms": 8610,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "quantities": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000358,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4173,
+            "outputTokens": 632
+          },
+          "packageBytes": 1263,
+          "assetCount": 0,
+          "definitionSha256": "facfe8fe6686b71a1083760c2c08e79c5b407d27791dde034f27a9751fdbb507",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "markdown",
+          "passed": true,
+          "ms": 5491,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00025166,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4189,
+            "outputTokens": 419
+          },
+          "packageBytes": 1205,
+          "assetCount": 0,
+          "definitionSha256": "30f9c8d23d3041c594782085ca9b54b2ca87b2f6bc195c47371dfa7d0e63a637",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "csv",
+          "passed": true,
+          "ms": 7110,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00032269,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4142,
+            "outputTokens": 562
+          },
+          "packageBytes": 1634,
+          "assetCount": 0,
+          "definitionSha256": "fc02e1e673243549ab6b0e101ee802eed1903e28668ee11a028c548c66f5ff76",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "json",
+          "passed": true,
+          "ms": 10154,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00037046,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4169,
+            "outputTokens": 657
+          },
+          "packageBytes": 1378,
+          "assetCount": 0,
+          "definitionSha256": "aa00b41a5aa77bd30d4371aaa210054cb387535a889a71e7768f3612803e36b7",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "html",
+          "passed": true,
+          "ms": 5822,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.0002687,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4193,
+            "outputTokens": 453
+          },
+          "packageBytes": 1122,
+          "assetCount": 0,
+          "definitionSha256": "dfb663d762f1334b50c6f1961c240473461d774eb71f4fc62b12f787866f807e",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "word",
+          "passed": true,
+          "ms": 9763,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.0003493,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4203,
+            "outputTokens": 614
+          },
+          "packageBytes": 1090,
+          "assetCount": 0,
+          "definitionSha256": "34a5e2d9ab7e38c6dab7826d7944cefbda9a34b2b2a303a27e1a5396f8d4c6b4",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "blocked_link",
+          "passed": true,
+          "ms": 1997,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 7.599e-05,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4172,
+            "outputTokens": 68
+          },
+          "packageBytes": null,
+          "assetCount": 0,
+          "definitionSha256": null,
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "injection",
+          "passed": true,
+          "ms": 4963,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "injectionIgnored": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00017105,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4178,
+            "outputTokens": 258
+          },
+          "packageBytes": 871,
+          "assetCount": 0,
+          "definitionSha256": "4fc82f56339c17b2a97be6979f2de07cc492663e2805e1d24b8d0a2b472c8043",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "long_copy",
+          "passed": true,
+          "ms": 11675,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000509985,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 8727,
+            "outputTokens": 765
+          },
+          "packageBytes": 1282,
+          "assetCount": 0,
+          "definitionSha256": "b956d80e9e64d42740ba30824934bcfaa9c974404bc43362bb8c934344d10443",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "finnish",
+          "passed": true,
+          "ms": 6905,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.0002966,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4133,
+            "outputTokens": 510
+          },
+          "packageBytes": 1258,
+          "assetCount": 0,
+          "definitionSha256": "6fb3ea4bd237aa5e5e97f3d44adbe7afff949af7781343e53744320f53104144",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "reference",
+          "passed": true,
+          "ms": 5733,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00017219,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4142,
+            "outputTokens": 261
+          },
+          "packageBytes": 923,
+          "assetCount": 0,
+          "definitionSha256": "6394c7f829665a7373102abdefe35e91fd9d3cac2ffe031cba26a844b6e64a2f",
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        },
+        {
+          "case": "unsupported",
+          "passed": true,
+          "ms": 3589,
+          "storage": "memory",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00013502,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4125,
+            "outputTokens": 187
+          },
+          "packageBytes": null,
+          "assetCount": 0,
+          "definitionSha256": null,
+          "sources": [],
+          "deviceDownloadVerified": false,
+          "stateBackupVerified": false
+        }
+      ]
+    },
+    {
+      "run": "results-1794647932265.json",
+      "count": 6,
+      "passed": 6,
+      "medianMs": 20842,
+      "rows": [
+        {
+          "case": "search",
+          "passed": true,
+          "ms": 36695,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "images": true,
+            "searched": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00510019,
+            "searches": 1,
+            "toolUses": 3,
+            "inputTokens": 64384,
+            "outputTokens": 2093
+          },
+          "packageBytes": 32204,
+          "assetCount": 1,
+          "definitionSha256": "4e6b20484debdc62ae84a8f20e5dc3de7fee997860cfa307719ccded80409a3c",
+          "sources": [
+            "https://www.scoutadventures.org.uk/sites/default/files/2018-05/Simple%20Knots%20-%20Factsheet_0.pdf page 4 crop {\"left\":0.08,\"top\":0.23,\"width\":0.84,\"height\":0.19}"
+          ],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "find_images",
+          "passed": true,
+          "ms": 10110,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "images": true,
+            "usedTools": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00053596,
+            "searches": 0,
+            "toolUses": 2,
+            "inputTokens": 14784,
+            "outputTokens": 454
+          },
+          "packageBytes": 90330,
+          "assetCount": 1,
+          "definitionSha256": "728b2e2497160bb96f550649ad775c5900f7fde167499e6e251e8f7793a2f57a",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/e/ed/Bowline_%28PSF%29.jpg"
+          ],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "search",
+          "passed": true,
+          "ms": 31574,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "images": true,
+            "searched": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.003280035,
+            "searches": 1,
+            "toolUses": 3,
+            "inputTokens": 33256,
+            "outputTokens": 1864
+          },
+          "packageBytes": 205342,
+          "assetCount": 1,
+          "definitionSha256": "26e1a100c442866e02f6bae104f4baab5ae9cbe543b48d93c9fa9355c36cc1ba",
+          "sources": [
+            "https://www.animatedknots.com/photos/bowline/bowlineR7.jpg"
+          ],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "find_images",
+          "passed": true,
+          "ms": 10003,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "images": true,
+            "usedTools": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00040863,
+            "searches": 0,
+            "toolUses": 2,
+            "inputTokens": 14932,
+            "outputTokens": 379
+          },
+          "packageBytes": 90472,
+          "assetCount": 1,
+          "definitionSha256": "95695dde72810de45b3a005460f0645bcce94394f6c3d8b28db30e6835e5580f",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/e/ed/Bowline_%28PSF%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+          ],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "search",
+          "passed": true,
+          "ms": 44175,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "images": true,
+            "searched": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00393148,
+            "searches": 1,
+            "toolUses": 7,
+            "inputTokens": 38846,
+            "outputTokens": 3044
+          },
+          "packageBytes": 894787,
+          "assetCount": 5,
+          "definitionSha256": "2340112067b9c23527008ff1c1bbf8d2bb114e8bd5beb6d0ca56279bf512b1b4",
+          "sources": [
+            "https://www.rmg.co.uk/sites/default/files/styles/storytelling_image_half/public/2021-02/1_2.PNG.webp?itok=YuNOHHNp",
+            "https://www.rmg.co.uk/sites/default/files/styles/storytelling_image_half/public/2021-02/2_0.PNG.webp?itok=9TPX3nmC",
+            "https://www.rmg.co.uk/sites/default/files/styles/storytelling_image_half/public/2021-02/3_0.PNG.webp?itok=QLk5wu7v",
+            "https://www.rmg.co.uk/sites/default/files/styles/storytelling_image_half/public/2021-02/4_0.PNG.webp?itok=a1Igv5nQ",
+            "https://www.rmg.co.uk/sites/default/files/styles/storytelling_image_half/public/2021-02/5_0.PNG.webp?itok=NpPn3-_H"
+          ],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "find_images",
+          "passed": true,
+          "ms": 9225,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "images": true,
+            "usedTools": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00035415,
+            "searches": 0,
+            "toolUses": 2,
+            "inputTokens": 14784,
+            "outputTokens": 411
+          },
+          "packageBytes": 90319,
+          "assetCount": 1,
+          "definitionSha256": "6016629f4934e671f7e6a6bc5d09187bd368c1c92b6de323d2510ef5eee7c3d8",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/e/ed/Bowline_%28PSF%29.jpg"
+          ],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        }
+      ]
+    },
+    {
+      "run": "results-1794648126447.json",
+      "count": 6,
+      "passed": 6,
+      "medianMs": 6036,
+      "rows": [
+        {
+          "case": "counter",
+          "passed": true,
+          "ms": 5472,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00024859,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4176,
+            "outputTokens": 403
+          },
+          "packageBytes": 1421,
+          "assetCount": 0,
+          "definitionSha256": "00d811cd56b9267444b75737c2d95fb4b85c10abe0e10af3b3d8e337e39ef1ae",
+          "sources": [],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "counter",
+          "passed": true,
+          "ms": 7411,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "migration": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00044034,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4534,
+            "outputTokens": 697
+          },
+          "packageBytes": 2344,
+          "assetCount": 0,
+          "definitionSha256": "09e473e3f0d503734ad1df0fb17504b4f74f5550c839474ddaad3b544c950202",
+          "sources": [],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "word",
+          "passed": true,
+          "ms": 5872,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "counts": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00026834,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4258,
+            "outputTokens": 422
+          },
+          "packageBytes": 1143,
+          "assetCount": 0,
+          "definitionSha256": "b64c2eac72cc1ab07d2a3363f1181d2c07ef9180e83f88d649d30e11388f4b1c",
+          "sources": [],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "multi",
+          "passed": true,
+          "ms": 6200,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "bothSources": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.000250215,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 4237,
+            "outputTokens": 391
+          },
+          "packageBytes": 1056,
+          "assetCount": 0,
+          "definitionSha256": "508fbef145201e85317bbf405fe92e2ab2261329454e583cf75790ec70bb6718",
+          "sources": [],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "source_edit",
+          "passed": true,
+          "ms": 5301,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "images": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00032059,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 5292,
+            "outputTokens": 268
+          },
+          "packageBytes": 64311,
+          "assetCount": 1,
+          "definitionSha256": "5305fd0cac8b6fde730825f66fa1e779fd114329371d0d2e767053c66d2bb5bc",
+          "sources": [
+            "9d5a4adb5d4fc1ea.png"
+          ],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        },
+        {
+          "case": "source_edit",
+          "passed": true,
+          "ms": 6932,
+          "storage": "s3",
+          "transport": "HTTP",
+          "checks": {
+            "expectedOutcome": true,
+            "images": true
+          },
+          "usage": {
+            "model": "openrouter:openai/gpt-6-luna",
+            "costUsd": 0.00049009,
+            "searches": 0,
+            "toolUses": 0,
+            "inputTokens": 5496,
+            "outputTokens": 556
+          },
+          "packageBytes": 65145,
+          "assetCount": 1,
+          "definitionSha256": "f550ccd8341746d3c2e2fb66a55fc54cd941917c6a2120635d352cdc349684d4",
+          "sources": [
+            "9d5a4adb5d4fc1ea.png"
+          ],
+          "deviceDownloadVerified": true,
+          "stateBackupVerified": true
+        }
+      ]
+    }
+  ]
+}

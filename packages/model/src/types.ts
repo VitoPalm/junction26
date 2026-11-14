@@ -12,11 +12,27 @@ export type Part =
   | { type: 'file'; mediaType: string; filename: string; data: string };
 
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'tool';
+  toolCallId?: string;
+  toolCalls?: ToolCall[];
   content: Part[];
 }
 
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: string;
+}
+export interface ModelTool {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
 export interface CompletionRequest {
+  tools?: ModelTool[];
+  /** Bounded OpenRouter server search, executed separately from final JSON authoring. */
+  webSearch?: boolean;
   /** Provider-specific model name (the part after "provider:" in a model spec). */
   model: string;
   system: string;
@@ -36,6 +52,7 @@ export interface Usage {
 }
 
 export interface CompletionResult {
+  toolCalls?: ToolCall[];
   text: string;
   finishReason: 'stop' | 'length' | 'content_filter' | 'other';
   usage: Usage;

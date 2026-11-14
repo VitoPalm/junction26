@@ -15,7 +15,8 @@
     "dev:api": "npm run dev -w @junction26/api",
     "dev:worker": "npm run dev -w @junction26/worker",
     "migrate": "npm run migrate -w @junction26/db",
-    "smoke:storage": "node --env-file=.env.verda.local --conditions=junction26-source scripts/smoke-storage.ts"
+    "smoke:storage": "node --env-file=.env.verda.local --conditions=junction26-source scripts/smoke-storage.ts",
+    "bench:model": "node --env-file-if-exists=.env.openrouter.local --conditions=junction26-source scripts/model-bench/run.ts"
   },
   "engines": {
     "node": ">=22.18"

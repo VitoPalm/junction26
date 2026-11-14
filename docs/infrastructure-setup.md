@@ -305,3 +305,7 @@ touch the file again.
   lasts ~2.5 weeks.
 - Verda: storage of a few hundred MB costs cents. €200 balance.
 - OpenRouter: ~$0.007 per manual-sized generation; $17 cap ≈ 2,000 generations.
+
+## Worker source/fit prerequisites (2026-11-14)
+
+The worker image now installs Poppler (`poppler-utils`) and Chromium for source PDF rendering and generated-candidate fit checks. Local development requires `pdfinfo`, `pdftotext`, `pdftoppm` and Chrome/Chromium; set `CHROME_PATH` when it is outside the detected Linux paths. Build the renderer measurement bundle with `npm run build:fit -w @junction26/worker` before `dev:worker` (the regular worker build includes this step). Missing fit prerequisites fail generation before a paid model call. Source tool limits and the optional paid benchmark are in [model-pipeline.md](model-pipeline.md). The authoring app/worker can perform public web lookups during creation; downloaded glasses applets remain offline.

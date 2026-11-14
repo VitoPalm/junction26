@@ -228,3 +228,27 @@ Refused snapshots are **kept** in `state_backups`, never merged or discarded,
 so a recovery UI can offer them later. `GET …/state` returns the last accepted
 snapshot with its `serverVersion`, `deviceId`, `sequence`, `revisionId`,
 `schemaVersion` and `savedAt`.
+
+### Authoring source import (2026-11-14)
+
+Upload support now includes `text/csv`, `application/json`, `text/html`, and
+`application/vnd.openxmlformats-officedocument.wordprocessingml.document` in
+addition to PDF, PNG, JPEG, WebP, plain text and Markdown. The API upload ceiling
+still defaults to 50 MiB; current authoring preparation accepts at most 12 MiB
+per source and asks for an excerpt when a source exceeds its processing budget.
+JSON and Word content receive deeper validity checks in preparation. See
+[model-pipeline.md](model-pipeline.md) for page, text, archive and image limits.
+
+Existing message endpoints now support public source URLs in message text and
+model-driven bounded source tools. No new browser-to-provider endpoint exists;
+all model access remains behind `packages/model` in the worker. Generation may
+return a clarification with no revision when a link cannot be read. Follow-ups
+reuse conversation uploads and preserve base images without requiring another
+upload. Model revisions are accepted only after source-ref resolution and
+canonical 600×600 rendering checks. This does not strengthen validation on direct
+client revision submissions or add server-side change acceptance.
+
+Generated `assets` retain `uploadId` (the prepared image ref), normalized PNG
+`data`, `source` (file/page or URL), and optional `attribution`. The renderer
+consumes image data offline. These source refs are checked against owner-filtered
+attachments, tool imports and base assets before the worker saves a revision.
