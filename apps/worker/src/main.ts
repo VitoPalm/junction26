@@ -3,7 +3,8 @@ import { createPool, migrateUrl } from '@junction26/db';
 import { createObjectStore } from '@junction26/storage';
 import { createLogger, loadConfig, onShutdown } from '@junction26/server-common';
 import { JobRunner } from './runner.ts';
-import { defaultHandlers } from './handlers.ts';
+import { createHandlers } from './handlers.ts';
+import { modelRegistryFromConfig } from './generate.ts';
 
 const config = loadConfig();
 const logger = createLogger({ level: config.logLevel, bindings: { service: 'worker' } });
@@ -15,7 +16,9 @@ if (config.migrateOnStart) {
   logger.info('migrations checked', { applied: result.applied });
 }
 
-const runner = new JobRunner({ config, pool, store, logger }, defaultHandlers, {
+const models = modelRegistryFromConfig(config);
+logger.info('authoring models', { default: config.model.model, allowed: config.model.allowed });
+const runner = new JobRunner({ config, pool, store, logger }, createHandlers(models), {
   ...(config.worker.id ? { workerId: config.worker.id } : {}),
   concurrency: config.worker.concurrency,
   generationConcurrency: config.limits.generationConcurrency,

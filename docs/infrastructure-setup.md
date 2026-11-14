@@ -58,7 +58,12 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `DATABASE_URL` | api, worker | Injected by the Aiven service integration (full URI, includes `sslmode`) |
 | `OPENROUTER_API_KEY` | worker | Runtime secret. Never in a frontend bundle |
 | `OPENROUTER_BASE_URL` | worker | `https://openrouter.ai/api/v1` |
-| `AUTHORING_MODEL` | worker | `openai/gpt-6-luna` |
+| `AUTHORING_MODEL` | api, worker | Default model spec, `openai/gpt-6-luna` (bare name = OpenRouter; `provider:model` otherwise). See [apps.md](apps.md#models-swappable) |
+| `AUTHORING_MODELS` | api, worker | Extra specs users may pick, comma-separated (e.g. `fake:demo`) |
+| `AUTHORING_REASONING_EFFORT` | worker | Optional `low`/`medium`/`high` |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | worker | For `openai:<model>` specs (any OpenAI-compatible endpoint) |
+| `CORS_ORIGINS` | api | Browser origins allowed to call `/v1` (native shells: `capacitor://localhost,https://localhost`). Dev default includes those and the Vite ports; production default is none |
+| `WEB_ROOT` | api | Directory with the built `glasses/` and `author/` apps; `/app/web` in the image |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | api, worker | Verda key `junction26-backend-storage` (project-scoped: can read every bucket in the project) |
 | `AWS_ENDPOINT_URL` | api, worker | `https://objects.eu-north-3.verda.storage` |
 | `AWS_REGION` | api, worker | `eu-north-3` |

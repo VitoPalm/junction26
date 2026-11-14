@@ -23,6 +23,8 @@ const MessageBody = z.object({
   text: z.string().trim().min(1).max(8000),
   attachmentIds: z.array(uuid).max(20).default([]),
   baseRevisionId: uuid.nullable().default(null),
+  /** A model spec from GET /v1/authoring/models; default when omitted. */
+  model: z.string().max(200).optional(),
 });
 
 const RevisionBody = z.object({
@@ -50,6 +52,9 @@ export function authoringRoutes(deps: Deps) {
     const projectId = param(c, 'projectId');
     const key = idempotencyKey(c, false);
     const body = await readJson(c, MessageBody);
+    if (body.model !== undefined && !deps.config.model.allowed.includes(body.model)) {
+      throw badRequest('That model is not available', { allowed: deps.config.model.allowed });
+    }
     const fingerprint = requestFingerprint({ projectId, ...body });
 
     const replay = key ? await findJobByIdempotencyKey(deps.pool, userId, key) : null;
@@ -71,7 +76,13 @@ export function authoringRoutes(deps: Deps) {
         ownerId: userId,
         projectId,
         kind: 'generate_revision',
-        input: { projectId, baseRevisionId: body.baseRevisionId, attachmentIds: body.attachmentIds, fingerprint },
+        input: {
+          projectId,
+          baseRevisionId: body.baseRevisionId,
+          attachmentIds: body.attachmentIds,
+          model: body.model ?? deps.config.model.model,
+          fingerprint,
+        },
         idempotencyKey: key,
         maxAttempts: 2,
       });

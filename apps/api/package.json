@@ -11,7 +11,9 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
+    "@junction26/applet-format": "*",
     "@junction26/db": "*",
+    "@junction26/model": "*",
     "@junction26/storage": "*",
     "@junction26/server-common": "*",
     "hono": "4.13.18",

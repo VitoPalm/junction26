@@ -75,7 +75,7 @@ attempts and tokens rather than assume exactly-once inference.
 | --- | --- | --- | --- |
 | `prepare_upload` | `POST /v1/uploads` | 3 | Implemented (verification only) |
 | `package_release` | `POST /v1/projects/:id/releases` | 5 | Implemented |
-| `generate_revision` | `POST /v1/projects/:id/messages` | 2 | **Placeholder**: fails with `not_implemented` |
+| `generate_revision` | `POST /v1/projects/:id/messages` | 2 | Implemented (`apps/worker/src/generate.ts`) |
 
 ### `prepare_upload`
 
@@ -102,12 +102,31 @@ upload has succeeded. If the job fails permanently, the release is marked
 
 ### `generate_revision`
 
-Not built yet (milestone M4: `packages/model` + `packages/ingest`). It fails at
-once with a non-retryable `not_implemented` error, so no money is spent and the
-client can say why. The input is already final: `{ projectId, messageId,
-baseRevisionId, attachmentIds }`. The planned flow: prepare context → call
-OpenRouter (`AUTHORING_MODEL`, capped by `MAX_OUTPUT_TOKENS`) → validate → one
-bounded repair → save the revision and change review → record `usage`.
+Input: `{ projectId, messageId, baseRevisionId, attachmentIds, model }`.
+
+1. If this job already saved its assistant reply, return it (repeat run, no model call).
+2. Base = `baseRevisionId`, else the project's latest valid revision.
+3. Resolve `model` (must be in `AUTHORING_MODELS`/`AUTHORING_MODEL`) through
+   the model registry (`packages/model`). Progress stages: `preparing`,
+   `generating`, `repairing`.
+4. Messages: last 12 thread messages, then the current request with the base
+   definition and attachments (text inline ≤ 200 KiB; images/PDFs ≤ 12 MiB as
+   parts if the model supports them, else skipped and mentioned).
+5. Call the model with the JSON schema response format; parse
+   `{ reply, definition|null }`; validate with `validateDefinition`. If invalid,
+   one repair call with the exact issues.
+6. In one transaction: revision (`source: model`, `job_id`), assistant message,
+   and the project title if it was still "New applet". Result
+   `{ revisionId, revisionNumber, messageId }`; `usage` =
+   `{ inputTokens, outputTokens, costUsd, model }`.
+
+Error codes: `model_<code>` from the adapter (`model_not_configured`,
+`model_auth`, `model_insufficient_credits`, `model_rate_limited` (retryable),
+`model_unavailable` (retryable), `model_timeout` (retryable),
+`model_context_too_long`, `model_bad_request`), `model_not_allowed`,
+`output_truncated`, `invalid_output` (after the repair), `attachment_too_large`.
+`onFailed` posts a plain-language assistant message. Model calls can repeat
+after an ambiguous failure; attempts are capped at 2.
 
 ## Release package (format 1)
 

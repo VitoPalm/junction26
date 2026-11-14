@@ -1,0 +1,26 @@
+{
+  "name": "@junction26/applet-format",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Applet format v1: schema, validation, change diff, capability catalog and authoring prompt. Shared by worker, authoring client and glasses.",
+  "exports": {
+    ".": {
+      "junction26-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --conditions=junction26-source --test 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2"
+  }
+}

@@ -13,6 +13,8 @@ import {
   type Revision,
 } from '@junction26/db';
 import { objectKeys } from '@junction26/storage';
+import type { ModelRegistry } from '@junction26/model';
+import { generateRevisionHandler } from './generate.ts';
 import { JobError, type HandlerRegistry, type JobHandler } from './types.ts';
 
 // ---------------------------------------------------------------- prepare_upload
@@ -125,20 +127,13 @@ export const packageRelease: JobHandler = {
   },
 };
 
-// ---------------------------------------------------------------- generate_revision
+// ---------------------------------------------------------------- registry
 
-/**
- * Placeholder until milestone M4 (model adapter + ingest). Fails with a clear,
- * non-retryable error so no money is spent and the client can show why.
- */
-export const generateRevision: JobHandler = {
-  async run() {
-    throw new JobError('not_implemented', 'Automatic generation is not available yet. Submit a definition with POST /v1/projects/:id/revisions.');
-  },
-};
-
-export const defaultHandlers: HandlerRegistry = {
-  prepare_upload: prepareUpload,
-  package_release: packageRelease,
-  generate_revision: generateRevision,
-};
+/** All job handlers. Generation needs the model registry (see generate.ts). */
+export function createHandlers(models: ModelRegistry): HandlerRegistry {
+  return {
+    prepare_upload: prepareUpload,
+    package_release: packageRelease,
+    generate_revision: generateRevisionHandler(models),
+  };
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@junction26/applet-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "React renderer for applet definitions on glasses-ui, plus the WebMCP adapter. Shared by apps/glasses and the apps/author preview.",
+  "exports": {
+    ".": {
+      "junction26-source": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@junction26/applet-format": "*",
+    "@junction26/applet-runtime": "*",
+    "@junction26/glasses-ui": "*",
+    "@wearables-ui-toolkit/mrbd": "130.33.0",
+    "react": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "7.0.2"
+  }
+}

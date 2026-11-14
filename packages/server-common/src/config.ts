@@ -42,7 +42,19 @@ const EnvSchema = z.object({
 
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_BASE_URL: z.string().url().default('https://openrouter.ai/api/v1'),
+  /** Default authoring model spec ("provider:model"; a bare name means OpenRouter). */
   AUTHORING_MODEL: z.string().default('openai/gpt-6-luna'),
+  /** Extra model specs users may pick, comma-separated. The default is always allowed. */
+  AUTHORING_MODELS: z.string().optional(),
+  AUTHORING_REASONING_EFFORT: z.enum(['low', 'medium', 'high']).optional(),
+  /** Any OpenAI-compatible endpoint, used by "openai:<model>" specs. */
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
+
+  /** Origins allowed to call the API from a browser (native app shells, dev servers), comma-separated. */
+  CORS_ORIGINS: z.string().optional(),
+  /** Directory holding the built web apps (glasses/ and author/), served by the API. */
+  WEB_ROOT: z.string().optional(),
 
   WORKER_ID: z.string().optional(),
   WORKER_CONCURRENCY: positiveInt.default(2),
@@ -85,7 +97,18 @@ export interface Config {
     generationConcurrency: number;
     maxOutputTokens: number;
   };
-  model: { apiKey: string | undefined; baseUrl: string; model: string };
+  model: {
+    apiKey: string | undefined;
+    baseUrl: string;
+    /** Default model spec. */
+    model: string;
+    /** Every spec a user may choose (default first). */
+    allowed: string[];
+    reasoningEffort: 'low' | 'medium' | 'high' | undefined;
+    openAI: { apiKey: string | undefined; baseUrl: string };
+  };
+  corsOrigins: string[];
+  webRoot: string | undefined;
   worker: {
     id: string | undefined;
     concurrency: number;
@@ -95,6 +118,19 @@ export interface Config {
   };
   shutdownGraceMs: number;
 }
+
+const list = (v: string | undefined) => (v ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+
+/** Capacitor shells (iOS: capacitor://localhost, Android: https://localhost) and Vite dev servers. */
+const DEV_CORS_ORIGINS = [
+  'capacitor://localhost',
+  'https://localhost',
+  'http://localhost',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+];
 
 export class ConfigError extends Error {
   readonly problems: string[];
@@ -163,7 +199,16 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       generationConcurrency: e.GENERATION_CONCURRENCY,
       maxOutputTokens: e.MAX_OUTPUT_TOKENS,
     },
-    model: { apiKey: e.OPENROUTER_API_KEY, baseUrl: e.OPENROUTER_BASE_URL, model: e.AUTHORING_MODEL },
+    model: {
+      apiKey: e.OPENROUTER_API_KEY,
+      baseUrl: e.OPENROUTER_BASE_URL,
+      model: e.AUTHORING_MODEL,
+      allowed: [...new Set([e.AUTHORING_MODEL, ...list(e.AUTHORING_MODELS)])],
+      reasoningEffort: e.AUTHORING_REASONING_EFFORT,
+      openAI: { apiKey: e.OPENAI_API_KEY, baseUrl: e.OPENAI_BASE_URL },
+    },
+    corsOrigins: e.CORS_ORIGINS !== undefined ? list(e.CORS_ORIGINS) : e.NODE_ENV === 'production' ? [] : DEV_CORS_ORIGINS,
+    webRoot: e.WEB_ROOT,
     worker: {
       id: e.WORKER_ID,
       concurrency: e.WORKER_CONCURRENCY,

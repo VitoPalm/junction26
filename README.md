@@ -19,8 +19,12 @@ Design agreed and documented. The glasses component library and the authoring
 pipeline proof (PDF → GPT-6 Luna via OpenRouter → validated JSON → rendered
 guide, ~$0.007 per manual) exist. The backend skeleton (API, job worker,
 PostgreSQL schema, Verda storage, publishing, device pairing, state backup) is
-built and tested locally but not deployed. Model generation in the service,
-user sign-in, the glasses app shell and the authoring client aren't built yet. See the [implementation plan](docs/implementation-plan.md).
+built and tested locally but not deployed. The MVP apps are built: the
+authoring app (web + iOS/Android via Capacitor), the glasses web app (offline
+library, runtime, WebMCP voice tools, sync), and generation through a swappable
+model adapter (Luna via OpenRouter by default, a free demo model for
+development). User sign-in, PDF ingest and hardware verification remain. See
+[apps](docs/apps.md) and the [implementation plan](docs/implementation-plan.md).
 
 ## Documentation
 
@@ -30,6 +34,7 @@ user sign-in, the glasses app shell and the authoring client aren't built yet. S
 | [Implementation plan](docs/implementation-plan.md) | Current state, target layout, applet format v1 draft, milestones, open decisions |
 | [Backend architecture](docs/backend-architecture.md) | Contracts, data model, jobs, publishing, offline execution, sync, API |
 | [Glasses platform](docs/glasses-platform.md) | Verified Meta Ray-Ban Display facts: limits, additive display, WebMCP, install |
+| [Apps](docs/apps.md) | Authoring app (web/iOS/Android), glasses app, applet format, swappable models, running it all |
 | [Backend development](docs/backend-development.md) | Run, test and change the API and worker locally |
 | [API reference](docs/api.md) | Sessions, errors, idempotency, every endpoint, sync and backup protocol |
 | [Background jobs](docs/jobs.md) | Job lifecycle, leases, retries, handlers, release package format |
@@ -57,7 +62,11 @@ enabled, and set Background Blur to 0. Use the arrow keys, Enter and Esc.
 ```text
 docs/                 specs and setup guides
 apps/api/             HTTP API (Hono): projects, uploads, revisions, publishing, sync, pairing, state
-apps/worker/          durable PostgreSQL job runner: upload prep, packaging, (generation, soon)
+apps/worker/          durable PostgreSQL job runner: generation, upload prep, packaging
+apps/glasses/         Meta Ray-Ban Display web app (offline library, applet runtime, WebMCP, sync)
+apps/author/          authoring app: web + Capacitor iOS/Android shells
+packages/applet-*     applet format (schema, validation, prompt), runtime, React renderer
+packages/model/       provider-neutral model adapter (OpenRouter, OpenAI-compatible, fake)
 packages/db/          SQL migrations + typed queries
 packages/storage/     object storage adapter (Verda S3, fs, memory)
 packages/server-common/ config, logging, shutdown

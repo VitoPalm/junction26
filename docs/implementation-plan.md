@@ -19,7 +19,11 @@ For an engineer or agent starting cold. Read in this order:
 | Aiven PostgreSQL + Runtime | Not provisioned |
 | Applet format v1 (general, beyond guides) | **Draft below**, not implemented |
 | Backend: API, worker, DB schema, storage adapter (`apps/api`, `apps/worker`, `packages/db`, `packages/storage`, `packages/server-common`) | **Built (M3 skeleton)**, tested against PostgreSQL 18 locally, container image builds. Not deployed. User auth is a dev placeholder; generation is a placeholder ([backend-development.md](backend-development.md)) |
-| Glasses app shell, authoring client, WebMCP adapter, applet format/runtime, model adapter, ingest | Not implemented |
+| Applet format v1 + runtime + renderer (`packages/applet-format`, `applet-runtime`, `applet-renderer`) | **Built (MVP)**, unit-tested; see [apps.md](apps.md) |
+| Model adapter (`packages/model`) + real `generate_revision` | **Built**: OpenRouter / OpenAI-compatible / free `fake` provider, swappable by spec. Luna not yet run against the format |
+| Glasses app (`apps/glasses`): library, runtime host, IndexedDB, sync, pairing, WebMCP, SW | **Built (MVP)**, checked in headless Chrome at 600×600; not on hardware |
+| Authoring app (`apps/author`): web + Capacitor iOS/Android | **Built (MVP)**, checked in Chrome and the Android emulator; iOS project generated, not built |
+| Ingest (PDF rendering, diagram assets), change-review endpoint, measured fit at publish | Not implemented |
 | Hardware verification (WebMCP, storage, band, readability) | Not done |
 
 The experiments contain copies of the component library (`experiments/*/app/src/lib`)
@@ -135,14 +139,16 @@ arguments in `runtime.dispatch`. Return `{ ok, summary, next_action }`.
 
 Each milestone ends with its acceptance checks passing and the docs updated.
 
-### M0. Feasibility on real glasses (half a day, do first)
+### M0. Feasibility on real glasses (half a day, when hardware is available)
 
 Deploy a static "hello" page (any HTTPS host) that registers one WebMCP tool and
 writes to IndexedDB. Verify "Hey Meta" invokes it, IndexedDB survives a close
 and a reboot, `navigator.storage.estimate()` reports a quota, band focus/select
 works, and a 1 MB download takes an acceptable time. **If WebMCP isn't
-available on the device, stop and tell the owner**: voice architecture depends
-on it.
+available or Meta AI never invokes a registered tool, report the blocker**:
+the voice path is unverified. Until hardware is available, continue the
+runtime, manual controls and desktop checks; do not mark M0 complete or promise
+device voice behavior. See [WebMCP audit and verification plan](webmcp-audit.md).
 
 ### M1. Applet format + runtime (no network)
 
@@ -213,6 +219,10 @@ state backup → restore.
 An MCP server exposing authoring tools (`list_capabilities`, `create_applet`,
 `revise_applet`, `validate`, `publish`) so ChatGPT/Codex/Claude/local models can
 author. Same validation and change review apply.
+
+Integration research and proposed tool/service boundaries:
+[assistant-integrations.md](assistant-integrations.md) (2026-11-14; proposal,
+not implemented or tested in assistant clients).
 
 ## Open decisions (owner input needed)
 

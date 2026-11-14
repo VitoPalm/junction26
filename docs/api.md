@@ -84,7 +84,7 @@ and kept forever (they live on the job row).
 | `GET /v1/projects/:id` | any | 200 | |
 | `PATCH /v1/projects/:id` | any¹ | 200 | `{ title?, lastOpenedAt? }`; `lastOpenedAt` only moves forward |
 | `GET /v1/projects/:id/messages` | user | 200 | Authoring thread, oldest first |
-| `POST /v1/projects/:id/messages` | user | 202 | `{ text, attachmentIds?, baseRevisionId? }`; queues `generate_revision`. Idempotency-Key optional |
+| `POST /v1/projects/:id/messages` | user | 202 | `{ text, attachmentIds?, baseRevisionId?, model? }`; queues `generate_revision`. `model` must be one of `GET /v1/authoring/models` (400 otherwise). Idempotency-Key optional |
 | `GET /v1/projects/:id/revisions` | user | 200 | Summaries (no definition), newest first |
 | `POST /v1/projects/:id/revisions` | user | 201 | `{ definition, baseRevisionId? }`; see [revisions](#revisions) |
 | `GET /v1/projects/:id/revisions/:revisionId` | user | 200 | Includes `definition` |
@@ -102,13 +102,20 @@ and kept forever (they live on the job row).
 | `POST /v1/devices/pair` | **none** | 201 | `{ code, label? }` → `{ token, device }` |
 | `GET /v1/devices` | user | 200 | Paired devices, including revoked |
 | `DELETE /v1/devices/:id` | user | 200 | Revokes; idempotent |
+| `GET /v1/authoring/models` | any | 200 | `{ default, models: [{ id, label, provider, free, default }] }` for the model picker |
+| `GET /v1/authoring/capabilities` | any | 200 | The capability catalog (`capabilities`, `limitations`) the authoring model is given |
+| `GET /glasses/*`, `GET /author/*` | none | 200 | Built web apps when `WEB_ROOT` is set; unknown paths fall back to `index.html`; `assets/` immutable, HTML `no-cache` |
 
 ¹ A device may only send `lastOpenedAt`; changing `title` needs a user session.
 
 Not implemented yet (from the architecture's proposed surface):
-`POST /v1/projects/:id/reviews` (change review acceptance; needs the diff
-package), static serving of `/glasses/` and `/author/` (those apps don't exist
-yet).
+`POST /v1/projects/:id/reviews` (change review acceptance). The diff exists in
+`packages/applet-format` and the authoring app shows it, but acceptance isn't
+recorded server-side yet.
+
+**CORS.** `/v1/*` answers CORS for `CORS_ORIGINS` (the Capacitor shells and dev
+servers). Bearer tokens, no cookies, so credentials mode stays off. The
+glasses app and the web authoring app are same-origin and don't need it.
 
 ### Revisions
 

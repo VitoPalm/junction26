@@ -1,0 +1,15 @@
+/* Host screens only; applet pages use glasses-ui styles unchanged. */
+.j26-pair { display: flex; flex-direction: column; align-items: center; gap: var(--uit-spacing-large); }
+.j26-code {
+  inline-size: 320px;
+  font: 700 36px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-align: center;
+  color: #fff;
+  background: transparent;
+  border: 3px solid var(--g-ink-accent);
+  border-radius: 16px;
+  padding: 10px 12px;
+  text-transform: uppercase;
+}
+.j26-code:focus { outline: 4px solid #fff; outline-offset: 2px; }

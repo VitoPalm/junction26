@@ -11,3 +11,7 @@ experiments
 !experiments/*/app/package.json
 docs
 assets
+
+# Native shells and their build output
+apps/author/android
+apps/author/ios
