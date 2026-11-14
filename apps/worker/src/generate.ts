@@ -37,6 +37,7 @@ import { checkRenderedFit, fitPrerequisites } from './fit.ts';
 import { prepareUploadSource } from './sources.ts';
 import { AuthoringSources, SOURCE_TOOLS } from './authoring-tools.ts';
 import { JobError, type JobHandler } from './types.ts';
+import { fakeTranscribe, isTranscribeRequest } from './transcribe.ts';
 
 const MAX_HISTORY_MESSAGES = 12;
 export const DEFAULT_PROJECT_TITLE = 'New solution';
@@ -44,7 +45,7 @@ export const DEFAULT_PROJECT_TITLE = 'New solution';
 const PLACEHOLDER_TITLES = new Set([DEFAULT_PROJECT_TITLE, 'New applet']);
 
 export function modelRegistryFromConfig(config: Config): ModelRegistry {
-  return registryFromSettings(config.model, fakeAuthor);
+  return registryFromSettings(config.model, (req) => isTranscribeRequest(req) ? fakeTranscribe(req) : fakeAuthor(req));
 }
 
 /**

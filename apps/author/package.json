@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Authoring app (web + iOS + Android via Capacitor): library, chat, uploads, preview, publish, glasses pairing.",
   "scripts": {
-    "test": "node --test src/api.test.ts",
+    "test": "node --test src/api.test.ts src/audio.test.ts",
     "dev": "vite --host 127.0.0.1 --port 5173",
     "build": "tsc --noEmit && vite build",
     "build:native": "tsc --noEmit && vite build --mode native",

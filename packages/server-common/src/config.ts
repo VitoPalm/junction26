@@ -74,6 +74,20 @@ const EnvSchema = z.object({
   AUTHORING_REASONING_EFFORT: z.enum(['low', 'medium', 'high']).optional(),
   /** Voice-bridge resolver: audio/text utterance + open applet tools → one action. "fake:voice" is free. */
   VOICE_MODEL: z.string().default('google/gemini-3.5-flash-lite'),
+  /**
+   * Voice notes (docs/voice-notes.md): final transcription of the whole recording.
+   * Chosen by published word error rate (Artificial Analysis AA-WER, 2026-11-14):
+   * Voxtral Mini Transcribe 3 = 2.2% at $3.50 / 1000 min. "fake:notes" is free.
+   * A chat model with audio input (e.g. "google/gemini-3.1-flash-lite") also works.
+   */
+  NOTES_TRANSCRIBE_MODEL: z.string().default('openrouter-stt:mistralai/voxtral-mini-transcribe-3-0'),
+  /** Voice notes: cheap cloud fallback that only listens for the stop phrase (AA-WER 3.4%, $1.10 / 1000 min). */
+  NOTES_LIVE_MODEL: z.string().default('google/gemini-3.1-flash-lite'),
+  /** Mistral API (Voxtral transcription). Runtime secret, worker only. */
+  MISTRAL_API_KEY: z.string().optional(),
+  MISTRAL_BASE_URL: z.string().url().default('https://api.mistral.ai/v1'),
+  /** Longest voice note the phone records before stopping by itself. */
+  NOTES_MAX_SECONDS: positiveInt.default(300),
   /** Any OpenAI-compatible endpoint, used by "openai:<model>" specs. */
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
@@ -151,6 +165,8 @@ export interface Config {
   };
   /** Always-listening voice fallback (docs/voice-fallback.md). */
   voice: { model: string };
+  /** Voice notes on applet pages (docs/voice-notes.md). */
+  notes: { transcribeModel: string; liveModel: string; maxSeconds: number; maxAudioBytes: number; mistral: { apiKey: string | undefined; baseUrl: string } };
   corsOrigins: string[];
   webRoot: string | undefined;
   worker: {
@@ -312,6 +328,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       compatible,
     },
     voice: { model: e.VOICE_MODEL },
+    // 16 kHz mono PCM16 WAV is 32 KB/s; allow 25% headroom over the longest note.
+    notes: { transcribeModel: e.NOTES_TRANSCRIBE_MODEL, liveModel: e.NOTES_LIVE_MODEL, maxSeconds: e.NOTES_MAX_SECONDS, maxAudioBytes: Math.ceil(e.NOTES_MAX_SECONDS * 32_000 * 1.25) + 4096, mistral: { apiKey: e.MISTRAL_API_KEY, baseUrl: e.MISTRAL_BASE_URL } },
     corsOrigins: e.CORS_ORIGINS !== undefined ? list(e.CORS_ORIGINS) : e.NODE_ENV === 'production' ? [] : DEV_CORS_ORIGINS,
     webRoot: e.WEB_ROOT,
     worker: {

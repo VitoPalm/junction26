@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ContentScreen, TextBlock, type GlassesAction } from './content.js';
 
 /** Packaged, intrinsically looping GIF. Never inkify/canvas: those flatten motion.
@@ -23,15 +23,16 @@ export function GifImage({ src, alt }: { src: string; alt: string }) {
 /** Fixed GIF page with optional essential instruction (e.g. stitch counts).
  * Navigation actions belong to the guide, never to an autoplaying animation.
  */
-export function GifScreen({ src, alt, title, instruction, hint, actions }: {
+export function GifScreen({ src, alt, title, instruction, hint, actions, footer }: {
   src: string;
   alt: string;
   title?: string;
   instruction?: string;
   hint?: string;
   actions?: readonly GlassesAction[];
+  footer?: ReactNode;
 }) {
-  return <ContentScreen title={title} actions={actions}>
+  return <ContentScreen title={title} actions={actions} footer={footer}>
     <GifImage src={src} alt={alt} />
     {(instruction || hint) && <TextBlock text={instruction ?? hint!} hint={instruction ? hint : undefined} />}
   </ContentScreen>;

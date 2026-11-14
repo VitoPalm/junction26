@@ -112,6 +112,21 @@ and kept forever (they live on the job row).
 | `DELETE /v1/voice/context` | device | 200 | Applet closed |
 | `GET /v1/voice/events` | device | 200 | Server-sent `command` events |
 | `POST /v1/voice/utterances` | user, device | 200 | One utterance (`audio/wav`, `audio/mpeg` or JSON `{ text }`) → outcome |
+| `GET /v1/notes/recorder/events` | user | 200 | Phone recorder: server-sent `start` / `stop`; see [voice notes](#voice-notes) |
+| `POST /v1/notes` | device | 201 / 200 | Start a note on the open page; `409 no_recorder` when no phone recorder is on |
+| `GET /v1/notes?projectId=` | user | 200 | Notes of an applet, newest first |
+| `GET /v1/notes/counts?projectId=` | user, device | 200 | Saved notes per page |
+| `GET /v1/notes/:id` | user, device | 200 | One note |
+| `GET /v1/notes/:id/events` | user, device | 200 | Server-sent status of one note until `saved` / `discarded` |
+| `POST /v1/notes/:id/stop` | user, device | 200 | `{ reason: band \| voice \| timeout }` → asks the recorder to stop |
+| `POST /v1/notes/:id/recording` | user | 200 | Recorder confirms it is recording |
+| `POST /v1/notes/:id/discard` | user, device | 200 | `{ reason }`; nothing worth keeping (only notes without audio) |
+| `PUT /v1/notes/:id/audio?durationMs=&endReason=` | user | 201 / 200 | Raw `audio/wav` or `audio/mpeg`; queues `transcribe_voice_note` |
+| `GET /v1/notes/:id/audio` | user | 200 | Streams the recording |
+| `POST /v1/notes/:id/live` | user | 200 | One short `audio/wav` window → `{ stop, startSeconds }` (cloud stop-phrase check) |
+| `PATCH /v1/notes/:id` | user | 200 | `{ transcript }`; marks it edited (later transcriptions keep the edit) |
+| `POST /v1/notes/:id/transcribe` | user | 202 | Transcribe again |
+| `DELETE /v1/notes/:id` | user | 200 | Deletes the note and its recording |
 | `GET /v1/authoring/models` | any | 200 | `{ default, models: [{ id, label, provider, free, default }] }` for the model picker |
 | `GET /v1/authoring/capabilities` | any | 200 | The capability catalog (`capabilities`, `limitations`) the authoring model is given |
 | `GET /glasses/*`, `GET /author/*` | none | 200 | Built web apps when `WEB_ROOT` is set; unknown paths fall back to `index.html`; `assets/` immutable, HTML `no-cache` |
@@ -248,6 +263,44 @@ logged or stored. Logs carry the id, outcome, tool name, model, cost and
 timing. Fan-out is in-process, so the API must run as a single instance until
 it moves to `LISTEN/NOTIFY`.
 
+### Voice notes
+
+Spec: [voice-notes.md](voice-notes.md). The glasses start a note, the phone
+recorder (a user session) records and uploads it, the worker transcribes it.
+
+1. Phone: `GET /v1/notes/recorder/events` (SSE) while the recorder is on.
+   Events: `ready`; `start { note: { id, projectId, viewId, stepId, pageLabel,
+   noteLabel, maxSeconds } }`, sent to the most recently connected recorder
+   only; `stop { noteId, reason }`, sent to all of the user's recorders.
+2. Glasses: `POST /v1/notes` `{ id (client UUID), projectId, releaseId?,
+   viewId, stepId?, pageLabel (≤120), noteLabel?, stateSnapshot? }`. Retrying
+   the same `id` returns `200` with the existing note and sends `start` again
+   only while it is still `starting`. Without an open recorder: `409
+   no_recorder` and nothing is stored. Then `GET /v1/notes/:id/events` (SSE):
+   `ready`, `status { status }`, `recording { startedAt }`, `stopping
+   { reason }`, then `saved` or `discarded { reason }`, which end the stream.
+3. Phone: `POST /v1/notes/:id/recording` as soon as it records. Optional live
+   check: `POST /v1/notes/:id/live` with ≤384 KB of WAV (the last few seconds)
+   answers `{ stop, startSeconds }` from `NOTES_LIVE_MODEL`; nothing is stored.
+   Errors `422 live_unsupported`, `503 live_model_unavailable`.
+4. Phone: `PUT /v1/notes/:id/audio?durationMs=&endReason=` with the trimmed
+   recording (`audio/wav` or `audio/mpeg`, sniffed, at most
+   `NOTES_MAX_SECONDS` × 40 KB). `endReason` ∈ phrase, band, voice, timeout,
+   disconnect, interrupted, phone. Identical bytes again: `200`, same job.
+   Answers `{ note, jobId }`.
+
+While a note of a user is recording, `POST /v1/voice/utterances` answers
+`200 { outcome: "paused", reason: "note_recording" }` so dictation never runs
+applet actions (cleared on upload/discard, or after the time limit + 1 min).
+
+Note JSON: `id, projectId, releaseId, viewId, stepId, pageLabel, noteLabel,
+stateSnapshot, status (starting | recording | uploaded | transcribing |
+transcribed | failed | discarded), endReason, startedAt, endedAt, durationMs,
+audio ({ url, mediaType, bytes } or null), transcript, transcriptEdited,
+transcriptModel, language, error`. Object keys never leave the server.
+Audio is stored by design (owner decision); it and transcripts are never
+logged. Fan-out is in-process like the voice bridge (single API instance).
+
 ### State backup
 
 The glasses are the only writer of live state. They back up in batches (session
@@ -373,6 +426,24 @@ Origin are checked against configuration. Proxy the canonical Host unchanged.
 Responses are not cached; JSON body limits apply. Local signed-token tests and a
 real Clerk consent/draft flow have passed; public Claude/ChatGPT clients remain
 unverified. Setup and revocation limits: [assistant-mcp.md](assistant-mcp.md).
+
+### Native background recorder sessions
+
+- `POST /v1/notes/recorder/session` (full user session) returns
+  `{ token, ownerId, expiresAt }` with HTTP 201. The random `j26r_` token expires
+  after 12 hours. It is kept in native memory, never frontend storage or logs;
+  the database stores only its keyed HMAC.
+- `DELETE /v1/notes/recorder/session` revokes that token when called with a
+  recorder credential; a full user session revokes all recorder credentials
+  for that owner. Returns `{ ok: true }`. Turning the recorder off/signing out
+  invokes revocation. Offline revocation may fail; expiry remains enforced.
+- Recorder credentials can only GET `/v1/notes/recorder/events`, POST
+  `/:id/recording`, `/:id/discard`, `/:id/live`, PUT `/:id/audio`, or revoke
+  themselves. They cannot list/play/edit/delete notes, author, pair glasses,
+  or issue more sessions. Note ownership checks still apply. Expired/revoked
+  event streams close on the next event or heartbeat (at most 25 seconds).
+- Successful audio upload responses include `note.audio.sha256`; all recorders
+  compare it against the local WAV before deleting their queued copy.
 
 
 ### Authoring model metadata and provider configuration

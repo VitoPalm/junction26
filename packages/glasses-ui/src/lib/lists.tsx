@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button } from '@wearables-ui-toolkit/mrbd';
 import { assertContent, checkCopy, checkIds, COPY_LIMITS, pageItems } from './constraints.js';
 import { ContentScreen, TextBlock } from './content.js';
 
 export interface Choice { id: string; label: string; hint?: string; disabled?: boolean }
 export interface ChecklistItem extends Choice { checked: boolean }
-function CollectionScreen({ title, items, activate, selected, emptyText }: {
+function CollectionScreen({ title, items, activate, selected, emptyText, footer }: {
   title: string; items: readonly Choice[]; activate: (id: string) => void;
-  selected: (id: string) => boolean | undefined; emptyText: string;
+  selected: (id: string) => boolean | undefined; emptyText: string; footer?: ReactNode;
 }) {
   assertContent([
     ...checkCopy('title', title, COPY_LIMITS.title), ...checkIds(items),
@@ -23,7 +23,7 @@ function CollectionScreen({ title, items, activate, selected, emptyText }: {
   return <ContentScreen title={title} actions={count > 1 ? [
     { id: 'collection.previous', label: 'Previous page', disabled: page === 0, onActivate: () => setPage(page - 1) },
     { id: 'collection.next', label: 'Next page', disabled: page === count - 1, onActivate: () => setPage(page + 1) },
-  ] : []}>
+  ] : []} footer={footer}>
     {!visible.length ? <TextBlock text={emptyText} /> : <div data-g-fit-content className="g-choices" aria-label={`${title}, page ${page + 1} of ${count}`}>
       {visible.map(i => <Button key={i.id} title={i.label} subtitle={selected(i.id) === true ? 'Selected' : i.hint}
         aria-pressed={selected(i.id)} alwaysShowText disabled={i.disabled} onClick={() => activate(i.id)} />)}
@@ -32,18 +32,18 @@ function CollectionScreen({ title, items, activate, selected, emptyText }: {
 }
 
 /** Up to three choices per discrete page; no scrolling list. */
-export function ChoiceScreen({ title, items, onChoose, selectedId, emptyText = 'Nothing here yet.' }: {
-  title: string; items: readonly Choice[]; onChoose: (id: string) => void; selectedId?: string; emptyText?: string;
+export function ChoiceScreen({ title, items, onChoose, selectedId, emptyText = 'Nothing here yet.', footer }: {
+  title: string; items: readonly Choice[]; onChoose: (id: string) => void; selectedId?: string; emptyText?: string; footer?: ReactNode;
 }) {
-  return <CollectionScreen title={title} items={items} activate={onChoose}
+  return <CollectionScreen title={title} items={items} activate={onChoose} footer={footer}
     selected={id => selectedId === undefined ? undefined : id === selectedId} emptyText={emptyText} />;
 }
 
 /** Controlled checklist, paged rather than scrolled. Each item is one toggle. */
-export function ChecklistScreen({ title, items, onToggle, emptyText = 'All clear.' }: {
-  title: string; items: readonly ChecklistItem[]; onToggle: (id: string, checked: boolean) => void; emptyText?: string;
+export function ChecklistScreen({ title, items, onToggle, emptyText = 'All clear.', footer }: {
+  title: string; items: readonly ChecklistItem[]; onToggle: (id: string, checked: boolean) => void; emptyText?: string; footer?: ReactNode;
 }) {
-  return <CollectionScreen title={title} items={items} emptyText={emptyText}
+  return <CollectionScreen title={title} items={items} emptyText={emptyText} footer={footer}
     selected={id => items.find(i => i.id === id)?.checked}
     activate={id => { const item = items.find(i => i.id === id); if (item) onToggle(id, !item.checked); }} />;
 }

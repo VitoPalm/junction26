@@ -22,6 +22,8 @@ Band and by "Hey Meta" voice through WebMCP.
    [docs/assistant-mcp.md](docs/assistant-mcp.md).
 11. Voice without Meta AI (contingency if WebMCP stays broken):
    [docs/voice-fallback.md](docs/voice-fallback.md).
+12. Voice notes on applet pages (Meta triggers, phone records and transcribes):
+   [docs/voice-notes.md](docs/voice-notes.md).
 
 ## Commands
 

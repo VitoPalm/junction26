@@ -9,7 +9,7 @@ export function camelRows<T>(rows: Record<string, unknown>[]): T[] {
   return rows.map((r) => camel<T>(r));
 }
 
-export type JobKind = 'prepare_upload' | 'generate_revision' | 'package_release';
+export type JobKind = 'prepare_upload' | 'generate_revision' | 'package_release' | 'transcribe_voice_note';
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
 export interface User {
@@ -141,4 +141,36 @@ export interface StateBackup {
   outcome: 'accepted' | 'conflict' | 'stale';
   serverVersion: number | null;
   createdAt: Date;
+}
+
+export type VoiceNoteStatus = 'starting' | 'recording' | 'uploaded' | 'transcribing' | 'transcribed' | 'failed' | 'discarded';
+export type VoiceNoteEndReason = 'phrase' | 'band' | 'voice' | 'timeout' | 'disconnect' | 'interrupted' | 'phone' | 'too_short';
+export interface VoiceNote {
+  id: string;
+  ownerId: string;
+  projectId: string;
+  releaseId: string | null;
+  deviceId: string | null;
+  viewId: string;
+  stepId: string | null;
+  pageLabel: string;
+  noteLabel: string | null;
+  stateSnapshot: unknown;
+  status: VoiceNoteStatus;
+  endReason: VoiceNoteEndReason | null;
+  startedAt: Date;
+  endedAt: Date | null;
+  durationMs: number | null;
+  audioKey: string | null;
+  audioMediaType: string | null;
+  audioSha256: string | null;
+  audioBytes: number | null;
+  transcript: string | null;
+  transcriptEdited: boolean;
+  transcriptModel: string | null;
+  transcribedSha256: string | null;
+  language: string;
+  error: JobErrorInfo | null;
+  createdAt: Date;
+  updatedAt: Date;
 }

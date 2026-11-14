@@ -28,7 +28,8 @@ Source of truth: `packages/applet-format/src/schema.ts` (structure) and
 Differences from the draft in [implementation-plan.md](implementation-plan.md):
 collections are arrays with `id` (models handle them better than records), and
 action args are an array. Views: `text`, `value`, `list` (checklist with
-`check`), `sequence`, `image`. Ops: `add`, `subtract`, `set`, `toggle`, `reset`,
+`check`), `sequence`, `image`. Any view may add the voice note component
+`voiceNote: { label? }` (runtime 0.3.0; see [voice-notes.md](voice-notes.md)). Ops: `add`, `subtract`, `set`, `toggle`, `reset`,
 `listAppend`, `listRemove`, `listUpdate`, `listAdd`, `listToggle`, `listClear`,
 `move`, `goto`. Fixtures in `src/fixtures/` (row counter, D&D sheet, packing
 list, pancake guide) double as glasses demo content and the fake model's output.
@@ -304,6 +305,21 @@ pages: Capacitor release notes published after the model's training (8.6.2,
    providers report it unsupported. Turn it on per model, record the search
    cost in job usage, and keep the citations so the authoring app can show
    sources.
+
+## Voice notes (2026-11-14)
+
+Spec and status: [voice-notes.md](voice-notes.md). Pieces:
+`voiceNote` in the format, `VoiceNoteBar` in glasses-ui (a row between the
+content and the dock), anchors and the `start_voice_note` / `stop_voice_note`
+WebMCP tools in the renderer, `apps/glasses/src/notes.ts` (start/stop, per-note
+event stream, counts from sync), `/v1/notes` in the API, the
+`transcribe_voice_note` job, and in the authoring app a Recorder screen
+(`#/recorder`, `src/recorder.ts`) plus a Notes tab per applet.
+`node scripts/voice/recorder.ts` stands in for the phone recorder.
+Capacitor shells select `src/native-recorder.ts`: Android's microphone foreground
+service and iOS's continuous audio session own capture, recognition, event
+transport and disk uploads independently of the web view. Build and device
+verification details: [native-voice-notes.md](native-voice-notes.md).
 
 ## Known gaps (next)
 

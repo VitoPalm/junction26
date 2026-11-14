@@ -90,3 +90,20 @@ test('refuses newer runtime and nonfunctional checklist declarations', () => {
   assert.equal(r.ok, false);
   if (!r.ok) assert.ok(r.issues.some((i) => i.code === 'runtime_version'));
 });
+
+test('voice note component: label budget, runtime version and reserved tool names', () => {
+  const def = structuredClone(FIXTURES.rowCounter) as any;
+  assert.equal(validateDefinition(def).ok, true);
+  def.views[0].voiceNote = { label: 'x'.repeat(29) };
+  assert.ok(validateDefinition(def).issues.some((i) => i.path === 'views[0].voiceNote.label' && i.code === 'too_long'));
+  def.views[0].voiceNote = {};
+  def.minimumRuntimeVersion = '0.2.0';
+  assert.ok(validateDefinition(def).issues.some((i) => i.code === 'runtime_version'));
+  delete def.minimumRuntimeVersion;
+  def.views[0].voiceNote = { label: 'Notes', extra: true };
+  assert.equal(validateDefinition(def).ok, false);
+  const clash = structuredClone(FIXTURES.rowCounter) as any;
+  clash.actions[0].id = 'start_voice_note';
+  clash.views[0].actions = ['start_voice_note', 'undo_row'];
+  assert.ok(validateDefinition(clash).issues.some((i) => i.code === 'reserved'));
+});

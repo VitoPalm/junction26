@@ -9,6 +9,7 @@ const base = { DATABASE_URL: 'postgres://x', SESSION_SECRET: 'x'.repeat(32), STO
 test('loads defaults', () => {
   const c = loadConfig(base);
   assert.equal(c.port, 8080);
+  assert.equal(c.notes.transcribeModel, "openrouter-stt:mistralai/voxtral-mini-transcribe-3-0");
   assert.equal(c.storage.driver, 'memory');
   assert.equal(c.model.model, 'openai/gpt-6-luna');
   assert.equal(c.limits.maxUploadBytes, 50 * 1024 * 1024);

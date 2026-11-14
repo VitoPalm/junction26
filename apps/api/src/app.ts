@@ -17,7 +17,10 @@ import { deviceRoutes, healthRoutes, jobRoutes, pairRoute } from './routes/misc.
 import { authoringMetaRoutes, webRoutes } from './routes/web.ts';
 import { voiceRoutes } from './routes/voice.ts';
 import { fakeVoice, VoiceHub } from './voice.ts';
+import { noteRoutes } from './routes/notes.ts';
+import { fakeLive, isLiveRequest, NoteHub } from './notes.ts';
 import { registryFromSettings } from '@junction26/model';
+
 
 /**
  * Builds the HTTP application. Pure: no listening socket, so tests call
@@ -26,9 +29,10 @@ import { registryFromSettings } from '@junction26/model';
 export function createApp(deps: Deps) {
   const app = new Hono<AppEnv>();
   const voiceHub = deps.voice ?? new VoiceHub();
+  const noteHub = deps.notes ?? new NoteHub();
   const models =
     deps.models ??
-    registryFromSettings(deps.config.model, fakeVoice);
+    registryFromSettings(deps.config.model, (req) => isLiveRequest(req) ? fakeLive(req) : fakeVoice(req));
 
   app.use('*', async (c, next) => {
     const incoming = c.req.header('x-request-id');
@@ -83,8 +87,10 @@ export function createApp(deps: Deps) {
     maxSize: Math.max(deps.config.limits.maxDefinitionBytes, deps.config.limits.maxStateBytes) + 64 * 1024,
     onError: (c) => c.json(errorBody('payload_too_large', 'The request body is too large'), 413),
   });
-  // Uploads and voice clips enforce their own limits.
-  app.use('/v1/*', async (c, next) => (c.req.path.startsWith('/v1/uploads') || c.req.path === '/v1/voice/utterances' ? next() : jsonLimit(c, next)));
+  // Uploads, voice clips and voice-note audio enforce their own limits.
+  const ownLimit = (path: string) =>
+    path.startsWith('/v1/uploads') || path === '/v1/voice/utterances' || /^\/v1\/notes\/[^/]+\/(audio|live)$/.test(path);
+  app.use('/v1/*', async (c, next) => (ownLimit(c.req.path) ? next() : jsonLimit(c, next)));
 
   app.route('/v1/devices/pair', pairRoute(deps));
 
@@ -101,7 +107,8 @@ export function createApp(deps: Deps) {
   v1.route('/devices', deviceRoutes(deps));
   v1.route('/authoring', authoringMetaRoutes(deps, models));
   v1.route('/assistant', assistantRoutes(deps));
-  v1.route('/voice', voiceRoutes(deps, voiceHub, models));
+  v1.route('/voice', voiceRoutes(deps, voiceHub, models, noteHub));
+  v1.route('/notes', noteRoutes(deps, noteHub, models));
   app.route('/v1', v1);
 
   if (deps.config.webRoot) app.route('/', webRoutes(deps.config.webRoot));

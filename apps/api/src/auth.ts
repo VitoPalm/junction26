@@ -75,7 +75,18 @@ export function authenticate(deps: Deps) {
     if (!match) {
       throw new ApiError(401, 'unauthenticated', 'Send Authorization: Bearer <token>');
     }
-    const principal = await resolvePrincipal(deps, match[1]!);
+    const token = match[1]!;
+    let principal: Principal | null;
+    if (token.startsWith('j26r_')) {
+      // Recorder credentials never authorize library, authoring, audio playback, or other user APIs.
+      const allowed = (c.req.method === 'GET' && c.req.path === '/v1/notes/recorder/events') ||
+        (c.req.method === 'DELETE' && c.req.path === '/v1/notes/recorder/session') ||
+        (c.req.method === 'POST' && /^\/v1\/notes\/[0-9a-f-]+\/(recording|discard|live)$/.test(c.req.path)) ||
+        (c.req.method === 'PUT' && /^\/v1\/notes\/[0-9a-f-]+\/audio$/.test(c.req.path));
+      if (!allowed) throw forbidden('This credential only permits note recording');
+      const { rows } = await deps.pool.query('SELECT owner_id FROM note_recorder_sessions WHERE token_hash = $1 AND expires_at > now()', [hmac(deps.config.sessionSecret, 'recorder', token)]);
+      principal = rows[0] ? { kind: 'user', userId: rows[0].owner_id } : null;
+    } else principal = await resolvePrincipal(deps, token);
     if (!principal) throw new ApiError(401, 'unauthenticated', 'The session token is invalid or revoked');
     c.set('principal', principal);
     c.set('log', c.get('log').child({ userId: principal.userId, ...(principal.kind === 'device' ? { deviceId: principal.deviceId } : {}) }));

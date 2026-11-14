@@ -9,6 +9,7 @@ import type { AppletState } from '@junction26/applet-runtime';
 import { store, type InstalledApplet } from './store.ts';
 import { installDemos, library, loadState, markOpened, pair, pairing, saveState, sync } from './sync.ts';
 import { setVoiceEnabled, startVoiceBridge, useVoiceChip, useVoicePref } from './voice.ts';
+import { useVoiceNotes } from './notes.ts';
 
 const HOME_COUNT = 3;
 
@@ -225,10 +226,12 @@ function AppletHost({ applet, initial }: { applet: InstalledApplet; initial: App
     if (currentView && currentView !== session.state.view) session.setView(currentView);
   }, [currentView, session]);
 
-  // Voice tools exist only while this applet is open.
-  useAppletTools(applet.projectId, def, { session: () => sessionRef.current, openView: (id) => open({ kind: 'view', viewId: id }), currentView: () => viewRef.current });
+  const notes = useVoiceNotes(applet, () => sessionRef.current);
 
-  return <AppletScreen session={session} screen={screen} onOpen={open} />;
+  // Voice tools exist only while this applet is open.
+  useAppletTools(applet.projectId, def, { session: () => sessionRef.current, openView: (id) => open({ kind: 'view', viewId: id }), currentView: () => viewRef.current, notes: notes.host });
+
+  return <AppletScreen session={session} screen={screen} onOpen={open} notes={notes.binding} />;
 }
 
 /**
@@ -243,7 +246,12 @@ function useAppletTools(projectId: string, def: AppletDefinition, host: ToolHost
   hostRef.current = host;
   useEffect(() => {
     const key = `${projectId}:${JSON.stringify(def).length}:${def.title}`;
-    const proxy: ToolHost = { session: () => hostRef.current.session(), openView: (v) => hostRef.current.openView(v), currentView: () => hostRef.current.currentView() };
+    const proxy: ToolHost = {
+      session: () => hostRef.current.session(),
+      openView: (v) => hostRef.current.openView(v),
+      currentView: () => hostRef.current.currentView(),
+      notes: { start: (a) => hostRef.current.notes!.start(a), stop: () => hostRef.current.notes!.stop() },
+    };
     clearTimeout(activeTools.timer);
     if (activeTools.key !== key) {
       activeTools.ac?.abort();
@@ -254,6 +262,7 @@ function useAppletTools(projectId: string, def: AppletDefinition, host: ToolHost
         session: () => activeTools.hosts.at(-1)!.session(),
         openView: (v) => activeTools.hosts.at(-1)!.openView(v),
         currentView: () => activeTools.hosts.at(-1)?.currentView() ?? null,
+        notes: { start: (a) => activeTools.hosts.at(-1)!.notes!.start(a), stop: () => activeTools.hosts.at(-1)!.notes!.stop() },
       };
       registerAppletTools(def, latest, activeTools.ac.signal);
       // Same tools, same single owner: the phone voice bridge, when switched on.

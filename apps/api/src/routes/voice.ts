@@ -8,6 +8,7 @@ import { requireDevice } from '../auth.ts';
 import { ApiError, forbidden } from '../errors.ts';
 import { readJson } from '../http.ts';
 import { resolveUtterance, type Utterance, type VoiceHub } from '../voice.ts';
+import type { NoteHub } from '../notes.ts';
 
 /** About 8 s of 16 kHz mono PCM16 WAV is 256 KB; leave headroom for 8 kHz stereo oddities. */
 export const MAX_UTTERANCE_BYTES = 512 * 1024;
@@ -35,7 +36,7 @@ const ContextBody = z.object({
 const TextUtterance = z.object({ id: z.string().regex(/^[\w-]{8,64}$/).optional(), text: z.string().trim().min(1).max(500) });
 
 /** Routes under /v1/voice. Contract: docs/api.md, "Voice bridge". */
-export function voiceRoutes(deps: Deps, hub: VoiceHub, models: ModelRegistry) {
+export function voiceRoutes(deps: Deps, hub: VoiceHub, models: ModelRegistry, notes?: NoteHub) {
   const app = new Hono<AppEnv>();
 
   /** Glasses: what is open now. Replaces the previous context; DELETE when the applet closes. */
@@ -122,6 +123,12 @@ export function voiceRoutes(deps: Deps, hub: VoiceHub, models: ModelRegistry) {
 
     const log = c.get('log').child({ utteranceId: id, input: utt.kind });
     const started = performance.now();
+    // Dictating a voice note must never trigger applet actions.
+    if (notes?.isRecording(p.userId)) {
+      const body = { id, outcome: 'paused' as const, reason: 'note_recording' };
+      log.info('voice utterance', { outcome: body.outcome });
+      return c.json(body);
+    }
     // Don't pay for a model call nobody can act on.
     const target = hub.target(p.userId);
     if (!target) {

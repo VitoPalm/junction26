@@ -5,8 +5,10 @@ import { diffDefinitions, validateDefinition, type AppletDefinition, type Change
 import { ApiError, waitForJob, type Job, type Message, type ModelOption, type Project, type Release, type RevisionSummary, type Upload } from './api.ts';
 import { useApp, useAutosize } from './App.tsx';
 import { GlassesPreview } from './GlassesPreview.tsx';
+import { NotesPanel } from './Notes.tsx';
 import { BrandMark, IconArrowRight, IconArrowUp, IconBack, IconCheck, IconClip, IconClose, IconFile, IconGlasses, IconWarn } from './icons.tsx';
 import { FILE_ACCEPT, SUGGESTIONS, takeStartRequest } from './ui.ts';
+
 
 const STAGES = [
   { id: 'preparing', label: 'Reading your files…' },
@@ -24,7 +26,7 @@ export function ProjectScreen() {
   const [releases, setReleases] = useState<Release[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [definitions, setDefinitions] = useState<Record<string, unknown>>({});
-  const [tab, setTab] = useState<'chat' | 'preview'>('chat');
+  const [tab, setTab] = useState<'chat' | 'preview' | 'notes'>('chat');
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -67,6 +69,11 @@ export function ProjectScreen() {
     } else if (!selected) setSelected(revs[0]?.id ?? null);
   };
 
+  // Page order for the notes list: the live version's views.
+  const liveRevisionId = project?.currentRelease?.revisionId ?? releases.find((r) => r.id === project?.currentReleaseId)?.revisionId;
+  const liveDef = liveRevisionId ? (definitions[liveRevisionId] as { views?: { id: string }[] } | undefined) : undefined;
+  const viewOrder = useMemo(() => liveDef?.views?.map((v) => v.id) ?? [], [liveDef]);
+
   if (error)
     return (
       <main className="page narrow">
@@ -77,6 +84,7 @@ export function ProjectScreen() {
       </main>
     );
   const hasPreview = revisions.some((r) => r.validationStatus === 'valid');
+
   return (
     <main className="page project">
       <header className="topbar sticky">
@@ -87,8 +95,11 @@ export function ProjectScreen() {
           <button role="tab" aria-selected={tab === 'preview'} onClick={() => setTab('preview')}>
             Preview{hasPreview && tab !== 'preview' && <span className="tab-dot" />}
           </button>
+          <button role="tab" aria-selected={tab === 'notes'} onClick={() => setTab('notes')}>Notes</button>
+
         </div>
       </header>
+      {tab === 'notes' ? <NotesPanel projectId={projectId} viewOrder={viewOrder} /> : (
       <div className="split" data-tab={tab}>
         <Chat projectId={projectId} messages={messages} onSent={refresh} onDone={onGenerated} hasPreview={hasPreview} onShowPreview={() => setTab('preview')} />
         <PreviewPanel
@@ -102,6 +113,7 @@ export function ProjectScreen() {
           onPublished={refresh}
         />
       </div>
+      )}
     </main>
   );
 }

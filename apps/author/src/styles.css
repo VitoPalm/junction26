@@ -537,3 +537,31 @@ input:not([type='checkbox']):focus { outline: none; border-color: var(--ink); bo
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Voice notes */
+.recorder-pill { position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 20; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 8px 14px; text-decoration: none; font-size: 0.9rem; }
+.recorder-pill.recording { border-color: var(--bad); color: #ffd0d0; }
+.recorder-pill.error { border-color: var(--warn); }
+.recorder-status { font-weight: 600; margin: 0; }
+.recorder-status.recording { color: #ffb4b4; }
+.recorder-status.error { color: var(--bad); }
+.notes { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.note-group { display: flex; flex-direction: column; gap: 8px; }
+.note-group h3 { margin: 4px 0 0; }
+.note { display: flex; flex-direction: column; gap: 8px; }
+.note .transcript { margin: 0; white-space: pre-wrap; }
+.note audio { width: 100%; }
+.badge.bad { color: var(--bad); }
+.badge.rec { color: #ffb4b4; }
+.link.danger { color: var(--bad); }
+
+
+/* Recorder and note cards use the same surfaces as the Solutions library. */
+.recorder-screen { display: flex; flex-direction: column; gap: 16px; }
+.recorder-screen .card, .notes .note.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 20px; box-shadow: var(--shadow-sm);
+}
+.notes .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.notes .badge { padding: 3px 8px; border-radius: 999px; background: var(--surface-2); }
+.notes .link { padding: 6px 8px; border: 0; background: none; color: var(--accent); }
+.notes .link.danger { color: var(--bad); }
