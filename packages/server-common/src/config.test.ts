@@ -9,6 +9,7 @@ const base = { DATABASE_URL: 'postgres://x', SESSION_SECRET: 'x'.repeat(32), STO
 test('loads defaults', () => {
   const c = loadConfig(base);
   assert.equal(c.port, 8080);
+  assert.equal(c.notes.transcribeModel, "openrouter-stt:mistralai/voxtral-mini-transcribe-3-0");
   assert.equal(c.storage.driver, 'memory');
   assert.equal(c.model.model, 'openai/gpt-6-luna');
   assert.equal(c.limits.maxUploadBytes, 50 * 1024 * 1024);
@@ -111,4 +112,26 @@ test('hosted MCP requires explicit Clerk settings and an exact canonical resourc
     { MCP_RESOURCE_URL: 'https://user:pass@external.example/mcp' },
     { NODE_ENV: 'production' },
   ]) assert.throws(() => loadConfig({ ...enabled, ...env }), ConfigError);
+});
+
+test('provider settings use secret references and conservative capabilities', () => {
+  const c = loadConfig({ ...base, ANTHROPIC_API_KEY: 'a', GEMINI_API_KEY: 'g', GROQ_API_KEY: 'private', MODEL_PROVIDERS: JSON.stringify([
+    { id: 'groq', baseUrl: 'https://example.com/v1', apiKeyEnv: 'GROQ_API_KEY', capabilities: { tools: true } },
+    { id: 'ollama', baseUrl: 'http://localhost:11434/v1', auth: 'none', modelCapabilities: { vision: { images: true } } },
+  ]) });
+  assert.equal(c.model.anthropic?.apiKey, 'a');
+  assert.equal(c.model.gemini?.apiKey, 'g');
+  assert.equal(c.model.compatible?.[0]?.apiKey, 'private');
+  assert.equal(c.model.compatible?.[0]?.responseFormat, 'prompt');
+  assert.equal(c.model.compatible?.[0]?.capabilities?.images, false);
+  assert.equal(c.model.compatible?.[1]?.auth, 'none');
+});
+
+test('provider JSON fails closed for invalid or duplicate definitions without disclosing values', () => {
+  for (const definition of ['bad-json-private', '{}', '[{"id":"openai","baseUrl":"https://x"}]',
+    '[{"id":"x","baseUrl":"file:///etc/private"}]', '[{"id":"x","baseUrl":"https://x","apiKey":"private"}]',
+    '[{"id":"x","baseUrl":"https://x"},{"id":"x","baseUrl":"https://x"}]',
+    '[{"id":"x","baseUrl":"https://x","capabilities":{"images":"private"}}]']) {
+    assert.throws(() => loadConfig({ ...base, MODEL_PROVIDERS: definition }), (e: unknown) => e instanceof ConfigError && !e.message.includes('private'));
+  }
 });

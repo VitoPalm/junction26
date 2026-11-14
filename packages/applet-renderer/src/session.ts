@@ -25,7 +25,7 @@ export function useAppletSession(
   initial: AppletState,
   persist: (state: AppletState) => Promise<void> = async () => {},
 ): AppletSession {
-  const [state, setState] = useState(initial);
+  const [, setState] = useState(initial);
   const [notice, setNotice] = useState<string | null>(null);
   const ref = useRef(initial);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
@@ -68,5 +68,7 @@ export function useAppletSession(
   const step = useCallback((viewId: string, by: 1 | -1) => serial(() => commit(stepSequence(definition, ref.current, viewId, by))), [definition, commit, serial]);
   const setView = useCallback((viewId: string) => void serial(() => commit(withView(ref.current, viewId))), [commit, serial]);
 
-  return { definition, state, run, step, setView, notice, clearNotice: () => setNotice(null) };
+  // Tool callers can read again before React renders the committed update.
+  // Always expose the latest persisted state, including through older handles.
+  return { definition, get state() { return ref.current; }, run, step, setView, notice, clearNotice: () => setNotice(null) };
 }

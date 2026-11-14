@@ -13,6 +13,7 @@ export const UPLOAD_TYPES: Record<string, (head: Buffer) => boolean> = {
   'application/pdf': (h) => h.subarray(0, 5).toString('latin1') === '%PDF-',
   'image/png': (h) => h.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
   'image/jpeg': (h) => h[0] === 0xff && h[1] === 0xd8 && h[2] === 0xff,
+  'image/gif': (h) => /^GIF8[79]a$/.test(h.subarray(0, 6).toString('latin1')),
   'image/webp': (h) => h.subarray(0, 4).toString('latin1') === 'RIFF' && h.subarray(8, 12).toString('latin1') === 'WEBP',
   'text/plain': (h) => !h.includes(0),
   'text/markdown': (h) => !h.includes(0),
@@ -24,7 +25,7 @@ export const UPLOAD_TYPES: Record<string, (head: Buffer) => boolean> = {
 
 const SNIFF_BYTES = 16;
 
-class UploadRejected extends Error {
+export class UploadRejected extends Error {
   readonly status: 413 | 415;
   readonly code: string;
   constructor(status: 413 | 415, code: string, message: string) {
@@ -35,7 +36,7 @@ class UploadRejected extends Error {
 }
 
 /** Counts, hashes and sniffs bytes on their way to storage; errors abort the write. */
-class Inspector extends Transform {
+export class Inspector extends Transform {
   bytes = 0;
   private readonly hash = createHash('sha256');
   private head: Buffer = Buffer.alloc(0);

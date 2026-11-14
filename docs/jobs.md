@@ -76,6 +76,7 @@ attempts and tokens rather than assume exactly-once inference.
 | `prepare_upload` | `POST /v1/uploads` | 3 | Implemented (verification only) |
 | `package_release` | `POST /v1/projects/:id/releases` | 5 | Implemented |
 | `generate_revision` | `POST /v1/projects/:id/messages` | 2 | Implemented (`apps/worker/src/generate.ts`) |
+| `transcribe_voice_note` | `PUT /v1/notes/:id/audio`, `POST /v1/notes/:id/transcribe` | 4 | Implemented (`apps/worker/src/transcribe.ts`) |
 
 ### `prepare_upload`
 
@@ -100,6 +101,27 @@ upload has succeeded. If the job fails permanently, the release is marked
 `failed`. Objects left by superseded or failed releases aren't cleaned up yet
 (a later sweep job).
 
+### `transcribe_voice_note`
+
+Input `{ noteId, sha256, force? }`; idempotency key `note:<id>:<sha256>`.
+1. Load the note. Deleted, or its audio hash isn't `sha256` any more (a newer
+   upload): finish as a no-op. Already transcribed for this hash and not
+   `force`: no-op.
+2. Mark it `transcribing`, read the audio from storage, and call
+   `NOTES_TRANSCRIBE_MODEL`. Default: OpenRouter's `/api/v1/audio/transcriptions`
+   (`openrouter-stt:mistralai/voxtral-mini-transcribe-3-0`, `language=en`, `context_bias` = up to 100
+   words from the applet, passed in Mistral provider options as spelling hints), through
+   `packages/model/src/transcription.ts`. A chat-model spec instead gets the
+   audio as a message part with a verbatim-transcript prompt.
+   `cleanTranscript` strips a trailing "stop recording meta" either way.
+3. Save the transcript only if the audio hash still matches, and never over a
+   transcript the wearer edited. A permanent failure marks the note `failed`
+   (the audio stays; the phone offers "Transcribe again"). Transcripts are
+   never logged; usage and cost are recorded on the job.
+
+`fake:notes` is free: it returns the text a test clip carries after
+`TRANSCRIPT:` in its bytes, or a description of the clip.
+
 ### `generate_revision`
 
 Input: `{ projectId, messageId, baseRevisionId, attachmentIds, model }`.
@@ -116,7 +138,8 @@ Input: `{ projectId, messageId, baseRevisionId, attachmentIds, model }`.
    `{ reply, definition|null }`; validate with `validateDefinition`. If invalid,
    one repair call with the exact issues.
 6. In one transaction: revision (`source: model`, `job_id`), assistant message,
-   and the project title if it was still "New applet". Result
+   and the project title if it was still the placeholder "New solution" (or the
+   older "New applet"). Result
    `{ revisionId, revisionNumber, messageId }`; `usage` =
    `{ inputTokens, outputTokens, costUsd, model }`.
 
@@ -185,3 +208,36 @@ source/attribution metadata. The legacy reserved top-level `assets` object remai
 empty. Publication performs no live image fetch. See
 [model-pipeline.md](model-pipeline.md) for processing and network limits and local
 Poppler/Chromium prerequisites.
+
+GIF source preparation preserves an infinite loop and a separate PNG first-frame
+model preview. It rejects motion exceeding 8 seconds / 96 frames or 512 KiB after
+resizing to 360 px with `source_motion_limit`. Managed generation checks a 2 MiB
+aggregate GIF budget (`motion_budget` validation issue). Runtime 0.2.0 consumes
+the embedded GIF directly. No video import job is registered; the YouTube/FFmpeg
+prototype is local-only. See [video-tutorials.md](video-tutorials.md).
+
+GIF steps with essential instruction text are measured together in the canonical
+`GifScreen`. GIF decode recovery messages also produce an `image_decode` issue
+in generation checks, so a broken animation cannot pass merely because the
+component replaces it with fallback text.
+
+
+### Multiple model providers
+
+Generation and voice resolution share the server-configured model registry.
+`anthropic:` uses native Messages, `gemini:` uses native generateContent, and
+operator-defined prefixes use independent Chat Completions endpoints. Missing
+credentials fail as `model_not_configured` before generation/fit work. Models
+configured without tools skip source-tool rounds; prepared source text is still
+provided. Search is enabled by the adapter's `webSearch` capability (currently
+OpenRouter only), rather than by checking a provider name.
+
+The response schema always reaches the adapter. Native Anthropic/Gemini and
+compatible `prompt` mode include it as prompt guidance, avoiding rejection of
+our complex schema by providers with restricted JSON Schema support. Existing
+local definition validation, repairs and rendered-fit checks remain required.
+Gemini's complete signed model parts are retained across tool rounds; function
+results are paired with their calls. Direct providers report token usage, including
+Gemini thinking tokens and Anthropic cache input, with `costUsd: null` when no
+actual cost is returned. No price estimates are invented. Offline contract tests
+cover wire formats and errors; direct paid-provider behavior is unverified.

@@ -77,7 +77,9 @@ light to the real world. Consequences that are easy to get wrong:
 - **No camera, no microphone capture.** Only the native Device Access Toolkit
   (iOS/Android companion apps) can do that.
 - Spoken input reaches a web app only as dictated text in a field, or as WebMCP
-  tool calls from Meta AI.
+  tool calls from Meta AI. A phone app can capture the glasses mics over
+  Bluetooth HFP, which Meta's DAT docs say is **beamformed to the wearer's
+  voice**. Our fallback relays that through the API: [voice-fallback.md](voice-fallback.md).
 - No guaranteed execution while hidden: stop timers, animation frames, sensors,
   polling and sockets on pause, hide, route exit and unmount.
 

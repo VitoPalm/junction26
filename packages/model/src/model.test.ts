@@ -175,3 +175,26 @@ test('server search is a separate bounded Responses request with accounted usage
   assert.equal(out.usage.inputTokens, 10);
   assert.match(out.text, /example.com/);
 });
+
+test('audio clips go out as input_audio and tool_choice is forwarded', async () => {
+  const seen: any[] = [];
+  const p = new OpenAICompatibleProvider({
+    id: 'openrouter',
+    baseUrl: 'https://x',
+    apiKey: 'k',
+    openRouter: true,
+    fetch: stubFetch(200, { choices: [{ message: { content: null, tool_calls: [{ id: 'c', function: { name: 'none', arguments: '{}' } }] }, finish_reason: 'tool_calls' }] }, seen),
+  });
+  assert.equal(p.capabilities('google/gemini-3.5-flash-lite').audio, true);
+  assert.equal(p.capabilities('openai/gpt-6-luna').audio, false);
+  await p.complete({
+    model: 'google/gemini-3.5-flash-lite',
+    system: 's',
+    maxOutputTokens: 50,
+    toolChoice: 'required',
+    tools: [{ name: 'none', description: 'Ignore', parameters: { type: 'object' } }],
+    messages: [{ role: 'user', content: [{ type: 'text', text: 'Command:' }, { type: 'audio', format: 'wav', data: 'UklGRg==' }] }],
+  });
+  assert.equal(seen[0].body.tool_choice, 'required');
+  assert.deepEqual(seen[0].body.messages[1].content[1], { type: 'input_audio', input_audio: { data: 'UklGRg==', format: 'wav' } });
+});

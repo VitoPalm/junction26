@@ -26,6 +26,8 @@ export interface SourceImage {
   width: number;
   height: number;
   attribution?: string;
+  /** Original motion for the offline package; the model sees the PNG preview. */
+  animation?: { mediaType: 'image/gif'; data: string };
 }
 export interface PreparedSource {
   version: 1;
@@ -80,7 +82,22 @@ export async function prepareBytes(
   const result: PreparedSource = { version: 1, source, text: '', images: [], warnings: [] };
   if (bytes.length > SOURCE_LIMITS.bytes)
     throw new JobError('source_too_large', 'Source is too large; upload a smaller excerpt.');
-  if (mediaType.startsWith('image/')) result.images = [await imageSource(bytes, source, ref)];
+  if (mediaType === 'image/gif') {
+    const meta = await sharp(bytes, { animated: true, limitInputPixels: SOURCE_LIMITS.pixels }).metadata();
+    const duration = (meta.delay ?? []).reduce((sum, ms) => sum + ms, 0);
+    if ((meta.pages ?? 1) > 96 || duration > 8000)
+      throw new JobError('source_motion_limit', 'Use a GIF excerpt of at most 8 seconds and 96 frames.');
+    const animation = await sharp(bytes, { animated: true, limitInputPixels: SOURCE_LIMITS.pixels })
+      .resize({ width: 360, height: 360, fit: 'inside', withoutEnlargement: true })
+      .gif({ loop: 0, effort: 7 })
+      .toBuffer();
+    if (animation.length > 512 * 1024)
+      throw new JobError('source_motion_limit', 'GIF exceeds 512 KiB after resizing; use a shorter or tighter excerpt.');
+    const image = await imageSource(animation, source, ref);
+    image.animation = { mediaType: 'image/gif', data: animation.toString('base64') };
+    result.images = [image];
+    result.warnings.push('Looping GIF: the attached PNG is only its first-frame preview, not evidence of the full movement. Preserve this motion ref when embedding; do not describe unseen motion as verified.');
+  } else if (mediaType.startsWith('image/')) result.images = [await imageSource(bytes, source, ref)];
   else if (mediaType === 'application/pdf') {
     const dir = await mkdtemp(join(tmpdir(), 'j26-source-'));
     try {
@@ -278,6 +295,7 @@ export async function fetchPublic(
   throw new Error('Too many source redirects');
 }
 export function sourceMediaType(bytes: Buffer, declared: string): string {
+  if (/^GIF8[79]a$/.test(bytes.subarray(0, 6).toString('latin1'))) return 'image/gif';
   if (bytes.subarray(0, 5).toString('latin1') === '%PDF-') return 'application/pdf';
   if (bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return 'image/png';
   if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return 'image/jpeg';
@@ -299,6 +317,7 @@ export async function cropImage(
   image: SourceImage,
   box: { left: number; top: number; width: number; height: number },
 ): Promise<SourceImage> {
+  if (image.animation) throw new Error('Cropping a GIF here would remove its motion. Crop the source video before making the GIF.');
   for (const v of Object.values(box))
     if (!Number.isFinite(v) || v < 0 || v > 1) throw new Error('Crop coordinates must be fractions from 0 to 1');
   if (box.width === 0 || box.height === 0 || box.left + box.width > 1.001 || box.top + box.height > 1.001)
@@ -325,7 +344,7 @@ export function sourceParts(source: PreparedSource, vision: boolean): Part[] {
         text: source.text,
         warnings: source.warnings,
         imageCandidates: source.links ?? [],
-        images: source.images.map(({ data, ...rest }) => rest),
+        images: source.images.map(({ data, animation, ...rest }) => ({ ...rest, ...(animation ? { motion: 'image/gif' } : {}) })),
       }),
     },
     ...source.images.flatMap((i): Part[] =>

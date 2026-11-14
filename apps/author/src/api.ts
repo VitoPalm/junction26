@@ -88,6 +88,7 @@ export function createApi(session: Session, getToken: () => Promise<string | nul
     projects: () => req<{ projects: Project[] }>('GET', '/v1/projects'),
     createProject: (title: string) => req<{ project: Project }>('POST', '/v1/projects', { body: { title } }),
     project: (id: string) => req<{ project: Project }>('GET', `/v1/projects/${id}`),
+    renameProject: (id: string, title: string) => req<{ project: Project }>('PATCH', `/v1/projects/${id}`, { body: { title } }),
     messages: (id: string) => req<{ messages: Message[] }>('GET', `/v1/projects/${id}/messages`),
     send: (id: string, text: string, attachmentIds: string[], model?: string) =>
       req<{ message: Message; job: Job }>('POST', `/v1/projects/${id}/messages`, { body: { text, attachmentIds, model }, headers: { 'idempotency-key': key() } }),
@@ -107,13 +108,36 @@ export function createApi(session: Session, getToken: () => Promise<string | nul
     pairingCode: () => req<{ code: string; expiresAt: string; pairUrl: string }>('POST', '/v1/devices/pairing-codes'),
     devices: () => req<{ devices: Device[] }>('GET', '/v1/devices'),
     revokeDevice: (id: string) => req<{ device: Device }>('DELETE', `/v1/devices/${id}`),
+    nativeRecorderSession: () => req<{ token: string; ownerId: string; expiresAt: string }>('POST', '/v1/notes/recorder/session'),
+    stopNativeRecorderSession: () => req<{ ok: true }>('DELETE', '/v1/notes/recorder/session'),
+    recorderServer: session.server,
+    // Voice notes (docs/voice-notes.md)
+    notes: (projectId: string) => req<{ notes: VoiceNote[] }>('GET', `/v1/notes?projectId=${projectId}`),
+    editNote: (id: string, transcript: string) => req<{ note: VoiceNote }>('PATCH', `/v1/notes/${id}`, { body: { transcript } }),
+    deleteNote: (id: string) => req<{ ok: true }>('DELETE', `/v1/notes/${id}`),
+    retranscribe: (id: string) => req<{ note: VoiceNote; jobId: string }>('POST', `/v1/notes/${id}/transcribe`),
+    noteRecording: (id: string) => req<{ note: VoiceNote }>('POST', `/v1/notes/${id}/recording`),
+    discardNote: (id: string, reason: 'too_short' | 'interrupted' | 'disconnect' | 'phone') => req<{ note: VoiceNote }>('POST', `/v1/notes/${id}/discard`, { body: { reason } }),
+    uploadNoteAudio: (id: string, wav: Blob, durationMs: number, endReason: string) =>
+      req<{ note: VoiceNote; jobId: string }>('PUT', `/v1/notes/${id}/audio?durationMs=${Math.round(durationMs)}&endReason=${endReason}`, { raw: wav, headers: { 'content-type': 'audio/wav' } }),
+    liveCheck: (id: string, wav: Blob) => req<{ stop: boolean; startSeconds: number | null }>('POST', `/v1/notes/${id}/live`, { raw: wav, headers: { 'content-type': 'audio/wav' } }),
+    /** Raw fetch for binary/streaming endpoints (audio playback, recorder events). */
+    async fetchRaw(path: string, init: RequestInit = {}): Promise<Response> {
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'unauthenticated', 'Please sign in again.');
+      const headers = new Headers(init.headers);
+      headers.set('authorization', `Bearer ${token}`);
+      const res = await fetch(`${session.server}${path}`, { ...init, headers });
+      if (!res.ok) throw new ApiError(res.status, 'http_error', `Request failed (${res.status})`);
+      return res;
+    },
   };
 }
 export type Api = ReturnType<typeof createApi>;
 
 function guessType(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase();
-  return ext === 'csv' ? 'text/csv' : ext === 'json' ? 'application/json' : ext === 'html' || ext === 'htm' ? 'text/html' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : ext === 'pdf' ? 'application/pdf' : ext === 'md' ? 'text/markdown' : ext === 'txt' ? 'text/plain' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'application/octet-stream';
+  return ext === 'csv' ? 'text/csv' : ext === 'json' ? 'application/json' : ext === 'html' || ext === 'htm' ? 'text/html' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : ext === 'pdf' ? 'application/pdf' : ext === 'md' ? 'text/markdown' : ext === 'txt' ? 'text/plain' : ext === 'gif' ? 'image/gif' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'application/octet-stream';
 }
 
 export interface Project {
@@ -166,6 +190,9 @@ export interface Upload {
   status: string;
 }
 export interface ModelOption {
+  available: boolean;
+  unavailableReason: string | null;
+  capabilities?: { images: boolean; files: boolean; audio: boolean; structuredOutput: boolean; tools?: boolean; webSearch?: boolean };
   id: string;
   label: string;
   provider: string;
@@ -178,6 +205,26 @@ export interface Device {
   createdAt: string;
   lastSeenAt: string | null;
   revokedAt: string | null;
+}
+
+export interface VoiceNote {
+  id: string;
+  projectId: string;
+  viewId: string;
+  stepId: string | null;
+  pageLabel: string;
+  noteLabel: string | null;
+  stateSnapshot: Record<string, unknown> | null;
+  status: 'starting' | 'recording' | 'uploaded' | 'transcribing' | 'transcribed' | 'failed' | 'discarded';
+  endReason: string | null;
+  startedAt: string;
+  endedAt: string | null;
+  durationMs: number | null;
+  audio: { url: string; mediaType: string; bytes: number; sha256: string } | null;
+  transcript: string | null;
+  transcriptEdited: boolean;
+  transcriptModel: string | null;
+  error: { code: string; message: string } | null;
 }
 
 /** Polls a job until it settles. */

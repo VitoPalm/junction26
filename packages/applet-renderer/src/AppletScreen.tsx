@@ -1,7 +1,8 @@
-import { Component, type ReactNode } from 'react';
+import { Component, useEffect, useState, type ReactNode } from 'react';
 import { Button } from '@wearables-ui-toolkit/mrbd';
-import { ChecklistScreen, ChoiceScreen, ContentScreen, Diagram, TextBlock, ValueReadout, type GlassesAction } from '@junction26/glasses-ui';
-import type { AppletDefinition, ListItem, View } from '@junction26/applet-format';
+import { ChecklistScreen, ChoiceScreen, ContentScreen, Diagram, GifScreen, TextBlock, ValueReadout, VoiceNoteBar, type GlassesAction } from '@junction26/glasses-ui';
+import { anchorKey, noteAnchor, type NotesBinding } from './notes.ts';
+import type { AppletDefinition, Asset, ListItem, View } from '@junction26/applet-format';
 import { formatScalar, formatValue } from '@junction26/applet-runtime';
 import type { AppletSession } from './session.ts';
 
@@ -23,7 +24,7 @@ export function hasMenu(def: AppletDefinition): boolean {
  * agnostic: the host maps `onOpen` to its navigation (routes on the glasses,
  * local state in the authoring preview).
  */
-export function AppletScreen({ session, screen, onOpen }: { session: AppletSession; screen: Screen; onOpen: (s: Screen) => void }) {
+export function AppletScreen({ session, screen, onOpen, notes }: { session: AppletSession; screen: Screen; onOpen: (s: Screen) => void; notes?: NotesBinding }) {
   const def = session.definition;
   if (screen.kind === 'menu') {
     return (
@@ -39,7 +40,7 @@ export function AppletScreen({ session, screen, onOpen }: { session: AppletSessi
   const view = def.views.find((v) => v.id === screen.viewId) ?? def.views[0]!;
   return (
     <Guard key={view.id}>
-      <ViewScreen session={session} view={view} />
+      <ViewScreen session={session} view={view} footer={view.voiceNote ? <NoteFooter session={session} view={view} notes={notes} /> : undefined} />
     </Guard>
   );
 }
@@ -51,20 +52,43 @@ function docked(session: AppletSession, view: View): GlassesAction[] {
   });
 }
 
-function ViewScreen({ session, view }: { session: AppletSession; view: View }) {
+/** The voice note component for the page as it is now (current step on a guide). */
+function NoteFooter({ session, view, notes }: { session: AppletSession; view: View; notes?: NotesBinding }) {
+  const anchor = noteAnchor(session.definition, session.state, view.id);
+  const active = anchor && notes?.active?.key === anchorKey(anchor) ? notes.active : null;
+  const [now, setNow] = useState(() => Date.now());
+  const ticking = active?.status === 'recording' && active.startedAt !== null;
+  useEffect(() => {
+    if (!ticking) return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [ticking]);
+  if (!anchor) return null;
+  return (
+    <VoiceNoteBar
+      status={active?.status ?? 'idle'}
+      elapsedMs={active?.startedAt ? now - active.startedAt : 0}
+      count={notes?.counts[anchorKey(anchor)] ?? 0}
+      message={active?.message}
+      onActivate={notes ? () => notes.toggle(anchor) : undefined}
+    />
+  );
+}
+
+function ViewScreen({ session, view, footer }: { session: AppletSession; view: View; footer?: ReactNode }) {
   const { definition: def, state } = session;
   const hint = session.notice ?? undefined;
   switch (view.kind) {
     case 'text':
       return (
-        <ContentScreen title={view.title} actions={docked(session, view)}>
+        <ContentScreen title={view.title} actions={docked(session, view)} footer={footer}>
           <TextBlock label={view.label} text={view.text} hint={hint ? clip(hint) : view.hint} />
         </ContentScreen>
       );
     case 'value': {
       const field = def.state.find((f) => f.id === view.field);
       return (
-        <ContentScreen title={view.title} actions={docked(session, view)}>
+        <ContentScreen title={view.title} actions={docked(session, view)} footer={footer}>
           <ValueReadout label={view.label ?? field?.label ?? view.field} value={formatValue(view, state)} hint={hint ? clip(hint) : view.hint} />
         </ContentScreen>
       );
@@ -89,6 +113,7 @@ function ViewScreen({ session, view }: { session: AppletSession; view: View }) {
             emptyText={view.emptyText}
             items={items.map((it) => ({ id: it.id, label: String(it[view.display] ?? ''), checked: it[check] === true }))}
             onToggle={(id) => select(id)}
+            footer={footer}
           />
         );
       }
@@ -98,6 +123,7 @@ function ViewScreen({ session, view }: { session: AppletSession; view: View }) {
           emptyText={view.emptyText}
           items={items.map((it) => ({ id: it.id, label: String(it[view.display] ?? ''), hint: detail(it), disabled: !view.onSelect }))}
           onChoose={select}
+          footer={footer}
         />
       );
     }
@@ -110,10 +136,13 @@ function ViewScreen({ session, view }: { session: AppletSession; view: View }) {
         { id: 'sequence.next', label: 'Next', disabled: index === total - 1, onActivate: () => void session.step(view.id, 1) },
       ];
       const asset = s.image ? def.assets.find((a) => a.id === s.image) : undefined;
+      if (asset?.data && asset.mediaType === 'image/gif')
+        return <GifScreen key={s.id} title={s.title ?? view.title} src={assetUrl(asset.mediaType, asset.data)}
+          alt={s.alt ?? `Step ${index + 1}`} instruction={s.text} hint={s.hint} actions={actions} footer={footer} />;
       return (
-        <ContentScreen key={s.id} title={s.title ?? view.title} actions={actions}>
+        <ContentScreen key={s.id} title={s.title ?? view.title} actions={actions} footer={footer}>
           {asset?.data ? (
-            <Diagram src={assetUrl(asset.mediaType, asset.data)} alt={s.alt ?? `Step ${index + 1}`} />
+            <AssetImage asset={asset} alt={s.alt ?? `Step ${index + 1}`} />
           ) : (
             <TextBlock label={`Step ${index + 1} of ${total}`} text={s.text ?? 'This step has no content.'} hint={s.hint} />
           )}
@@ -122,13 +151,20 @@ function ViewScreen({ session, view }: { session: AppletSession; view: View }) {
     }
     case 'image': {
       const asset = def.assets.find((a) => a.id === view.asset);
+      if (asset?.data && asset.mediaType === 'image/gif')
+        return <GifScreen title={view.title} src={assetUrl(asset.mediaType, asset.data)} alt={view.alt} actions={docked(session, view)} footer={footer} />;
       return (
-        <ContentScreen title={view.title} actions={docked(session, view)}>
-          {asset?.data ? <Diagram src={assetUrl(asset.mediaType, asset.data)} alt={view.alt} /> : <TextBlock text="This picture isn't downloaded yet." />}
+        <ContentScreen title={view.title} actions={docked(session, view)} footer={footer}>
+          {asset?.data ? <AssetImage asset={asset} alt={view.alt} /> : <TextBlock text="This picture isn't downloaded yet." />}
         </ContentScreen>
       );
     }
   }
+}
+
+function AssetImage({ asset, alt }: { asset: Asset; alt: string }) {
+  const src = assetUrl(asset.mediaType, asset.data!);
+  return <Diagram src={src} alt={alt} />;
 }
 
 const assetUrl = (type: string, data: string) => (data.startsWith('data:') ? data : `data:${type};base64,${data}`);

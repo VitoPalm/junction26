@@ -56,12 +56,23 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | Variable | Used by | Notes |
 | --- | --- | --- |
 | `DATABASE_URL` | api, worker | Injected by the Aiven service integration (full URI, includes `sslmode`) |
-| `OPENROUTER_API_KEY` | worker | Runtime secret. Never in a frontend bundle |
+| `OPENROUTER_API_KEY` | api, worker | Runtime secret. Never in a frontend bundle. The api needs it for the voice bridge unless `VOICE_MODEL=fake:voice` |
 | `OPENROUTER_BASE_URL` | worker | `https://openrouter.ai/api/v1` |
 | `AUTHORING_MODEL` | api, worker | Default model spec, `openai/gpt-6-luna` (bare name = OpenRouter; `provider:model` otherwise). See [apps.md](apps.md#models-swappable) |
 | `AUTHORING_MODELS` | api, worker | Extra specs users may pick, comma-separated (e.g. `fake:demo`) |
+| `VOICE_MODEL` | api | Voice-bridge resolver, default `google/gemini-3.5-flash-lite` (needs audio input + tools); `fake:voice` is free. See [voice-fallback.md](voice-fallback.md) |
+| `NOTES_TRANSCRIBE_MODEL` | worker | Final voice-note transcription, default `openrouter-stt:mistralai/voxtral-mini-transcribe-3-0` (OpenRouter transcription API, uses the existing `OPENROUTER_API_KEY`); a chat model with audio input such as `google/gemini-3.1-flash-lite` also works; `fake:notes` is free. See [voice-notes.md](voice-notes.md#model-choice) |
+| `NOTES_LIVE_MODEL` | api | Cloud fallback that only listens for "stop recording meta", default `google/gemini-3.1-flash-lite` (OpenRouter); `fake:live` is free |
+| `MISTRAL_API_KEY` | worker | Optional: only for direct `mistral:` transcription specs. The default uses OpenRouter and needs no separate Mistral key |
+| `MISTRAL_BASE_URL` | worker | Default `https://api.mistral.ai/v1` |
+| `NOTES_MAX_SECONDS` | api, worker | Longest voice note, default 300. Also sets the audio upload limit (40 KB per second) |
 | `AUTHORING_REASONING_EFFORT` | worker | Optional `low`/`medium`/`high` |
-| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | worker | For `openai:<model>` specs (any OpenAI-compatible endpoint) |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | api, worker | For `openai:<model>` specs (any OpenAI-compatible endpoint); URL defaults to `https://api.openai.com/v1` |
+| `OPENAI_RESPONSE_FORMAT` | api, worker | `json_schema` (default), `json_object`, or `prompt` |
+| `OPENAI_TOKEN_PARAMETER` | api, worker | `max_completion_tokens` (default), or `max_tokens` for older/compatible endpoints |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_BASE_URL` | api, worker | Native `anthropic:<model>`; URL defaults to `https://api.anthropic.com/v1` |
+| `GEMINI_API_KEY` / `GEMINI_BASE_URL` | api, worker | Native `gemini:<model>`; URL defaults to `https://generativelanguage.googleapis.com/v1beta` |
+| `MODEL_PROVIDERS` | api, worker | JSON array of independent compatible endpoint definitions, referencing secret env variable names. [Setup and capabilities](model-providers.md) |
 | `CORS_ORIGINS` | api | Browser origins allowed to call `/v1` (native shells: `capacitor://localhost,https://localhost`). Dev default includes those and the Vite ports; production default is none |
 | `WEB_ROOT` | api | Directory with the built `glasses/` and `author/` apps; `/app/web` in the image |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | api, worker | Verda key `junction26-backend-storage` (project-scoped: can read every bucket in the project) |
@@ -319,6 +330,32 @@ servers on 4180/4181) and in `experiments/openrouter-ikea-v2/app` (needs the
 Gotcha: Vite can cache a half-written file if you `cp` over a source it is
 watching (empty CSS, missing exports). Write to a temp file and `mv` it, or
 touch the file again.
+
+### Onboarding a teammate
+
+Goal: a teammate tests against the real external services without touching the
+shared production database.
+
+1. Add them as a collaborator on `VitoPalm/junction26` (private). For redeploy
+   rights, also invite them to the Aiven project `vitopalm1982-7b23`.
+2. Hand over the secret files over a private channel (password manager,
+   Signal), never through chat with an agent or git: `.env.backend.local`,
+   `.env.verda.local`, `.env.openrouter.local`, `apps/author/.env.local`.
+   In the copy of `.env.backend.local`, keep `DATABASE_URL`/`TEST_DATABASE_URL`
+   on the local `dev:db` server (`127.0.0.1:55432`). Don't share the Aiven
+   `avnadmin` URI or `DATABASE_CA_CERT`.
+3. They sign up with their own account in the Clerk development instance (the
+   live `/author/` sign-in). Local Vite origins are already in
+   `CLERK_AUTHORIZED_PARTIES`; add any other origin they use.
+4. Two ways to test:
+   - **Live**: `https://humorous-active-ladybird.eur-1.aiven.app` (`/author/`,
+     `/glasses/`, `/v1`). Call `/v1` with `authorization: Bearer <Clerk session token>`
+     copied from the signed-in browser.
+   - **Local, real services**: section 6 plus [backend-development.md](backend-development.md),
+     with `STORAGE_DRIVER=s3` (shared Verda bucket; keys are per user id) and
+     `AUTH_MODE=clerk`. `AUTH_MODE=dev` with `Bearer dev:me` is the offline shortcut.
+5. Budget: use `fake:demo` / `fake:voice` for routine runs. The OpenRouter key
+   is capped at $17 and expires 2026-11-21; `experiments/*/run.py` spends money.
 
 ## 7. Glasses device setup **[todo, needs hardware]**
 

@@ -8,7 +8,7 @@ html, body, #root {
 }
 .g-screen-shell {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   block-size: 100%;
   min-block-size: 0;
   min-inline-size: 0;
@@ -73,3 +73,41 @@ html, body, #root {
 .g-action-dock .uit-text-label,
 .g-choices .uit-text-label { font-weight: 700; }
 .g-choices [class*="subtitleLabel"] { font-weight: 600; color: var(--g-ink-soft); }
+
+/* Voice note component: one row between the content and the dock. Emitted
+   light only; the recording dot is a bright warm colour (red is dim on an
+   additive display, so it is lightened). */
+.g-voice-note {
+  display: flex;
+  align-items: center;
+  gap: var(--uit-spacing-medium, 12px);
+  padding: 0 var(--uit-spacing-large) var(--uit-spacing-xsmall, 4px);
+  min-inline-size: 0;
+}
+.g-voice-note > :first-child { flex: 0 0 auto; }
+.g-voice-note-line {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--g-ink-soft);
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.g-voice-note[data-status="recording"] .g-voice-note-line,
+.g-voice-note[data-status="saved"] .g-voice-note-line { color: var(--g-ink); }
+.g-voice-note[data-status="error"] .g-voice-note-line,
+.g-voice-note[data-status="unavailable"] .g-voice-note-line { color: #ffd27a; }
+.g-voice-note .uit-text-label { font-weight: 700; }
+.g-rec-dot {
+  flex: 0 0 auto;
+  inline-size: 14px;
+  block-size: 14px;
+  border-radius: 50%;
+  background: #ff8a8a;
+  box-shadow: 0 0 10px #ff8a8a;
+  animation: g-rec-pulse 1.4s ease-in-out infinite;
+}
+@keyframes g-rec-pulse { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .g-rec-dot { animation: none; } }

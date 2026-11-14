@@ -88,7 +88,7 @@ export async function checkRenderedFit(def: AppletDefinition, signal?: AbortSign
       const badImage = await page
         .locator('img')
         .evaluateAll((images) => images.some((i) => !(i as unknown as { naturalWidth: number }).naturalWidth));
-      if (badImage)
+      if (badImage || await page.locator('[data-g-gif-error]').count())
         issues.push({
           path,
           code: 'image_decode',
