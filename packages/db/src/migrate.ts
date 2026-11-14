@@ -94,8 +94,8 @@ export async function migrate(pool: pg.Pool, dir: string = MIGRATIONS_DIR): Prom
 }
 
 /** Migrates over a dedicated one-connection pool (use the direct, non-pooled URL). */
-export async function migrateUrl(connectionString: string): Promise<MigrationResult> {
-  const pool = createPool(connectionString, { max: 1, applicationName: 'junction26-migrate' });
+export async function migrateUrl(connectionString: string, options: { caCert?: string } = {}): Promise<MigrationResult> {
+  const pool = createPool(connectionString, { max: 1, applicationName: 'junction26-migrate', caCert: options.caCert });
   try {
     return await migrate(pool);
   } finally {

@@ -15,7 +15,8 @@ if (!url) {
   process.exit(2);
 }
 
-const pool = createPool(url, { max: 1, applicationName: 'junction26-migrate' });
+const caCert = process.env.DATABASE_CA_CERT?.replace(/\\n/g, '\n') || undefined;
+const pool = createPool(url, { max: 1, applicationName: 'junction26-migrate', caCert });
 try {
   const result = await migrate(pool);
   console.log(JSON.stringify({ msg: 'migrations complete', ...result }));

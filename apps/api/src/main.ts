@@ -6,12 +6,12 @@ import { createApp } from './app.ts';
 
 const config = loadConfig();
 const logger = createLogger({ level: config.logLevel, bindings: { service: 'api' } });
-const pool = createPool(config.databaseUrl, { max: config.databasePoolMax, applicationName: 'junction26-api' });
+const pool = createPool(config.databaseUrl, { max: config.databasePoolMax, applicationName: 'junction26-api', caCert: config.databaseCaCert });
 const store = createObjectStore(config.storage);
 
 if (config.migrateOnStart) {
   // Guarded by an advisory lock, so concurrent starters are safe.
-  const result = await migrateUrl(config.migrationDatabaseUrl);
+  const result = await migrateUrl(config.migrationDatabaseUrl, { caCert: config.databaseCaCert });
   logger.info('migrations checked', { applied: result.applied });
 }
 

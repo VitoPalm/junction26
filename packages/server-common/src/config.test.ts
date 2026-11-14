@@ -75,6 +75,13 @@ test('production accepts a Clerk development instance only with the explicit opt
   assert.throws(() => loadConfig({ ...base, ...s3, NODE_ENV: 'production', AUTH_MODE: 'dev', CLERK_ALLOW_DEVELOPMENT_INSTANCE: 'true' }), ConfigError);
 });
 
+test('DATABASE_CA_CERT accepts PEM with escaped newlines and rejects anything else', () => {
+  const pem = '-----BEGIN CERTIFICATE-----\\nMIIB\\n-----END CERTIFICATE-----';
+  assert.equal(loadConfig({ ...base, DATABASE_CA_CERT: pem }).databaseCaCert, '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----');
+  assert.equal(loadConfig(base).databaseCaCert, undefined);
+  assert.throws(() => loadConfig({ ...base, DATABASE_CA_CERT: 'not a cert' }), ConfigError);
+});
+
 test('checkDefinition accepts minimal definitions and reports every issue', () => {
   assert.deepEqual(checkDefinition({ formatVersion: 1, title: 'Row counter' }, 1000), {
     ok: true,

@@ -16,7 +16,7 @@ For an engineer or agent starting cold. Read in this order:
 | Glasses UI component library (`packages/glasses-ui`) | **Built**: fixed pages, no scrolling, fit guard, additive-display ink for diagrams, tests |
 | Authoring pipeline proof (PDF → Luna via OpenRouter → validated JSON → rendered guide) | **Proven** in `experiments/openrouter-ikea-v2` (local scripts, not a service) |
 | Verda bucket + credentials, OpenRouter key | **Provisioned** |
-| Aiven PostgreSQL + Runtime | Not provisioned |
+| Aiven PostgreSQL + Runtime | **Provisioned** 2026-11-14: `j26-pg` + `api`/`worker` apps in Google europe-west4 ([infrastructure-setup.md](infrastructure-setup.md)) |
 | Backend: API, worker, DB schema, storage adapter (`apps/api`, `apps/worker`, `packages/db`, `packages/storage`, `packages/server-common`) | **Built**, tested against PostgreSQL 18 locally, container image builds. Not deployed. User auth is a dev placeholder; generation uses the model adapter ([apps.md](apps.md)) |
 | Applet format v1 + runtime + renderer (`packages/applet-format`, `applet-runtime`, `applet-renderer`) | **Built (MVP)**, unit-tested; see [apps.md](apps.md) |
 | Model adapter (`packages/model`) + real `generate_revision` | **Built**: OpenRouter / OpenAI-compatible / free `fake` provider, swappable by spec. Luna not yet run against the format |
