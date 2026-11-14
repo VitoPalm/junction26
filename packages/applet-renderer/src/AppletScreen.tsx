@@ -113,7 +113,10 @@ function ViewScreen({ session, view }: { session: AppletSession; view: View }) {
       return (
         <ContentScreen key={s.id} title={s.title ?? view.title} actions={actions}>
           {asset?.data ? (
-            <Diagram src={assetUrl(asset.mediaType, asset.data)} alt={s.alt ?? `Step ${index + 1}`} />
+            <>
+              <Diagram src={assetUrl(asset.mediaType, asset.data)} alt={s.alt ?? `Step ${index + 1}`} />
+              {s.text && <TextBlock text={s.text} hint={s.hint} />}
+            </>
           ) : (
             <TextBlock label={`Step ${index + 1} of ${total}`} text={s.text ?? 'This step has no content.'} hint={s.hint} />
           )}

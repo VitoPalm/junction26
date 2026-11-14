@@ -117,8 +117,12 @@ industrial machinery as a later expansion because of its verification burden.
   split into discrete pages with Previous/Next. Overflow is an authoring error,
   never a scroll area or silent clipping. (Owner: *"I really don't like
   scrolling, it's really bad for something that needs to run w no hands."*)
-- **Visual-first.** If images alone explain a step, show only the image. No
-  narration of what the picture already shows, no decorative headings.
+- **Image plus instruction.** A step shows its picture *and* a short
+  instruction line (the wiki-how pattern: what to do, shown). The wearer glances
+  at the image and the line instead of reading a page, so the line is one short
+  sentence, never a paragraph. A step with no useful text (a pure diagram) can
+  still be image-only, but instructional text is the default whenever the source
+  has it. No decorative headings and no invented explanations.
 - **Identifiers only with context.** A part code is useful only with a
   description or a directly associated image; otherwise omit it.
 - Readable on an **additive display** (it can only add light; black is

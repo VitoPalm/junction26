@@ -72,6 +72,37 @@ export async function installDemos(): Promise<void> {
       demo: true,
     });
   }
+  await installFileDemo(existing, 'pax-wardrobe');
+}
+
+/**
+ * Large picture guides ship as static JSON next to the app instead of inside
+ * the JS bundle, so the shell stays small. Fetched once; afterwards it lives
+ * in the local store and works offline like any other applet.
+ */
+async function installFileDemo(existing: Set<string>, name: string): Promise<void> {
+  const id = `demo-${name}`;
+  if (existing.has(id)) return;
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}demos/${name}.json`);
+    if (!res.ok) return;
+    const r = validateDefinition(await res.json());
+    if (!r.ok) return;
+    await store.putApplet({
+      projectId: id,
+      title: r.definition.title,
+      releaseId: null,
+      revisionId: null,
+      sha256: null,
+      definition: r.definition,
+      installedAt: new Date().toISOString(),
+      lastOpenedAt: null,
+      openedSinceSync: false,
+      demo: true,
+    });
+  } catch {
+    // Offline on first launch: try again next time.
+  }
 }
 
 /** Latest opened first, then newest installed. */

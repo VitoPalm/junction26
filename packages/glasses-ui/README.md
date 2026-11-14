@@ -56,8 +56,10 @@ barrier; ResizeObserver checks the authored content dimensions so an overloaded
 page is reported rather than silently hidden. The guard is not an authoring
 substitute or a universal validator of arbitrary nested React children.
 
-`Diagram` belongs on its own ContentScreen. Text and a detailed drawing should
-be separate pages. Split complex drawings into meaningful source-region/detail
+A `Diagram` may share a ContentScreen with one short `TextBlock` (the
+instruction line under the picture); the diagram takes the remaining height.
+A dense drawing that needs the full page, or text that exceeds the body limit,
+belongs on its own page. Split complex drawings into meaningful source-region/detail
 pages; never shrink type to squeeze a diagram in. Fitting the full image avoids
 scrolling but does not prove that its small labels are legible on hardware.
 

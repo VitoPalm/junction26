@@ -388,7 +388,6 @@ function validateView(
         ids.add(s.id);
         if (!s.text && !s.image) add(q, 'empty', 'A step needs text or an image');
         if (s.image && !assets.has(s.image)) add(`${q}.image`, 'reference', `No asset "${s.image}"`);
-        if (s.image && s.text) add(q, 'mixed', 'Put a diagram and its text on separate steps');
         copy(`${q}.title`, s.title, LIMITS.title);
         copy(`${q}.text`, s.text, LIMITS.body);
         copy(`${q}.hint`, s.hint, LIMITS.hint);

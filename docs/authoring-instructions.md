@@ -6,14 +6,16 @@ communicates it most directly. Do not start by filling every available component
 
 ## Choose the right representation
 
-- An image, diagram, short phrase, value, or control can be sufficient on its
-  own. Use only what helps the user act or understand.
+- For procedures, pair each step's image with a short instruction line on the
+  same page: what to do, in one short sentence, taken from the source. The user
+  glances at the picture and the line while their hands are busy.
 - When source visuals already explain an action clearly, preserve and present
-  those visuals. Do not routinely translate them into prose or add a second page
-  that repeats the same information. Image-only views are valid complete views.
-- Add text when it resolves an ambiguity, supplies missing context, communicates
-  essential information not visible in the visual, or helps the user decide.
-  Avoid redundant captions, decorative headings, and invented explanations.
+  those visuals. Keep the instruction line when the source has one; omit text
+  only when the source gives none or it would add nothing beyond a label already
+  visible in the image. Image-only views remain valid complete views.
+- Add text when it states the action, resolves an ambiguity, supplies missing
+  context, communicates essential information not visible in the visual, or
+  helps the user decide. Avoid decorative headings and invented explanations.
 - Choose sources and views according to their usefulness, rather than including
   everything available or forcing a fixed number of steps. Preserve the meaning,
   sequence, conditions, and essential details needed to complete the task.
