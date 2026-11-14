@@ -1,9 +1,9 @@
 # Task coach (assembly manuals)
 
 Status (2026-11-14): **smallest working version built**, checked with mocks,
-the free fake model and desktop Chrome. **Not checked on the glasses, in the
-Meta simulator extension, with Meta AI, with a real model, or against a live
-PostgreSQL-backed API/worker** (see [Evidence](#evidence)).
+the free fake model, desktop Chrome and a real PostgreSQL-backed API/worker.
+**Not checked on the glasses, in the Meta simulator extension, with Meta AI or
+with a real model** (see [Evidence](#evidence)).
 
 A guide made from a furniture-assembly manual that shows one step at a time,
 answers questions about the current step from the manual, handles a reported
@@ -92,7 +92,7 @@ the executor (non-empty, ≤ 500 characters). Names are reserved in
 | Browser, dev stub + mocked API (Chrome 157, 600×600) | `apps/glasses/browser-tests/coach.spec.ts`: D-pad focus/Enter, More menu paging, parts, repeat, complete, local answers, no scroll, fit guard, reload persistence; offline → Retry with the same operation ID; reload while pending resumes polling without resubmitting; clarification; confirm → fix steps → return; decline; cancel a pending question | Pass |
 | Desktop Chrome native WebMCP (`--enable-features=WebMCP`) | `webmcp-native.spec.ts` (opt-in `NATIVE_WEBMCP=1`): discovery via `getTools`, invocation via `executeTool`, unregister on leaving, re-register without duplicates | Pass |
 | Production build, service worker | offline cold start → open coach → Next / Show parts → reload restores the step (one-off run) | Pass after the worker finished precaching |
-| Real API + worker + PostgreSQL | not run: no local container VM | **Not verified** |
+| Real API + worker + PostgreSQL (Aiven PostgreSQL, throwaway `j26_test_*` databases) | `apps/api/src/coach.test.ts`: publish the bookcase guide, pair, ask/report via `/v1/coach/requests`, run `coach_request` with `fake:coach`, read results; idempotent resend, no internals in responses, 403 for user sessions, 404 across owners, 422/400/409 refusals, cancel; plus the existing db/api/worker suites | Pass |
 | Meta simulator extension, Meta AI, real model, glasses | not run | **Not verified** |
 
 Finding: Chrome 157's `executeTool(tool, input)` requires an **object**;
