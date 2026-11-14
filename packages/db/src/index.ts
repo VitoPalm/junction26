@@ -5,3 +5,4 @@ export * from './queries/core.ts';
 export * from './queries/jobs.ts';
 export * from './queries/devices.ts';
 export * from './queries/state.ts';
+export * from './queries/notes.ts';

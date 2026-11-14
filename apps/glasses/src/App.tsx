@@ -7,6 +7,8 @@ import type { AppletDefinition } from '@junction26/applet-format';
 import type { AppletState } from '@junction26/applet-runtime';
 import { store, type InstalledApplet } from './store.ts';
 import { installDemos, library, loadState, markOpened, pair, pairing, saveState, sync } from './sync.ts';
+import { setVoiceEnabled, startVoiceBridge, useVoiceChip, useVoicePref } from './voice.ts';
+import { useVoiceNotes } from './notes.ts';
 
 const HOME_COUNT = 3;
 
@@ -30,14 +32,29 @@ export function GlassesApp() {
   const location = useLocation();
   // Screens switch instantly: no slide transition between routes.
   return (
-        <Routes location={location}>
-          <Route path="/" element={<Home />} />
-          <Route path="/older" element={<Older />} />
-          <Route path="/pair" element={<Pair />} />
-          <Route path="/a/:projectId" element={<AppletRoute key={location.pathname} />} />
-          <Route path="/a/:projectId/:viewId" element={<AppletRoute key={location.pathname} />} />
-          <Route path="*" element={<Home />} />
-        </Routes>
+    <>
+      <VoiceChipView />
+      <Routes location={location}>
+        <Route path="/" element={<Home />} />
+        <Route path="/older" element={<Older />} />
+        <Route path="/pair" element={<Pair />} />
+        <Route path="/a/:projectId" element={<AppletRoute key={location.pathname} />} />
+        <Route path="/a/:projectId/:viewId" element={<AppletRoute key={location.pathname} />} />
+        <Route path="*" element={<Home />} />
+      </Routes>
+    </>
+  );
+}
+
+/** What the voice bridge heard and did; bright text only (additive display). */
+function VoiceChipView() {
+  const chip = useVoiceChip();
+  if (!chip) return null;
+  return (
+    <div className="j26-voice-chip" role="status" aria-live="polite">
+      <div className="j26-voice-heard">“{chip.heard}”</div>
+      <div className={chip.ok ? 'j26-voice-result' : 'j26-voice-result j26-voice-error'}>{chip.result}</div>
+    </div>
   );
 }
 
@@ -73,6 +90,7 @@ function Home() {
   const navigate = useNavigate();
   const { items, paired, reload } = useLibrary();
   const [status, setStatus] = useState<string | null>(null);
+  const voice = useVoicePref();
   const busy = useRef(false);
 
   const doSync = async () => {
@@ -95,13 +113,15 @@ function Home() {
   const actions: GlassesAction[] = [];
   if (items.length > HOME_COUNT) actions.push({ id: 'home.older', label: 'Older', onActivate: () => navigate('/older') });
   actions.push(paired ? { id: 'home.sync', label: 'Sync', onActivate: () => void doSync() } : { id: 'home.pair', label: 'Pair phone', onActivate: () => navigate('/pair') });
+  // Phone voice bridge (docs/voice-fallback.md): needs a paired device session.
+  if (paired) actions.push({ id: 'home.voice', label: voice ? 'Voice off' : 'Voice on', onActivate: () => { setVoiceEnabled(!voice); setStatus(voice ? 'Voice bridge off' : 'Voice bridge on'); } });
 
   return (
-    <ContentScreen title={status ?? 'Your applets'} actions={actions}>
+    <ContentScreen title={status ?? 'Your solutions'} actions={actions}>
       {latest.length ? (
         <ButtonList items={latest.map((a) => ({ id: a.projectId, label: a.title, hint: a.demo ? 'Example' : undefined, onActivate: () => void openApplet(navigate, a) }))} />
       ) : (
-        <TextBlock text="Nothing here yet. Make an applet in the phone app, then choose Sync." />
+        <TextBlock text="Nothing here yet. Make a solution on your phone, then choose Sync." />
       )}
     </ContentScreen>
   );
@@ -113,7 +133,7 @@ function Older() {
   if (!items) return <ContentScreen><TextBlock text="Loading…" /></ContentScreen>;
   return (
     <ChoiceScreen
-      title="Older applets"
+      title="Older solutions"
       items={items.slice(HOME_COUNT).map((a) => ({ id: a.projectId, label: a.title }))}
       onChoose={(id) => { const a = items.find((x) => x.projectId === id); if (a) void openApplet(navigate, a); }}
     />
@@ -149,7 +169,7 @@ function Pair() {
   }, []);
   return (
     <ContentScreen title="Pair with your phone">
-      <TextBlock text="In the phone app, open Glasses and get a code. Enter it here." hint={msg ?? undefined} />
+      <TextBlock text="On your phone, open Glasses for a code. Enter it here." hint={msg ?? undefined} />
       <div data-g-fit-content className="j26-pair">
         {/* Focusing and selecting opens Meta's dictation/handwriting composer. */}
         <input className="j26-code" value={code} aria-label="Pairing code" placeholder="ABCD-EFGH" autoComplete="off" onChange={(e) => setCode(e.target.value)} onInput={(e) => setCode((e.target as HTMLInputElement).value)} />
@@ -174,7 +194,7 @@ function AppletRoute() {
       alive = false;
     };
   }, [projectId]);
-  if (loaded === 'missing') return <ContentScreen title="Not found"><TextBlock text="This applet isn’t on these glasses. Try Sync." /></ContentScreen>;
+  if (loaded === 'missing') return <ContentScreen title="Not found"><TextBlock text="This solution isn’t on these glasses. Try Sync." /></ContentScreen>;
   if (!loaded) return <ContentScreen><TextBlock text="Opening…" /></ContentScreen>;
   return <AppletHost applet={loaded.applet} initial={loaded.state} />;
 }
@@ -203,10 +223,12 @@ function AppletHost({ applet, initial }: { applet: InstalledApplet; initial: App
     if (currentView && currentView !== session.state.view) session.setView(currentView);
   }, [currentView, session]);
 
-  // Voice tools exist only while this applet is open.
-  useAppletTools(applet.projectId, def, { session: () => sessionRef.current, openView: (id) => open({ kind: 'view', viewId: id }), currentView: () => viewRef.current });
+  const notes = useVoiceNotes(applet, () => sessionRef.current);
 
-  return <AppletScreen session={session} screen={screen} onOpen={open} />;
+  // Voice tools exist only while this applet is open.
+  useAppletTools(applet.projectId, def, { session: () => sessionRef.current, openView: (id) => open({ kind: 'view', viewId: id }), currentView: () => viewRef.current, notes: notes.host });
+
+  return <AppletScreen session={session} screen={screen} onOpen={open} notes={notes.binding} />;
 }
 
 /**
@@ -221,7 +243,12 @@ function useAppletTools(projectId: string, def: AppletDefinition, host: ToolHost
   hostRef.current = host;
   useEffect(() => {
     const key = `${projectId}:${JSON.stringify(def).length}:${def.title}`;
-    const proxy: ToolHost = { session: () => hostRef.current.session(), openView: (v) => hostRef.current.openView(v), currentView: () => hostRef.current.currentView() };
+    const proxy: ToolHost = {
+      session: () => hostRef.current.session(),
+      openView: (v) => hostRef.current.openView(v),
+      currentView: () => hostRef.current.currentView(),
+      notes: { start: (a) => hostRef.current.notes!.start(a), stop: () => hostRef.current.notes!.stop() },
+    };
     clearTimeout(activeTools.timer);
     if (activeTools.key !== key) {
       activeTools.ac?.abort();
@@ -232,8 +259,11 @@ function useAppletTools(projectId: string, def: AppletDefinition, host: ToolHost
         session: () => activeTools.hosts.at(-1)!.session(),
         openView: (v) => activeTools.hosts.at(-1)!.openView(v),
         currentView: () => activeTools.hosts.at(-1)?.currentView() ?? null,
+        notes: { start: (a) => activeTools.hosts.at(-1)!.notes!.start(a), stop: () => activeTools.hosts.at(-1)!.notes!.stop() },
       };
       registerAppletTools(def, latest, activeTools.ac.signal);
+      // Same tools, same single owner: the phone voice bridge, when switched on.
+      startVoiceBridge(projectId, def, latest, activeTools.ac.signal);
     }
     activeTools.hosts.push(proxy);
     return () => {

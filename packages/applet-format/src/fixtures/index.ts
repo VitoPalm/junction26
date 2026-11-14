@@ -38,7 +38,7 @@ export const rowCounter: Input = {
       effects: [{ op: 'set', field: 'rows', value: { arg: 'value' } }],
     },
   ],
-  views: [{ id: 'counter', kind: 'value', field: 'rows', label: 'Rows done', actions: ['add_row', 'undo_row'] }],
+  views: [{ id: 'counter', kind: 'value', field: 'rows', label: 'Rows done', actions: ['add_row', 'undo_row'], voiceNote: { label: 'Pattern notes' } }],
   home: { primaryAction: 'add_row' },
 };
 
@@ -188,6 +188,7 @@ export const pancakeGuide: Input = {
       id: 'recipe',
       kind: 'sequence',
       cursor: 'step',
+      voiceNote: { label: 'Notes on this step' },
       steps: [
         { id: 'mix_dry', text: 'Whisk 200 g flour, 2 tsp baking powder and a pinch of salt.' },
         { id: 'mix_wet', text: 'Beat 2 eggs with 300 ml milk, then stir into the flour until just smooth.' },

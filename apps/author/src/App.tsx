@@ -1,9 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { HashRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { CAPABILITIES, LIMITATIONS } from '@junction26/applet-format';
-import { createApi, defaultServer, devToken, isNative, loadSession, saveSession, type Api, type Project, type Session } from './api.ts';
+import { createApi, defaultServer, devToken, isNative, loadSession, saveSession, type Api, type Device, type Project, type Session } from './api.ts';
 import { ProjectScreen } from './ProjectScreen.tsx';
 import { GlassesScreen } from './GlassesScreen.tsx';
+import { stopSessionRecorder } from './recorder.ts';
+import { RecorderPill, RecorderScreen } from './Notes.tsx';
+import { BrandMark, CAPABILITY_ICONS, IconArrowRight, IconArrowUp, IconClip, IconClose, IconGlasses, IconHelp, IconLogout } from './icons.tsx';
+import { FILE_ACCEPT, SUGGESTIONS, initialOf, relativeTime, setStartRequest, toneFor } from './ui.ts';
+
 
 interface Ctx {
   session: Session;
@@ -22,8 +27,7 @@ export function App({ account }: { account?: Ctx } = {}) {
         session,
         api: createApi(session),
         signOut: () => {
-          saveSession(null);
-          setSession(null);
+          void stopSessionRecorder().finally(() => { saveSession(null); setSession(null); });
         },
       },
     [session],
@@ -43,14 +47,34 @@ export function App({ account }: { account?: Ctx } = {}) {
     <AppCtx.Provider value={ctx}>
       {/* Hash routing works the same on the web and inside the native shells. */}
       <HashRouter>
+        <RecorderPill />
         <Routes>
           <Route path="/" element={<Library />} />
           <Route path="/p/:projectId" element={<ProjectScreen />} />
           <Route path="/glasses" element={<GlassesScreen />} />
+          <Route path="/recorder" element={<RecorderScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>
     </AppCtx.Provider>
+  );
+}
+
+/** Brand block for the signed-out screens. */
+export function Welcome({ children, footnote }: { children: ReactNode; footnote?: ReactNode }) {
+  return (
+    <main className="welcome">
+      <div className="welcome-glow" aria-hidden />
+      <div className="welcome-inner">
+        <div className="welcome-hero">
+          <BrandMark size={64} />
+          <h1 className="display">For the moments your hands are full.</h1>
+          <p className="lede">Describe what you need, or bring a pattern, recipe or manual. Follow along on your Meta Ray-Ban Display while you cook, build, craft or play.</p>
+        </div>
+        <div className="welcome-card">{children}</div>
+        {footnote && <p className="tiny muted center">{footnote}</p>}
+      </div>
+    </main>
   );
 }
 
@@ -75,16 +99,11 @@ function SignIn({ onDone }: { onDone: (s: Session) => void }) {
     }
   };
   return (
-    <main className="page narrow">
-      <div className="hero">
-        <img src="./icon.png" alt="" width={56} height={56} />
-        <h1>Applets</h1>
-        <p className="muted">Small personal apps for your Meta Ray-Ban Display glasses.</p>
-      </div>
-      <form className="card stack" onSubmit={submit}>
+    <Welcome footnote="Development sign-in: anyone with the same name shares the library. Real accounts come later.">
+      <form className="stack" onSubmit={submit}>
         <label className="field">
           <span>Your name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="nickname" placeholder="e.g. alex" />
+          <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="nickname" placeholder="e.g. Alex" autoFocus />
         </label>
         {(isNative || server) && (
           <label className="field">
@@ -93,21 +112,27 @@ function SignIn({ onDone }: { onDone: (s: Session) => void }) {
           </label>
         )}
         {error && <p className="error">{error}</p>}
-        <button className="primary" disabled={busy || !name.trim()}>
-          {busy ? 'Checking…' : 'Continue'}
+        <button className="primary lg" disabled={busy || !name.trim()}>
+          {busy ? 'Checking…' : 'Get started'} {!busy && <IconArrowRight size={18} />}
         </button>
-        <p className="tiny muted">Development sign-in: anyone with the same name shares the library. Real accounts come later.</p>
       </form>
-    </main>
+    </Welcome>
   );
 }
 
 const WELCOME_KEY = 'j26.welcomed';
 
+function greeting(name: string): string {
+  const h = new Date().getHours();
+  const part = h < 5 ? 'Hi' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  const first = name.trim().split(/\s+/)[0];
+  return first && first !== 'My' ? `${part}, ${first[0]!.toUpperCase()}${first.slice(1)}` : part;
+}
+
 function Library() {
-  const { api, session, signOut } = useApp();
-  const navigate = useNavigate();
+  const { api, session } = useApp();
   const [projects, setProjects] = useState<Project[] | null>(null);
+  const [devices, setDevices] = useState<Device[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [welcome, setWelcome] = useState(() => {
     try {
@@ -118,45 +143,95 @@ function Library() {
   });
   useEffect(() => {
     api.projects().then((r) => setProjects(r.projects), (e: Error) => setError(e.message));
+    api.devices().then((r) => setDevices(r.devices), () => setDevices(null));
   }, [api]);
-  const create = async () => {
-    try {
-      const { project } = await api.createProject('New applet');
-      navigate(`/p/${project.id}`);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
+  const paired = devices?.filter((d) => !d.revokedAt) ?? [];
+  const live = projects?.filter((p) => p.currentReleaseId).length ?? 0;
+
   return (
     <main className="page">
-      <header className="bar">
-        <h1>Your applets</h1>
-        <div className="row">
-          <Link className="ghost" to="/glasses">Glasses</Link>
-          <button className="ghost" onClick={() => setWelcome(true)} aria-label="What can I make?">?</button>
-          <button className="ghost" onClick={signOut} title={`Signed in as ${session.name}`}>Sign out</button>
-        </div>
+      <header className="topbar">
+        <Link to="/" className="brand" aria-label="Solutions home">
+          <BrandMark size={32} />
+          <span>Solutions</span>
+        </Link>
+        <span className="grow" />
+        <Link className="icon-btn" to="/glasses" aria-label={paired.length ? 'Glasses (paired)' : 'Glasses'}>
+          <IconGlasses size={22} />
+          {paired.length > 0 && <span className="status-dot" />}
+        </Link>
+        <button className="icon-btn" onClick={() => setWelcome(true)} aria-label="What can I make?">
+          <IconHelp size={21} />
+        </button>
+        <Link className="ghost" to="/recorder">Recorder</Link>
+        <AccountMenu />
+
       </header>
-      {error && <p className="error">{error}</p>}
-      {!projects && !error && <p className="muted">Loading…</p>}
-      {projects?.length === 0 && (
-        <div className="empty">
-          <p>Nothing yet. Tap <b>+</b> and describe what you need, like “a row counter for crochet” or “guide me through this manual”.</p>
-        </div>
+
+      <section className="home-hero">
+        <p className="eyebrow">{greeting(session.name)}</p>
+        <h1 className="display">What do you need on your glasses?</h1>
+        <HomeComposer />
+      </section>
+
+      {devices && paired.length === 0 && (
+        <Link to="/glasses" className="nudge">
+          <span className="nudge-icon"><IconGlasses size={24} /></span>
+          <span className="grow">
+            <b>Connect your glasses</b>
+            <span className="muted">Two quick steps, then your solutions sync over.</span>
+          </span>
+          <IconArrowRight size={18} />
+        </Link>
       )}
-      <ul className="list">
-        {projects?.map((p) => (
-          <li key={p.id}>
-            <Link to={`/p/${p.id}`} className="card item">
-              <span className="title">{p.title}</span>
-              <span className={p.currentReleaseId ? 'badge ok' : 'badge'}>{p.currentReleaseId ? 'On glasses' : 'Draft'}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <button className="fab" onClick={create} aria-label="New applet">+</button>
+
+      <section className="library">
+        <div className="section-head">
+          <h2>Your solutions</h2>
+          {projects && projects.length > 0 && (
+            <span className="muted tiny">
+              {projects.length} total{live ? ` · ${live} on glasses` : ''}
+            </span>
+          )}
+        </div>
+        {error && <p className="error">{error}</p>}
+        {!projects && !error && (
+          <div className="tiles">
+            {[0, 1, 2, 3].map((i) => <div key={i} className="tile skeleton" />)}
+          </div>
+        )}
+        {projects?.length === 0 && (
+          <div className="empty-note">
+            <p>Nothing here yet. Your first solution takes about a minute: describe it above, or pick one of the ideas.</p>
+          </div>
+        )}
+        {projects && projects.length > 0 && (
+          <ul className="tiles">
+            {projects.map((p) => (
+              <li key={p.id}>
+                <Link to={`/p/${p.id}`} className="tile" data-tone={toneFor(p.id)}>
+                  <span className="tile-mono" aria-hidden>{initialOf(p.title)}</span>
+                  <span className="tile-body">
+                    <span className="tile-title">{p.title}</span>
+                    <span className="tile-meta">
+                      {p.currentReleaseId ? (
+                        <span className="pill live"><span className="live-dot" />On glasses</span>
+                      ) : (
+                        <span className="pill">Draft</span>
+                      )}
+                      <span className="tiny">{relativeTime(p.updatedAt)}</span>
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {welcome && (
-        <Modal
+        <Sheet
+          title="What you can make"
           onClose={() => {
             try {
               localStorage.setItem(WELCOME_KEY, '1');
@@ -165,38 +240,196 @@ function Library() {
             }
             setWelcome(false);
           }}
+          action="Let’s make one"
         >
-          <h2>What you can make</h2>
+          <p className="muted">Solutions are small, focused tools that run on your glasses, even offline. Control them with the Neural Band (move and pinch) or say “Hey Meta, …”.</p>
           <ul className="caps">
-            {CAPABILITIES.map((c) => (
-              <li key={c.id}>
-                <b>{c.title}</b>
-                <span>{c.description}</span>
-                <span className="muted tiny">e.g. “{c.examples[0]}”</span>
-              </li>
-            ))}
+            {CAPABILITIES.map((c) => {
+              const Icon = CAPABILITY_ICONS[c.id];
+              return (
+                <li key={c.id}>
+                  <span className="cap-icon">{Icon ? <Icon size={22} /> : null}</span>
+                  <span>
+                    <b>{c.title}</b>
+                    <span className="cap-desc">{c.description}</span>
+                    <span className="cap-eg">“{c.examples[0]}”</span>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
-          <h3>Not possible (on purpose)</h3>
-          <ul className="limits">
-            {LIMITATIONS.map((l) => (
-              <li key={l.id}>{l.description}</li>
-            ))}
-          </ul>
-          <p className="muted tiny">On the glasses you use applets with the Neural Band (move and pinch) or by saying “Hey Meta, …”.</p>
-        </Modal>
+          <details className="limits">
+            <summary>What solutions can’t do, on purpose</summary>
+            <ul>
+              {LIMITATIONS.map((l) => (
+                <li key={l.id}>{l.description}</li>
+              ))}
+            </ul>
+          </details>
+        </Sheet>
       )}
     </main>
   );
 }
 
-export function Modal({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+/** Describe it → a new project is created and generation starts right away. */
+function HomeComposer() {
+  const { api } = useApp();
+  const navigate = useNavigate();
+  const [text, setText] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const area = useAutosize(text);
+
+  const start = async () => {
+    const body = text.trim();
+    if (!body || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { project } = await api.createProject('New solution');
+      setStartRequest({ projectId: project.id, text: body, files });
+      navigate(`/p/${project.id}`);
+    } catch (e) {
+      setBusy(false);
+      setError((e as Error).message);
+    }
+  };
+
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal card" role="dialog" onClick={(e) => e.stopPropagation()}>
-        {children}
-        <button className="primary" onClick={onClose}>
-          Got it
-        </button>
+    <div className="home-composer-wrap">
+      <form
+        className="composer home"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void start();
+        }}
+      >
+        <textarea
+          ref={area}
+          rows={2}
+          value={text}
+          placeholder="A row counter for my crochet blanket…"
+          aria-label="Describe your solution"
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia('(hover: hover)').matches) {
+              e.preventDefault();
+              void start();
+            }
+          }}
+        />
+        {files.length > 0 && (
+          <div className="files">
+            {files.map((f, i) => (
+              <span key={i} className="file-chip">
+                <span className="file-name">{f.name}</span>
+                <button type="button" className="chip-x" onClick={() => setFiles((x) => x.filter((_, j) => j !== i))} aria-label={`Remove ${f.name}`}>
+                  <IconClose size={14} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="composer-row">
+          <button type="button" className="icon-btn soft" onClick={() => fileInput.current?.click()} aria-label="Attach a manual, recipe or pattern">
+            <IconClip size={20} />
+          </button>
+          <span className="composer-hint">PDF, photo or text</span>
+          <input ref={fileInput} type="file" hidden multiple accept={FILE_ACCEPT} onChange={(e) => { setFiles((f) => [...f, ...Array.from(e.target.files ?? [])]); e.target.value = ''; }} />
+          <span className="grow" />
+          <button className="send-btn" disabled={!text.trim() || busy} aria-label="Make it">
+            {busy ? <span className="spinner" /> : <IconArrowUp size={20} />}
+          </button>
+        </div>
+      </form>
+      {error && <p className="error">{error}</p>}
+      <div className="ideas" aria-label="Ideas">
+        {SUGGESTIONS.map((s) => (
+          <button key={s.label} type="button" className="idea" onClick={() => { setText(s.text); area.current?.focus(); }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Grows a textarea with its content (up to the CSS max-height). */
+export function useAutosize(value: string) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return ref;
+}
+
+function AccountMenu() {
+  const { session, signOut } = useApp();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    addEventListener('pointerdown', close);
+    addEventListener('keydown', esc);
+    return () => {
+      removeEventListener('pointerdown', close);
+      removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  return (
+    <div className="account" ref={box}>
+      <button className="avatar" onClick={() => setOpen((o) => !o)} aria-label="Account" aria-expanded={open}>
+        {initialOf(session.name)}
+      </button>
+      {open && (
+        <div className="menu" role="menu">
+          <div className="menu-head">
+            <span className="avatar sm">{initialOf(session.name)}</span>
+            <span className="grow">
+              <b>{session.name}</b>
+              <span className="tiny muted">Signed in</span>
+            </span>
+          </div>
+          <Link to="/glasses" className="menu-item" role="menuitem"><IconGlasses size={18} /> Glasses</Link>
+          <button className="menu-item" role="menuitem" onClick={signOut}><IconLogout size={18} /> Sign out</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Bottom sheet on phones, centered dialog on wide screens. */
+export function Sheet({ title, children, onClose, action = 'Got it' }: { title: string; children: ReactNode; onClose: () => void; action?: string | null }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    addEventListener('keydown', esc);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      removeEventListener('keydown', esc);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-grip" aria-hidden />
+        <div className="sheet-head">
+          <h2>{title}</h2>
+          <button className="icon-btn" onClick={onClose} aria-label="Close"><IconClose size={20} /></button>
+        </div>
+        <div className="sheet-body">{children}</div>
+        {action && <button className="primary lg wide" onClick={onClose}>{action}</button>}
       </div>
     </div>
   );

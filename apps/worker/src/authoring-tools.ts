@@ -169,8 +169,8 @@ export class AuthoringSources {
       const found = a.uploadId ? this.images.get(a.uploadId) : undefined;
       const prior = base?.assets?.find((b) => b.id === a.id && b.uploadId === a.uploadId && b.data);
       if (found) {
-        a.data = found.data;
-        a.mediaType = found.mediaType;
+        a.data = found.animation?.data ?? found.data;
+        a.mediaType = found.animation?.mediaType ?? found.mediaType;
         a.source = found.source;
         a.attribution = found.attribution;
       } else if (prior) {
@@ -186,6 +186,12 @@ export class AuthoringSources {
             'Use uploadId equal to an exact supplied source image ref, or keep an existing asset unchanged. Never invent image data or refs.',
         });
     }
+    const motionBytes = def.assets.filter((a) => a.mediaType === 'image/gif')
+      .reduce((total, a) => total + Buffer.byteLength(a.data?.replace(/^data:[^,]+,/, '') ?? '', 'base64'), 0);
+    if (motionBytes > 2 * 1024 * 1024)
+      issues.push({ path: 'definition.assets', code: 'motion_budget', message: 'Looping GIFs exceed the 2 MiB motion budget. Use fewer or shorter excerpts.' });
+    if (def.assets.some((a) => a.mediaType === 'image/gif') && /^0\.[01]\./.test(def.minimumRuntimeVersion))
+      issues.push({ path: 'definition.minimumRuntimeVersion', code: 'runtime_version', message: 'Looping GIFs require minimumRuntimeVersion 0.2.0.' });
     return issues;
   }
 }

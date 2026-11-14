@@ -17,7 +17,7 @@ import { z } from 'zod';
 
 export const FORMAT_VERSION = 1;
 /** Bump when the runtime learns new kinds/ops; definitions declare the minimum they need. */
-export const RUNTIME_VERSION = '0.1.0';
+export const RUNTIME_VERSION = '0.3.0';
 
 /** Copy budgets (code points). Mirrors COPY_LIMITS in packages/glasses-ui. */
 export const LIMITS = {
@@ -150,12 +150,27 @@ export const Action = z
 
 // ---------------------------------------------------------------- views
 
+/**
+ * Voice note component (docs/voice-notes.md): the wearer can record spoken
+ * notes about this page ("Hey Meta, record a note"). The phone records and
+ * transcribes them; the glasses only show the recording status and a hint.
+ * Notes are not applet state and never change it.
+ */
+export const VoiceNote = z
+  .object({
+    /** What the notes are for, shown in the phone app (e.g. "Notes on this step"). */
+    label: z.string().optional(),
+  })
+  .strict();
+
 const viewBase = {
   id,
   /** Optional page heading. Omit when it would only repeat what the content shows. */
   title: z.string().optional(),
   /** Up to two docked buttons. Each action must work with no arguments (defaults). */
   actions: z.array(id).max(LIMITS.dockedActions).optional(),
+  /** Adds a voice note component to this page. Sequence views attach notes to the current step. */
+  voiceNote: VoiceNote.optional(),
 };
 
 export const SequenceStep = z
@@ -206,7 +221,7 @@ export const View = z.discriminatedUnion('kind', [
 export const Asset = z
   .object({
     id,
-    mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp']),
+    mediaType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/gif']),
     /** Source upload (authoring) or inlined data (package). Packaging resolves uploads to data. */
     uploadId: z.string().optional(),
     /** Original source/page for authoring inspection, not task-view copy. */
@@ -251,6 +266,7 @@ export type ActionArg = z.infer<typeof ActionArg>;
 export type Action = z.infer<typeof Action>;
 export type SequenceStep = z.infer<typeof SequenceStep>;
 export type View = z.infer<typeof View>;
+export type VoiceNote = z.infer<typeof VoiceNote>;
 export type Asset = z.infer<typeof Asset>;
 export type AppletDefinition = z.infer<typeof AppletDefinition>;
 export type ListItem = Record<string, Scalar> & { id: string };

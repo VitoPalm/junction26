@@ -5,6 +5,7 @@ import { createLogger, loadConfig, onShutdown } from '@junction26/server-common'
 import { JobRunner } from './runner.ts';
 import { createHandlers } from './handlers.ts';
 import { modelRegistryFromConfig } from './generate.ts';
+import { transcriptionRegistryFromConfig } from './transcribe.ts';
 
 const config = loadConfig();
 const logger = createLogger({ level: config.logLevel, bindings: { service: 'worker' } });
@@ -18,7 +19,8 @@ if (config.migrateOnStart) {
 
 const models = modelRegistryFromConfig(config);
 logger.info('authoring models', { default: config.model.model, allowed: config.model.allowed });
-const runner = new JobRunner({ config, pool, store, logger }, createHandlers(models), {
+logger.info('voice note models', { transcribe: config.notes.transcribeModel });
+const runner = new JobRunner({ config, pool, store, logger }, createHandlers(models, transcriptionRegistryFromConfig(config)), {
   ...(config.worker.id ? { workerId: config.worker.id } : {}),
   concurrency: config.worker.concurrency,
   generationConcurrency: config.limits.generationConcurrency,

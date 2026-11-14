@@ -3,8 +3,10 @@ import { initialState, migrateState, type AppletState } from '@junction26/applet
 import { store, type InstalledApplet, type Pairing, type SavedState } from './store.ts';
 
 /**
- * The only network code on the glasses. Runs on explicit actions (pair, sync),
- * never on open, navigation or state changes. Contract: docs/api.md.
+ * Library network code on the glasses. Runs on explicit actions (pair, sync),
+ * never on open, navigation or state changes. Contract: docs/api.md. The one
+ * exception is the opt-in voice bridge (voice.ts), which streams while an
+ * applet is open and the app is visible.
  */
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '';
@@ -206,6 +208,19 @@ export async function sync(): Promise<SyncReport> {
         if (latest) await store.putState({ ...latest, conflict: true });
         report.conflicts++;
       } else report.failed++;
+    }
+  }
+
+  // Voice notes: how many each page has on the phone, for the "N on phone" hint.
+  for (const a of await store.applets()) {
+    if (a.demo || !a.definition.views.some((v) => v.voiceNote)) continue;
+    try {
+      const { body: out } = await call<{ counts: { viewId: string; stepId: string | null; count: number }[] }>(`/v1/notes/counts?projectId=${a.projectId}`, { token });
+      const c: Record<string, number> = {};
+      for (const r of out.counts) c[r.stepId ? `${r.viewId}/${r.stepId}` : r.viewId] = r.count;
+      await store.putMeta(`noteCounts:${a.projectId}`, c);
+    } catch {
+      /* next sync */
     }
   }
 

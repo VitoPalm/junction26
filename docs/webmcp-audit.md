@@ -12,8 +12,9 @@ remain open with zero comments.
 WebMCP is a documented Meta integration with official samples. It is a reasonable
 adapter for applet actions, but our project has not established reliable voice
 invocation on a target device/account. Continue the runtime and band-operated
-product while keeping this dependency explicit. Do not describe voice control
-as delivered. The owner clarified that glasses are for operating applets;
+product while keeping this dependency explicit. A later Scoreboard retry on
+2026-11-14 produced one confirmed on-device read-tool callback (see below);
+reliable action invocation remains unverified. The owner clarified that glasses are for operating applets;
 creation and definition edits happen in external authoring surfaces.
 
 Meta's public FAQ labels WebMCP **developer preview**. The detailed agent-tools
@@ -84,6 +85,70 @@ of calls that did not throw synchronously, not confirmed asynchronous acceptance
 or assistant discovery; the read-state result describes field values rather
 than original source documents; action callbacks do not currently consume the
 host cancellation signal. Stub success must not be presented as device success.
+
+## Hardware result, 2026-11-14: registered, never invoked
+
+First test on the team's own Meta Ray-Ban Display. Glasses release
+130.0.1.241.221, Meta AI app 298.0.0.28.160, English (US), Developer Mode on.
+Both the glasses and the phone app were restarted before the tests.
+
+1. **Official Agentic Todo sample** (`meta.github.io/meta_glasses_webmcp/examples/todo/`,
+   installed by deep-link QR): Meta AI answered as if no app tools existed. No
+   list change for "add buy milk to my list" and similar phrases.
+2. **Minimal self-reporting probe** (three tools: `probe_add_points`,
+   `probe_read_score`, `probe_ping`; it posts events to a log endpoint the
+   developer can watch). Observed on the device:
+   - User agent: Android 16 WebView (`Greatwhite` build), Chrome 154.0.8037.92, viewport 600×600.
+   - `document.modelContext` present; `navigator.modelContext` absent. The
+     object's members are `registerTool`, `getTools`, `executeTool`,
+     `ontoolchange`, the `EventTarget` methods and an undocumented `when`.
+   - All three `registerTool` calls returned promises that resolved within
+     about 50 ms of page start. Each fired `toolchange`, and `getTools()` listed
+     all three names.
+   - A Neural Band select on the probe's button raised the score from 0 to 1
+     and was logged, so the manual path and the logging worked in the same session.
+   - **Zero `execute` callbacks** across repeated voice attempts with the probe
+     in the foreground. The score didn't change.
+   - The page went `hidden` for about 13 s during one attempt, then `visible`
+     again. Unconfirmed whether the Meta AI overlay hides the web app while
+     it handles a request.
+
+This reproduces issues #31 and #35 on a newer release (v130) and in another
+locale (en-US). Our page-side contract (feature detection, early registration,
+schema, names) matches what the device accepts. The gap is between local
+registration and Meta AI choosing a tool, which we can't diagnose from the page.
+At that point voice control was **unverified/blocked**. The later retry below
+supersedes the blanket invocation-blocked conclusion. Band operation is unaffected.
+
+### Later retry, 2026-11-14: first confirmed voice callback
+
+The owner reported that Meta repeatedly failed to recognize the word “probe”.
+Renamed the diagnostic to Scoreboard v2, renamed all three tools to
+`scoreboard_*`, and changed descriptions/example phrases to “add five points”,
+“what's my score” and “check the scoreboard”. Relaunched on the glasses.
+
+At **15:38:06 UTC**, session `n3kdvh` logged an actual `execute` callback for
+`scoreboard_read_score` with `{}` arguments. A preceding band click set the
+score to 2; the following heartbeat reported one tool call and score 2. The
+owner independently reported that the voice interaction worked. This is
+on-device invocation evidence, not just registration or a browser stub.
+
+Only the read tool is confirmed in this observation. The exact spoken phrase
+and Meta's spoken answer were not captured by the page. Renaming, simpler
+phrasing and relaunch happened together, so the cause of success is not isolated.
+The earlier claim that the failure was necessarily on Meta's side was too
+strong. Next checks: a voice write with a specified amount, a correct readback,
+and repeated calls across an app relaunch.
+
+### Actual Applets app: owner-confirmed success, 2026-11-14
+
+After the Scoreboard callback, the owner installed the current built glasses
+app through a device-only HTTPS gateway and reported “it works”. The suggested
+test was Brakka the Bold with “take five damage”, “how much health do I have”
+and “heal three points”. This is owner-reported hardware success in the actual
+app; the exact commands attempted, resulting values and individual callbacks
+were not captured in this confirmation. Do not count all three suggested
+commands as individually verified or infer broad reliability from this session.
 
 ## Registration success is insufficient evidence
 

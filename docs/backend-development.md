@@ -68,6 +68,10 @@ build step). Database tests need `TEST_DATABASE_URL` (it's in
 dropped afterwards. Without the variable, those suites show as **skipped** with
 the reason. CI must set it.
 
+Video/GIF prototype tests additionally require `ffmpeg` and `ffprobe` (with GIF
+and MPEG-4 encoders). Renderer motion tests require the built worker fit bundle
+and Chromium; see [video-tutorials.md](video-tutorials.md).
+
 | Suite | Covers |
 | --- | --- |
 | `packages/server-common` | env parsing, production refusals, interim definition check |

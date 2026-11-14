@@ -13,7 +13,7 @@ development stub, not Meta AI.
 packages/applet-format/   format v1 (zod), validator, change diff, capability catalog, authoring prompt, fixtures
 packages/applet-runtime/  pure state machine: dispatch, initialState, migrateState, built-in step navigation
 packages/applet-renderer/ React renderer on glasses-ui + WebMCP adapter; used by glasses AND the phone preview
-packages/model/           provider-neutral model adapter (OpenRouter / OpenAI-compatible / fake)
+packages/model/           provider-neutral model adapter (OpenRouter / OpenAI-compatible / Anthropic / Gemini / fake)
 apps/glasses/             Meta Ray-Ban Display web app (served at /glasses/)
 apps/author/              authoring app: web (served at /author/) + Capacitor iOS/Android shells
 ```
@@ -28,7 +28,8 @@ Source of truth: `packages/applet-format/src/schema.ts` (structure) and
 Differences from the draft in [implementation-plan.md](implementation-plan.md):
 collections are arrays with `id` (models handle them better than records), and
 action args are an array. Views: `text`, `value`, `list` (checklist with
-`check`), `sequence`, `image`. Ops: `add`, `subtract`, `set`, `toggle`, `reset`,
+`check`), `sequence`, `image`. Any view may add the voice note component
+`voiceNote: { label? }` (runtime 0.3.0; see [voice-notes.md](voice-notes.md)). Ops: `add`, `subtract`, `set`, `toggle`, `reset`,
 `listAppend`, `listRemove`, `listUpdate`, `listAdd`, `listToggle`, `listClear`,
 `move`, `goto`. Fixtures in `src/fixtures/` (row counter, D&D sheet, packing
 list, pancake guide) double as glasses demo content and the fake model's output.
@@ -46,13 +47,24 @@ The worker never talks to a provider directly. A model is a spec
 | --- | --- |
 | `openai/gpt-6-luna` (bare = OpenRouter) or `openrouter:<model>` | OpenRouter, any model it routes |
 | `openai:<model>` | Any OpenAI-compatible endpoint (`OPENAI_BASE_URL`, `OPENAI_API_KEY`): OpenAI, vLLM, Ollama… |
+| `anthropic:<model>` | Native Anthropic Messages API (`ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`) |
+| `gemini:<model>` | Native Google Gemini generateContent API (`GEMINI_API_KEY`, `GEMINI_BASE_URL`) |
+| `<configured-id>:<model>` | Independent OpenAI-compatible endpoints configured with `MODEL_PROVIDERS` (hosted or local) |
 | `fake:demo` | Free, deterministic: picks a fixture by keyword. For dev, demos without credit, tests |
 
 `AUTHORING_MODEL` is the default; `AUTHORING_MODELS` (comma list) adds choices
-for the in-app model picker. The API refuses anything not on the list. Adding a
-provider (direct Anthropic, Gemini, a BYO key) = one `ModelProvider` class in
-`packages/model` + one line in `createModelRegistry`. The prompt
-(`systemPrompt()` in applet-format) and validation are provider-neutral.
+for the in-app model picker. The API refuses anything not on the list. The picker
+groups choices by provider, disables providers without local credentials, and
+chooses an available model if the default is unavailable. This checks configuration,
+not key validity, credit balance or live provider access. Secrets stay on the server.
+Images/PDF pages are prepared by the backend; text-only models can use extracted
+text but cannot interpret source diagrams. The picker explains that limitation.
+
+See [model-providers.md](model-providers.md) for setup, compatibility options and
+verification limits. All model access, including the API voice resolver, goes
+through `packages/model`. New protocol adapters implement `ModelProvider`; hosted
+services using Chat Completions need configuration rather than new worker code.
+The prompt and local validation are provider-neutral.
 
 Generation (`apps/worker/src/generate.ts`): thread + attachments (text inline,
 images and PDFs as parts when the model supports them) + the current
@@ -83,6 +95,45 @@ recorded on the job. Failures post a plain-language reply in the thread.
   `webmcp.list()` / `await webmcp.call('j26_dnd_heal', { amount: 2 })` in the console.
 - Back on the device/simulator is browser history (the toolkit doesn't bind Esc).
 
+Browser regression checks: `npm run test:browser -w @junction26/glasses`.
+These run the real app in Chrome at 600×600 using the explicit development
+WebMCP stub: action/read ordering, concurrent writes, manual input, invalid
+arguments, IndexedDB reload persistence, page navigation and tool cleanup when
+leaving an applet. Tool reads use the latest persisted session state even before
+React renders an acknowledged write. This is local browser evidence; it does
+not test Meta AI, the simulator extension's agent, or glasses voice routing.
+
+### Full local browser flow checked, 2026-11-14
+
+Manual browser run against a throwaway migrated PostgreSQL database, the real
+API and worker, memory object storage, dev authentication and only `fake:demo`:
+
+- Created a crochet row counter through the authoring UI; its generated preview
+  rendered at zero, and publishing completed through the UI.
+- Requested a pairing code through the authoring UI, entered it in the glasses
+  browser app, and confirmed pairing downloaded the published counter.
+- At 600×600, pressed Add row three times. Reopening showed three saved rows.
+- Pressing Add row in the author's preview showed one there; the glasses copy
+  stayed at three.
+- Submitted revision 2 through the revisions API (the fake model cannot edit
+  layouts): renamed the view label to Finished rows and reversed the two docked
+  actions, preserving state/action/view IDs. Previewed and published via the UI.
+- Before explicit Sync the glasses retained the old layout. Sync reported one
+  update; opening showed the new label/button order and three rows. A full
+  reload still showed three, with no fit-guard alert.
+- Both releases were ready; the server backup contained `values.rows = 3`.
+
+Follow-up found by inspecting that backup: during update sync, its envelope
+`revisionId` named revision 2 while `snapshot.revision` still named revision 1.
+`sync()` installs the new package before backing up old saved state; migration
+is currently deferred to `loadState()`. Local progress survived this test, but
+backup revision consistency and recovery after a schema-changing update need a
+dedicated regression test/fix. This run did not establish those behaviors.
+
+No paid model, Clerk login, Aiven deployment, Meta agent, hardware or offline
+cold start was tested. The temporary API/worker and author dev server were
+stopped, their test tabs closed and the throwaway database dropped afterwards.
+
 ## Authoring app (`apps/author`)
 
 One React codebase: web build served at `/author/`, and Capacitor 8.5 shells
@@ -91,14 +142,23 @@ One React codebase: web build served at `/author/`, and Capacitor 8.5 shells
 - Sign-in: Clerk accounts on the web, with a fresh session token per API request.
   The Vite dev server retains optional name-based `dev:<name>` login. Native
   Clerk sign-in remains pending; Clerk-mode native builds point to the web app.
-  Setup: [authentication-plan.md](authentication-plan.md). Library + `+`.
-  First-run "what you can make" from the
-  capability catalog. Chat with attachments and model picker. Preview: the real
-  renderer in a 600×600 iframe (`preview.html`), separate in-memory state, plus
-  "Try a voice command" (calls the same WebMCP tools). Change review: the
+  Setup: [authentication-plan.md](authentication-plan.md). Library home: a
+  "What do you need?" composer (text + files) that creates the project and
+  starts generation in one step (in-memory hand-off, `src/ui.ts`), a
+  connect-your-glasses nudge while nothing is paired, and applet tiles.
+  First-run "what you can make" sheet from the capability catalog. Chat with
+  attachments and model picker; tap the title to rename. Preview: the real
+  renderer in a 600×600 iframe (`preview.html`) framed as a lens, separate
+  in-memory state, plus "Try saying" chips (calls the same WebMCP tools). Change review: the
   program diffs against what's on the glasses; data loss needs an explicit tick
   before publishing (client-side only until the reviews endpoint exists).
-  Publish. Glasses screen: install deep link, pairing code, device list.
+  Publish. Glasses screen: install deep link, pairing code with countdown
+  (notices when pairing completes), device list.
+- Naming: people see "solutions" (brand "Solutions"); the code says applet.
+  See the decision log in [product-spec.md](product-spec.md).
+- Look: warm light/dark themes from `prefers-color-scheme`, tokens at the top of
+  `src/styles.css`, Bricolage Grotesque + Figtree from Google Fonts (system
+  fallbacks), inline icons in `src/icons.tsx`.
 - Web dev: `npm run dev -w @junction26/author` → http://127.0.0.1:5173/author/
 
 ### Android (emulator)
@@ -112,7 +172,17 @@ adb reverse tcp:8080 tcp:8080                              # emulator's localhos
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Sign in with server `http://localhost:8080` (prefilled). On this machine the
+Native builds read `apps/author/.env.native` (committed, public): Clerk mode
+with the development `pk_test_…` key and `VITE_CLERK_ALLOW_DEVELOPMENT=true`.
+Email sign-in is Clerk's web UI inside the WebView. Social sign-in (Google,
+Apple, Facebook) uses our own buttons (`src/native-oauth.ts`): the provider page
+opens in a Custom Tab / Safari sheet and Clerk redirects to
+`com.junction26.applets://oauth-callback`, which reopens the app to finish the
+sign-in (Clerk's own social buttons are hidden on native: Google refuses
+WebViews). Production Clerk instances must allowlist that redirect under Native
+applications. Not yet verified end to end on the emulator. The API must list
+the WebView origin in `CLERK_AUTHORIZED_PARTIES`: `https://localhost` (Android),
+`capacitor://localhost` (iOS, not yet accepted by config validation). On this machine the
 emulator only boots with `-gpu host`; `-gpu auto`/software rendering segfaults
 in the Vulkan/ANGLE renderer.
 
@@ -236,6 +306,21 @@ pages: Capacitor release notes published after the model's training (8.6.2,
    cost in job usage, and keep the citations so the authoring app can show
    sources.
 
+## Voice notes (2026-11-14)
+
+Spec and status: [voice-notes.md](voice-notes.md). Pieces:
+`voiceNote` in the format, `VoiceNoteBar` in glasses-ui (a row between the
+content and the dock), anchors and the `start_voice_note` / `stop_voice_note`
+WebMCP tools in the renderer, `apps/glasses/src/notes.ts` (start/stop, per-note
+event stream, counts from sync), `/v1/notes` in the API, the
+`transcribe_voice_note` job, and in the authoring app a Recorder screen
+(`#/recorder`, `src/recorder.ts`) plus a Notes tab per applet.
+`node scripts/voice/recorder.ts` stands in for the phone recorder.
+Capacitor shells select `src/native-recorder.ts`: Android's microphone foreground
+service and iOS's continuous audio session own capture, recognition, event
+transport and disk uploads independently of the web view. Build and device
+verification details: [native-voice-notes.md](native-voice-notes.md).
+
 ## Known gaps (next)
 
 - Real sign-in (open decision 1); `POST /v1/projects/:id/reviews` so data-loss
@@ -250,3 +335,20 @@ pages: Capacitor release notes published after the model's training (8.6.2,
 ## Real-model source pipeline (2026-11-14)
 
 Managed generation now prepares PDF pages and images, accepts text/Markdown/CSV/JSON/HTML/Word sources, reads public links, searches source material and Commons images, and crops known diagrams. Referenced image bytes are resolved server-side into revision definitions and offline packages. Generated candidates pass canonical headless-Chromium fit checks with bounded repair. See [model-pipeline.md](model-pipeline.md), [paid evidence](model-pipeline-results.md), and [adjacent follow-ups](model-pipeline-followups.md). These checks are local desktop/backend evidence, not on-device verification.
+
+## Looping motion (2026-11-14)
+
+Runtime `0.2.0` adds `image/gif` assets in image views and sequence image steps.
+GIFs play automatically with no playback controls and bypass static diagram ink
+conversion. Upload preparation preserves motion (bounded to 8 s / 96 frames /
+360 px / 512 KiB per GIF), with a PNG preview for the builder. Managed generation
+caps total motion at 2 MiB. Playback uses embedded offline bytes. The local
+YouTube/snippet CLI and remaining automatic builder integration are documented in
+[video-tutorials.md](video-tutorials.md). Video links are not yet imported by chat.
+
+The canonical library exports `GifImage` and `GifScreen` from
+`packages/glasses-ui/src/lib/gif.tsx`. `GifScreen` contains the fitted loop, an
+optional essential instruction/hint and the host's guide navigation. GIF sequence
+steps now display their `text` and `hint`, so stitch counts remain visible beside
+the demonstration. Decode failures show a recovery message and fail generation
+fit validation. `LoopingImage` remains an export alias for compatibility.

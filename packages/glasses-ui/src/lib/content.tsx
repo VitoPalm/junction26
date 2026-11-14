@@ -35,8 +35,10 @@ export function ActionBar({ actions }: { actions: readonly GlassesAction[] }) {
 }
 
 /** Fixed pages only. Overflow is a content error, never a scroll affordance. */
-export function ContentScreen({ title, children, actions = [] }: {
+export function ContentScreen({ title, children, actions = [], footer }: {
   title?: string; children: ReactNode; actions?: readonly GlassesAction[];
+  /** Page-level component between the content and the dock (e.g. VoiceNoteBar). Takes space from the content. */
+  footer?: ReactNode;
 }) {
   if (title !== undefined) assertContent(checkCopy('title', title, COPY_LIMITS.title));
   const viewport = useRef<HTMLDivElement>(null);
@@ -76,6 +78,7 @@ export function ContentScreen({ title, children, actions = [] }: {
           This page does not fit. Split it into smaller pages in the editor.
         </TextView></div> : <div className="g-content" ref={content}>{children}</div>}
       </div>
+      {footer ?? <div />}
       <ActionBar actions={actions} />
     </div>
   </Page>;
