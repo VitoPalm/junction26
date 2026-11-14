@@ -67,6 +67,12 @@ No model-provider keys go in the app. The backend defaults to
 `google/gemini-3.1-flash-lite` for cloud stop checks, using the existing backend
 `OPENROUTER_API_KEY`. The real OpenRouter smoke test returned the intended text
 from a 3-second synthesized English clip, with reported cost $0.000175.
+A separate synthesized stop-phrase clip returned `stop: true` with a 2.1-second
+phrase-start offset from Gemini Flash-Lite; reported cost $0.00009925.
+The integrated branch passed 167 unit tests (including fresh database tests,
+no skips), four glasses WebMCP browser tests, five canonical no-scroll browser
+tests, the full build, and Android APK/unit/lint checks. Capacitor iOS sync and
+plist validation pass; neither compiles the Swift code.
 
 ## Remaining device verification
 

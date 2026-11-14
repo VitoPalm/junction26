@@ -19,7 +19,7 @@ if (config.migrateOnStart) {
 
 const models = modelRegistryFromConfig(config);
 logger.info('authoring models', { default: config.model.model, allowed: config.model.allowed });
-logger.info('voice note models', { transcribe: config.notes.transcribeModel, mistralKey: Boolean(config.notes.mistral.apiKey) });
+logger.info('voice note models', { transcribe: config.notes.transcribeModel });
 const runner = new JobRunner({ config, pool, store, logger }, createHandlers(models, transcriptionRegistryFromConfig(config)), {
   ...(config.worker.id ? { workerId: config.worker.id } : {}),
   concurrency: config.worker.concurrency,

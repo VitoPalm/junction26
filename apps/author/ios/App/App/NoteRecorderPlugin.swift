@@ -134,6 +134,7 @@ private final class NativeNoteRecorder: NSObject, URLSessionDataDelegate {
         flush(); publish()
     }
     func disable() {
+        let wasEnabled = enabled
         enabled = false; generation += 1
         finish(reason: "interrupted")
         timer?.cancel(); timer = nil
@@ -142,6 +143,7 @@ private final class NativeNoteRecorder: NSObject, URLSessionDataDelegate {
         if tapInstalled { engine.inputNode.removeTap(onBus: 0); tapInstalled = false }
         observers.forEach { NotificationCenter.default.removeObserver($0) }; observers = []
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if wasEnabled { request("/v1/notes/recorder/session", method: "DELETE") { _, _ in } }
         connected = false; phase = "off"; ring.removeAll(); publish()
     }
     private func interrupt(_ text: String) { disable(); message = text; phase = "error"; publish() }

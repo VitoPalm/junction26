@@ -32,7 +32,7 @@ public class NoteRecorderService extends Service {
   private OutputStream speechWriter;
   private final ThreadPoolExecutor speechFeed =
       new ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(6));
-  private final ScheduledExecutorService network = Executors.newSingleThreadScheduledExecutor();
+  private final ScheduledExecutorService network = Executors.newScheduledThreadPool(3);
   private final Handler main = new Handler(Looper.getMainLooper());
   private HttpURLConnection events;
   private AudioManager manager;
@@ -42,6 +42,9 @@ public class NoteRecorderService extends Service {
   private boolean routeOwned;
   private long lastHeard, lastCheck;
   private boolean liveBusy;
+  private final java.util.concurrent.atomic.AtomicBoolean flushing =
+      new java.util.concurrent.atomic.AtomicBoolean();
+  private boolean shuttingDown;
   private final Object lock = new Object();
   private Thread audioThread;
 
@@ -156,11 +159,20 @@ public class NoteRecorderService extends Service {
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "applets:notes");
     wake.acquire(Math.max(1, Math.min(expires - System.currentTimeMillis(), 12 * 60 * 60 * 1000)));
     enabled = true;
-    phase = "ready";
+    phase = "arming";
     publish();
-    network.execute(this::recover);
-    network.scheduleWithFixedDelay(this::flushNow, 0, 15, TimeUnit.SECONDS);
-    new Thread(this::listen, "note-events").start();
+    network.execute(
+        () -> {
+          recover();
+          main.post(
+              () -> {
+                if (!enabled) return;
+                phase = "ready";
+                publish();
+                network.scheduleWithFixedDelay(this::flushNow, 0, 15, TimeUnit.SECONDS);
+                new Thread(this::listen, "note-events").start();
+              });
+        });
     main.postDelayed(this::tick, 1000);
     return START_NOT_STICKY;
   }
@@ -634,49 +646,57 @@ public class NoteRecorderService extends Service {
 
   private void flushNow() {
     if (directory == null || token == null || System.currentTimeMillis() >= expires) return;
-    File[] files = directory.listFiles((d, n) -> n.endsWith(".json"));
-    if (files == null) return;
-    for (File f : files)
-      try {
-        JSONObject m =
-            new JSONObject(new String(NoteAudio.read(f), java.nio.charset.StandardCharsets.UTF_8));
-        String id = m.getString("id");
-        File wav = new File(directory, id + ".wav");
-        if (!wav.exists()) continue;
-        byte[] bytes = NoteAudio.read(wav);
-        JSONObject result =
-            request(
-                "/v1/notes/"
-                    + id
-                    + "/audio?durationMs="
-                    + m.optInt("durationMs")
-                    + "&endReason="
-                    + m.optString("endReason", "interrupted"),
-                "PUT",
-                bytes,
-                "audio/wav");
-        byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
-        StringBuilder hash = new StringBuilder();
-        for (byte b : digest) hash.append(String.format("%02x", b & 255));
-        if (!hash.toString()
-            .equals(result.getJSONObject("note").getJSONObject("audio").optString("sha256")))
-          throw new IOException("Audio confirmation mismatch");
-        wav.delete();
-        f.delete();
-        lastSaved =
-            new JSONObject()
-                .put("pageLabel", m.optString("pageLabel"))
-                .put("at", System.currentTimeMillis());
-        message = null;
-        publish();
-      } catch (Exception e) {
-        message = "Saved on this phone; uploading when online…";
-        publish();
-        break;
-      }
+    if (!flushing.compareAndSet(false, true)) return;
+    try {
+      File[] files = directory.listFiles((d, n) -> n.endsWith(".json"));
+      if (files == null) return;
+      for (File f : files)
+        try {
+          JSONObject m =
+              new JSONObject(
+                  new String(NoteAudio.read(f), java.nio.charset.StandardCharsets.UTF_8));
+          String id = m.getString("id");
+          File wav = new File(directory, id + ".wav");
+          if (!wav.exists()) continue;
+          byte[] bytes = NoteAudio.read(wav);
+          JSONObject result =
+              request(
+                  "/v1/notes/"
+                      + id
+                      + "/audio?durationMs="
+                      + m.optInt("durationMs")
+                      + "&endReason="
+                      + m.optString("endReason", "interrupted"),
+                  "PUT",
+                  bytes,
+                  "audio/wav");
+          byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
+          StringBuilder hash = new StringBuilder();
+          for (byte b : digest) hash.append(String.format("%02x", b & 255));
+          if (!hash.toString()
+              .equals(result.getJSONObject("note").getJSONObject("audio").optString("sha256")))
+            throw new IOException("Audio confirmation mismatch");
+          wav.delete();
+          f.delete();
+          lastSaved =
+              new JSONObject()
+                  .put("pageLabel", m.optString("pageLabel"))
+                  .put("at", System.currentTimeMillis());
+          message = null;
+          publish();
+        } catch (Exception e) {
+          message = "Saved on this phone; uploading when online…";
+          publish();
+          break;
+        }
+    } finally {
+      flushing.set(false);
+    }
   }
 
   void shutdown() {
+    if (shuttingDown) return;
+    shuttingDown = true;
     enabled = false;
     finish("interrupted", -1);
     stopRecognition();
@@ -687,6 +707,14 @@ public class NoteRecorderService extends Service {
     phase = "off";
     publish();
     if (wake != null && wake.isHeld()) wake.release();
+    if (token != null && !network.isShutdown())
+      network.execute(
+          () -> {
+            try {
+              request("/v1/notes/recorder/session", "DELETE", null, null);
+            } catch (Exception ignored) {
+            }
+          });
     stopForeground(STOP_FOREGROUND_REMOVE);
     stopSelf();
   }
