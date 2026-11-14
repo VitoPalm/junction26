@@ -29,10 +29,14 @@
   },
   "exports": {
     ".": {
+      "junction26-source": "./src/lib/index.ts",
       "types": "./dist-lib/index.d.ts",
       "import": "./dist-lib/index.js"
     },
-    "./styles.css": "./dist-lib/styles.css"
+    "./styles.css": {
+      "junction26-source": "./src/lib/styles.css",
+      "default": "./dist-lib/styles.css"
+    }
   },
   "version": "0.1.0"
 }

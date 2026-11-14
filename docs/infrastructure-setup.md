@@ -58,7 +58,12 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `DATABASE_URL` | api, worker | Injected by the Aiven service integration (full URI, includes `sslmode`) |
 | `OPENROUTER_API_KEY` | worker | Runtime secret. Never in a frontend bundle |
 | `OPENROUTER_BASE_URL` | worker | `https://openrouter.ai/api/v1` |
-| `AUTHORING_MODEL` | worker | `openai/gpt-6-luna` |
+| `AUTHORING_MODEL` | api, worker | Default model spec, `openai/gpt-6-luna` (bare name = OpenRouter; `provider:model` otherwise). See [apps.md](apps.md#models-swappable) |
+| `AUTHORING_MODELS` | api, worker | Extra specs users may pick, comma-separated (e.g. `fake:demo`) |
+| `AUTHORING_REASONING_EFFORT` | worker | Optional `low`/`medium`/`high` |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | worker | For `openai:<model>` specs (any OpenAI-compatible endpoint) |
+| `CORS_ORIGINS` | api | Browser origins allowed to call `/v1` (native shells: `capacitor://localhost,https://localhost`). Dev default includes those and the Vite ports; production default is none |
+| `WEB_ROOT` | api | Directory with the built `glasses/` and `author/` apps; `/app/web` in the image |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | api, worker | Verda key `junction26-backend-storage` (project-scoped: can read every bucket in the project) |
 | `AWS_ENDPOINT_URL` | api, worker | `https://objects.eu-north-3.verda.storage` |
 | `AWS_REGION` | api, worker | `eu-north-3` |
@@ -75,7 +80,14 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `MIGRATION_DATABASE_URL` | api, worker | Optional direct (non-PgBouncer) URI for migrations; defaults to `DATABASE_URL` |
 | `DATABASE_POOL_MAX` | api | Connections per API process (default 10) |
 | `STORAGE_DRIVER` | api, worker | `s3` (default, required in production), `fs` or `memory` for development |
-| `AUTH_MODE` | api | Only `dev` exists until the identity provider is chosen |
+| `AUTH_MODE` | api, worker config | `clerk` for real web accounts; `dev` is local-only and refused in production |
+| `CLERK_ISSUER` | api, worker config | Required in Clerk mode: exact HTTPS issuer of the configured instance |
+| `CLERK_AUTHORIZED_PARTIES` | api, worker config | Required in Clerk mode: comma-separated frontend origins; HTTPS in production, loopback HTTP also allowed in development. Separate from CORS |
+| `CLERK_SECRET_KEY` | api, worker config | Backend-only Clerk key for signing-key retrieval; required unless `CLERK_JWT_KEY` is set |
+| `CLERK_JWT_KEY` | api, worker config | Optional PEM RSA public key for networkless verification, instead of a secret key; literal `\n` separators supported. Takes precedence; rotate manually |
+| `CLERK_ALLOW_DEVELOPMENT_INSTANCE` | api, worker config | Hackathon opt-in (default `false`): lets production accept a Clerk development instance (`sk_test_…`, `*.clerk.accounts.dev`). Dev auth, HTTP origins and non-S3 storage stay refused. Remove once a production Clerk instance exists |
+| `VITE_CLERK_ALLOW_DEVELOPMENT` | author build | Matching build-time opt-in for a `pk_test_…` key in a release build. Set in the committed, public `apps/author/.env.production` |
+| `VITE_AUTH_MODE`, `VITE_CLERK_PUBLISHABLE_KEY` | author build | `clerk` + public `pk_live_…` for release; local Vite defaults to dev login. `pk_test_…` only with the dev server. Never pass a secret key to Vite |
 | `LOG_LEVEL` | api, worker | `debug`, `info` (default), `warn`, `error` |
 | `WORKER_CONCURRENCY`, `WORKER_POLL_MS`, `WORKER_LEASE_MS`, `WORKER_ID` | worker | Defaults 2, 1000, 60000, generated |
 | `WORKER_HEALTH_PORT` | worker | If set, serves `GET /healthz` (for hosts that need a listening port) |
@@ -206,9 +218,13 @@ service becomes its own Runtime app. `compose.yaml` already sets
 `WORKER_HEALTH_PORT=8080`, so the worker answers `GET /healthz` on 8080 and can
 be deployed like the API if needed (don't route public traffic to it).
 
-**Before the first deploy, decide user authentication.** The image runs with
-`NODE_ENV=production`, which refuses the dev auth placeholder. Overriding
-`NODE_ENV=development` on a public URL would let anyone act as any user.
+**Before the first deploy, configure Clerk.** Build the author app with its
+production publishable key, and set `AUTH_MODE=clerk`, issuer, allowed frontend
+origins and a verification key in the backend runtime. Both API and worker use
+the shared config parser. The image runs with `NODE_ENV=production`, which
+refuses dev auth and Clerk development instances. Overriding it on a public URL
+would remove those safeguards. See [authentication-plan.md](authentication-plan.md)
+for setup and the remaining native/connector work.
 
 ### Deploy steps
 
@@ -300,3 +316,19 @@ touch the file again.
   lasts ~2.5 weeks.
 - Verda: storage of a few hundred MB costs cents. €200 balance.
 - OpenRouter: ~$0.007 per manual-sized generation; $17 cap ≈ 2,000 generations.
+
+## Worker source/fit prerequisites (2026-11-14)
+
+The worker image now installs Poppler (`poppler-utils`) and Chromium for source PDF rendering and generated-candidate fit checks. Local development requires `pdfinfo`, `pdftotext`, `pdftoppm` and Chrome/Chromium; set `CHROME_PATH` when it is outside the detected Linux paths. Build the renderer measurement bundle with `npm run build:fit -w @junction26/worker` before `dev:worker` (the regular worker build includes this step). Missing fit prerequisites fail generation before a paid model call. Source tool limits and the optional paid benchmark are in [model-pipeline.md](model-pipeline.md). The authoring app/worker can perform public web lookups during creation; downloaded glasses applets remain offline.
+
+### Optional external assistant OAuth
+
+The API can now serve the shared OAuth-protected MCP tools at `/mcp`. Configure
+`MCP_RESOURCE_URL` (the exact endpoint), `CLERK_PUBLISHABLE_KEY` and
+`CLERK_SECRET_KEY` alongside `AUTH_MODE=clerk` and the existing issuer settings.
+The Docker image includes the shared MCP tool package. The development Clerk
+instance is configured and real local consent/draft creation is verified; no
+public MCP deployment is implied. Register the public HTTPS resource in Clerk
+and preserve its Host header through the proxy before testing cloud clients.
+See [assistant-mcp.md](assistant-mcp.md) for scopes, bootstrap scripts and the
+remaining provider acceptance checks.

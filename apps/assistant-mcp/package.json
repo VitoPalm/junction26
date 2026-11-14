@@ -1,0 +1,34 @@
+{
+  "name": "@junction26/assistant-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared external-assistant MCP adapter for Claude and OpenAI clients",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --conditions=junction26-source --test 'src/**/*.test.ts'",
+    "dev": "node --env-file-if-exists=../../.env.assistant.local --conditions=junction26-source src/main.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2"
+  },
+  "exports": {
+    ".": {
+      "junction26-source": "./src/server.ts",
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./api": {
+      "junction26-source": "./src/api.ts",
+      "types": "./dist/api.d.ts",
+      "default": "./dist/api.js"
+    }
+  }
+}

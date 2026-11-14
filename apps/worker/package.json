@@ -4,19 +4,29 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json && npm run build:fit",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p browser/tsconfig.json",
     "test": "node --env-file-if-exists=../../.env.backend.local --conditions=junction26-source --test --test-concurrency=1 'src/**/*.test.ts'",
     "dev": "node --env-file-if-exists=../../.env.backend.local --env-file-if-exists=../../.env.verda.local --env-file-if-exists=../../.env.openrouter.local --conditions=junction26-source --watch src/main.ts",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "build:fit": "tsc --noEmit -p browser/tsconfig.json && node build-fit.mjs"
   },
   "dependencies": {
+    "@junction26/applet-format": "*",
     "@junction26/db": "*",
+    "@junction26/model": "*",
+    "@junction26/server-common": "*",
     "@junction26/storage": "*",
-    "@junction26/server-common": "*"
+    "cheerio": "^1.2.0",
+    "fflate": "^0.8.3",
+    "ipaddr.js": "^2.5.0",
+    "playwright-core": "^1.65.1",
+    "sharp": "^0.35.5",
+    "undici": "^8.12.4"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
+    "esbuild": "^0.28.2",
     "typescript": "7.0.2"
   },
   "exports": {

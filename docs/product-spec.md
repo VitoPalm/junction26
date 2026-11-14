@@ -8,15 +8,19 @@ Where it and other docs disagree, fix the other doc.
 ## One-sentence product
 
 **Describe the small tool you need right now; we generate it as an applet for
-your Meta Ray-Ban Display glasses, and you operate and reshape it hands-free.**
+your Meta Ray-Ban Display glasses, and you operate it hands-free.**
 
 Pitch lines that were agreed on along the way:
 
 - "Bring your tutorial. Keep your hands on what you're making."
 - "Bring a tutorial, pattern, or manual. Get a hands-free guide that keeps your
   place, shows your next action, and explains things when you get stuck."
-- "Describe the tool you need right now. Your glasses create it, and you operate
-  and change it by talking."
+- "Describe the tool you need right now on your phone or assistant. Open it on
+  your glasses and operate it hands-free."
+
+Scope clarification (2026-11-14): creation and definition/layout edits happen
+on the phone/laptop authoring client or in a connected assistant. The glasses
+operate downloaded applets; on-glasses authoring is outside the current scope.
 
 ## Challenge context
 
@@ -130,21 +134,26 @@ industrial machinery as a later expansion because of its verification burden.
   interprets the request and calls our tool. **We run no STT and no
   command-interpreter model of our own.** Example: *"Hey Meta, increase my
   maximum health by four"* → `dnd_adjust_max_health(delta=4)`.
+  This is the intended integration, currently in Meta developer preview and
+  unverified on our hardware/account. Every action remains manually reachable.
+  See [WebMCP assumption audit](webmcp-audit.md).
 - **Neural Band:** D-pad focus navigation plus pinch-to-select, activating the
   focused control's `onClick`. Same actions as voice, no model call.
 - The generator picks a **primary action and focus order** per applet (crochet:
   "completed repetition" focused, so a pinch increments the counter; cooking:
   "next step"). Navigation/select/back stay consistent across applets so habits
   carry over.
-- Nice interaction to demo: configure by voice, use silently with the band
-  (*"Put the row counter first"* → subsequent pinches increment it).
+- Nice interaction to demo: set a value by voice, then use silently with the
+  band (*"Set my row counter to twelve"* → subsequent pinches increment it).
 - Text input fallback: tapping a text field opens Meta's dictation/handwriting
   composer (needs user activation).
 
 ### Demo storyline (suggested)
 
-Describe a tool → use it quietly with the band → change it by voice
-mid-use (e.g. add a missing capability) → close and reopen, state preserved.
+Describe a tool on the phone or in a connected assistant → preview and publish
+→ open on glasses → use it quietly with the band → update a value by voice
+→ close and reopen, state preserved. Applet definition changes happen in the
+authoring surface, followed by publish and explicit sync.
 For guides: upload a manual → preview → glasses show one step at a time →
 recover from confusion without putting the work down.
 

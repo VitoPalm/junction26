@@ -1,0 +1,171 @@
+# Meta WebMCP assumption audit
+
+Research date: 2026-11-14. Documentation and source inspection only; no glasses
+available and no desktop WebMCP execution performed in this audit.
+Freshness recheck: 2026-11-14 against project baseline `e76b1c8`, current Meta
+FAQ, live documentation MCP, repository heads and issue metadata. The pinned
+Meta source revisions below remain the repository heads; issues #31 and #35
+remain open with zero comments.
+
+## Conclusion
+
+WebMCP is a documented Meta integration with official samples. It is a reasonable
+adapter for applet actions, but our project has not established reliable voice
+invocation on a target device/account. Continue the runtime and band-operated
+product while keeping this dependency explicit. Do not describe voice control
+as delivered. The owner clarified that glasses are for operating applets;
+creation and definition edits happen in external authoring surfaces.
+
+Meta's public FAQ labels WebMCP **developer preview**. The detailed agent-tools
+guide calls the API surface implemented and stable while warning that it follows
+the evolving W3C draft. These statements concern different things: the API
+contract can exist while availability and end-to-end behavior remain uncertain.
+[Meta FAQ](https://developers.meta.com/wearables/faq/),
+[agent-tools guide](https://wearables.developer.meta.com/docs/develop/webapps/agent-tools).
+
+## Evidence and access
+
+The Developer Center page and `llms.txt` returned a login page to web fetch.
+However, the official public documentation MCP server worked without credentials:
+`https://mcp.developer.meta.com/wearables`. Called `tools/list` and
+`search_webapps_docs`; read the returned Availability, Overview, How it works,
+Limitations, On desktop, Listing your tools, Reserved tool names, Speech ends
+the turn, and simulator-preview sections. The toolkit README documents this
+public search service. Reproduce with queries such as “WebMCP agent tools
+availability developer preview Developer Mode rollout foreground simulator” and
+“WebMCP modelContext registerTool inputSchema execution timeout return values”.
+[Toolkit README](https://github.com/meta/meta-wearables-webapp/blob/fbf132997d036548ce090761a8bd4cf0afbda52a/README.md).
+
+Public source revisions inspected:
+
+- Toolkit: `fbf132997d036548ce090761a8bd4cf0afbda52a`.
+- Agentic samples: `f4f50ac0d1028a7530b88168b271a0dc9613a0bf`.
+
+No account was linked, no code was deployed, and no paid model was invoked.
+
+## What the documented mechanism establishes
+
+The active page registers callbacks on `document.modelContext`. Meta AI chooses
+whether a spoken request matches one, executes it in that page, and receives its
+result. Tools apply only to the foreground app; there is no background or
+cross-app composition. Eligibility is checked at app launch, with WebMCP enabled
+per device through Developer Mode or rollout. All tool actions must have a
+manual UI path. Calls have a ten-second deadline, and tool turns add latency.
+
+The guide describes desktop Chrome with WebMCP enabled, tool enumeration and
+`executeTool(tool, JSON.stringify(args))`; the simulator can expose tool responses
+in a chat log. This supports desktop development, not proof of a particular
+account's on-device voice routing. The returned `getTools()` list is local to
+the document. [Agent-tools guide](https://wearables.developer.meta.com/docs/develop/webapps/agent-tools),
+retrieved through Meta's public docs MCP.
+
+Our current runtime architecture fits this model: voice and band should call the
+same deterministic action dispatcher. A remote MCP authoring server for Claude
+or ChatGPT is a separate integration; registering page tools does not connect
+those assistants to Meta AI or import their conversations.
+
+## Current implementation, inspected after the MVP landed
+
+[`packages/applet-renderer/src/webmcp.ts`](../packages/applet-renderer/src/webmcp.ts)
+now builds action tools and read-state/navigation tools, and guards each
+registration against synchronous errors and differing return shapes. The glasses
+app registers once per open applet to avoid duplicate names during overlapping
+route transitions; cleanup aborts the registrations. This supersedes the earlier
+implementation-plan suggestion to re-register on every screen.
+
+[`session.ts`](../packages/applet-renderer/src/session.ts) serializes state
+changes and persists them before acknowledging actions. Development `?webmcp`
+installs a stub only in a dev build and only if the native surface is absent.
+[apps.md](apps.md) records browser/emulator testing through the stub, not Meta
+AI. Those recorded checks were not rerun in this documentation refresh.
+
+Code-inspected limitations still to verify: the registration helper's count is
+of calls that did not throw synchronously, not confirmed asynchronous acceptance
+or assistant discovery; the read-state result describes field values rather
+than original source documents; action callbacks do not currently consume the
+host cancellation signal. Stub success must not be presented as device success.
+
+## Registration success is insufficient evidence
+
+Two open reports in the official repository describe the failure we most need
+to distinguish from our own implementation bugs:
+
+- [Issue #31](https://github.com/meta/meta-wearables-webapp/issues/31), opened
+  2026-10-16: reporter describes MRBD v129, German interaction, successful local
+  registration/enumeration, and no callback invocations. They also report local
+  assistant-channel errors, explicitly without claiming those prove causation.
+- [Issue #35](https://github.com/meta/meta-wearables-webapp/issues/35), opened
+  2026-10-25: another reporter describes v129, Developer Mode, English interaction
+  in the Netherlands, successful registration, and no invocation, also with the
+  official Magic Ball sample.
+
+Both had zero issue comments when checked through GitHub. These are first-hand
+developer reports, not confirmed Meta diagnoses. They establish a reported
+failure mode; they do not establish that region, language, Android, or v129 is
+the cause, nor that all devices fail. Do not promise a locale change fixes it.
+
+## Product assumptions requiring additional work
+
+**Existing applet actions are the scope.** “Increase health by four” or “set
+the row counter to twelve” maps to a declared runtime action. On-glasses
+generation, layout editing and new capability requests are outside the current
+scope, so generation latency is not a WebMCP blocker for this product. Focus
+verification on selecting the right action, validating arguments, committing
+state once and returning the actual result within the callback deadline.
+
+**Source-aware explanations.** “Explain this step” requires a read tool exposing
+the relevant step/source context, or our own retrieval/answer flow. Do not assume
+Meta AI has the uploaded PDF, original author's conversation, or all local state.
+Expose a small read-only snapshot with the current applet, view, available
+actions and relevant values. Keep private/source content out of descriptions
+unless intentionally needed by the assistant.
+
+**Interaction boundaries.** We have no evidence for continuously listening
+without wake words or invoking page tools while another app is open. Test the
+intended explicit “Hey Meta” commands with the applet in the foreground.
+
+## Adapter details to preserve
+
+Meta's WebMCP skill advises scalar arguments, local validation, short distinct
+tool names, safe per-tool registration, lifecycle cleanup, and explicit results.
+It warns that schema constraints are discarded, names can collide after 57
+characters, speech ends a turn, and `isError` is not a reliable failure channel.
+The current skill remains a useful compatibility reference alongside the live
+guide. [Pinned skill](https://github.com/meta/meta-wearables-webapp/blob/fbf132997d036548ce090761a8bd4cf0afbda52a/plugins/meta-wearables-webapp/skills/ai-glasses-webapp-webmcp/SKILL.md).
+
+Official samples are examples, not an executable device contract. In particular,
+the Todo sample's local dispatcher returns `isError` failure objects, and its
+README says most writes return only an acknowledgement; those differ from the
+skill's recommendations. Its local `getTools()` is also a wrapper-owned registry,
+not an acknowledgement from Meta AI. Inspect the distinction before copying its
+test helpers. [Sample wrapper](https://github.com/meta/meta_glasses_webmcp/blob/f4f50ac0d1028a7530b88168b271a0dc9613a0bf/examples/todo/src/webmcp.ts),
+[Todo README](https://github.com/meta/meta_glasses_webmcp/blob/f4f50ac0d1028a7530b88168b271a0dc9613a0bf/examples/todo/README.md).
+
+## Useful verification without glasses
+
+1. Contract-test the adapter with missing APIs, synchronous throws, promise and
+   non-promise registration returns, malformed arguments, duplicate names and
+   cleanup. Failure to register one tool must leave other tools and the UI usable.
+2. Exercise native desktop WebMCP discovery and invocation when available;
+   record browser version/flags and simulator version. A stub-only pass must be
+   labelled as such. Check post-mutation rendering and persistence, plus tool
+   changes when switching applets and views.
+3. Keep a minimal read-state and increment fixture ready for eventual hardware
+   testing, with visible callback-entry count and short technical status codes.
+   Separate API presence, local enumeration, actual assistant callback, committed
+   state and spoken result. Do not log transcripts, source content or secrets.
+4. On hardware, first try an official sample and the minimal fixture, then our
+   full app. Record firmware, phone/app versions, language, region, restart state
+   and foreground visibility. Test removal/re-registration, failure responses,
+   retries and offline band operation. Only observed callbacks establish routing.
+
+Meta's deterministic browser checks are useful regression checks but do not
+prove the device link or startup performance. The project can advance through
+desktop acceptance while hardware acceptance stays pending.
+[Meta testing guidance](https://github.com/meta/meta-wearables-webapp/blob/fbf132997d036548ce090761a8bd4cf0afbda52a/plugins/meta-wearables-webapp/skills/ai-glasses-webapp-test/SKILL.md).
+
+Questions for Meta when hardware/mentors become available: what identifies
+assistant-side receipt of tools; whether the reported invocation failures have
+a supported diagnosis; the intended simulator agent availability/setup; and
+which device/account/locale combinations are currently supported. No messages
+or issue comments were sent as part of this audit.

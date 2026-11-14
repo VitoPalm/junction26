@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createPublicKey } from 'node:crypto';
 
 /**
  * Environment contract for the API and the worker. Every variable is documented
@@ -30,7 +31,15 @@ const EnvSchema = z.object({
   VERDA_S3_BUCKET: z.string().optional(),
   S3_FORCE_PATH_STYLE: bool.default(true),
 
-  AUTH_MODE: z.enum(['dev']).default('dev'),
+  AUTH_MODE: z.enum(['dev', 'clerk']).default('dev'),
+  CLERK_ISSUER: z.string().url().optional(),
+  CLERK_AUTHORIZED_PARTIES: z.string().optional(),
+  CLERK_SECRET_KEY: z.string().optional(),
+  CLERK_JWT_KEY: z.string().optional(),
+  CLERK_PUBLISHABLE_KEY: z.string().optional(),
+  /** Hackathon opt-in: accept a Clerk development instance in production (dev auth stays refused). */
+  CLERK_ALLOW_DEVELOPMENT_INSTANCE: bool.default(false),
+  MCP_RESOURCE_URL: z.string().url().optional(),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
   PUBLIC_ORIGIN: z.string().url().default('http://127.0.0.1:8080'),
 
@@ -42,7 +51,19 @@ const EnvSchema = z.object({
 
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_BASE_URL: z.string().url().default('https://openrouter.ai/api/v1'),
+  /** Default authoring model spec ("provider:model"; a bare name means OpenRouter). */
   AUTHORING_MODEL: z.string().default('openai/gpt-6-luna'),
+  /** Extra model specs users may pick, comma-separated. The default is always allowed. */
+  AUTHORING_MODELS: z.string().optional(),
+  AUTHORING_REASONING_EFFORT: z.enum(['low', 'medium', 'high']).optional(),
+  /** Any OpenAI-compatible endpoint, used by "openai:<model>" specs. */
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
+
+  /** Origins allowed to call the API from a browser (native app shells, dev servers), comma-separated. */
+  CORS_ORIGINS: z.string().optional(),
+  /** Directory holding the built web apps (glasses/ and author/), served by the API. */
+  WEB_ROOT: z.string().optional(),
 
   WORKER_ID: z.string().optional(),
   WORKER_CONCURRENCY: positiveInt.default(2),
@@ -75,7 +96,9 @@ export interface Config {
   databasePoolMax: number;
   migrateOnStart: boolean;
   storage: StorageConfig;
-  authMode: 'dev';
+  mcp?: { resourceUrl: string; publishableKey: string };
+  authMode: 'dev' | 'clerk';
+  clerk?: { issuer: string; authorizedParties: string[]; secretKey?: string; jwtKey?: string };
   sessionSecret: string;
   publicOrigin: string;
   limits: {
@@ -85,7 +108,18 @@ export interface Config {
     generationConcurrency: number;
     maxOutputTokens: number;
   };
-  model: { apiKey: string | undefined; baseUrl: string; model: string };
+  model: {
+    apiKey: string | undefined;
+    baseUrl: string;
+    /** Default model spec. */
+    model: string;
+    /** Every spec a user may choose (default first). */
+    allowed: string[];
+    reasoningEffort: 'low' | 'medium' | 'high' | undefined;
+    openAI: { apiKey: string | undefined; baseUrl: string };
+  };
+  corsOrigins: string[];
+  webRoot: string | undefined;
   worker: {
     id: string | undefined;
     concurrency: number;
@@ -95,6 +129,19 @@ export interface Config {
   };
   shutdownGraceMs: number;
 }
+
+const list = (v: string | undefined) => (v ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+
+/** Capacitor shells (iOS: capacitor://localhost, Android: https://localhost) and Vite dev servers. */
+const DEV_CORS_ORIGINS = [
+  'capacitor://localhost',
+  'https://localhost',
+  'http://localhost',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+];
 
 export class ConfigError extends Error {
   readonly problems: string[];
@@ -114,6 +161,46 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
   const e = parsed.data;
   const problems: string[] = [];
+  let mcp: Config['mcp'];
+  if (e.MCP_RESOURCE_URL) {
+    const url = new URL(e.MCP_RESOURCE_URL);
+    const local = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
+    if (e.AUTH_MODE !== 'clerk' || !e.CLERK_SECRET_KEY || !e.CLERK_PUBLISHABLE_KEY) problems.push('MCP_RESOURCE_URL requires Clerk auth, CLERK_SECRET_KEY and CLERK_PUBLISHABLE_KEY');
+    if (url.pathname !== '/mcp' || url.search || url.hash || url.username || url.password ||
+        (url.protocol !== 'https:' && !(e.NODE_ENV !== 'production' && local && url.protocol === 'http:'))) {
+      problems.push('MCP_RESOURCE_URL must be the exact HTTPS /mcp endpoint (loopback HTTP allowed outside production)');
+    }
+    mcp = { resourceUrl: e.MCP_RESOURCE_URL, publishableKey: e.CLERK_PUBLISHABLE_KEY ?? '' };
+  }
+  let clerk: Config['clerk'];
+  if (e.AUTH_MODE === 'clerk') {
+    const parties = list(e.CLERK_AUTHORIZED_PARTIES);
+    if (!e.CLERK_ISSUER || new URL(e.CLERK_ISSUER).protocol !== 'https:') {
+      problems.push('AUTH_MODE=clerk requires CLERK_ISSUER (the exact HTTPS issuer of your Clerk instance)');
+    }
+    if (!parties.length || parties.some((party) => {
+      try {
+        const url = new URL(party);
+        return url.origin !== party || !(url.protocol === 'https:' ||
+          (e.NODE_ENV !== 'production' && url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)));
+      } catch { return true; }
+    })) problems.push('CLERK_AUTHORIZED_PARTIES requires exact HTTPS frontend origins (loopback HTTP is allowed outside production)');
+    if (!e.CLERK_SECRET_KEY && !e.CLERK_JWT_KEY) problems.push('AUTH_MODE=clerk requires CLERK_SECRET_KEY or CLERK_JWT_KEY');
+    const jwtKey = e.CLERK_JWT_KEY?.replace(/\\n/g, '\n');
+    if (jwtKey) {
+      try {
+        if (createPublicKey(jwtKey).asymmetricKeyType !== 'rsa') throw new Error('not RSA');
+      } catch { problems.push('CLERK_JWT_KEY must be a PEM RSA public key'); }
+    }
+    const strictInstance = e.NODE_ENV === 'production' && !e.CLERK_ALLOW_DEVELOPMENT_INSTANCE;
+    if (strictInstance && e.CLERK_SECRET_KEY?.startsWith('sk_test_')) {
+      problems.push('Production requires a Clerk production instance, not CLERK_SECRET_KEY=sk_test_…');
+    }
+    if (strictInstance && e.CLERK_ISSUER && new URL(e.CLERK_ISSUER).hostname.endsWith('.clerk.accounts.dev')) {
+      problems.push('Production requires a Clerk production issuer, not a development instance');
+    }
+    clerk = { issuer: e.CLERK_ISSUER ?? '', authorizedParties: parties, secretKey: e.CLERK_SECRET_KEY, jwtKey };
+  }
 
   let storage: StorageConfig;
   if (e.STORAGE_DRIVER === 's3') {
@@ -154,6 +241,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     migrateOnStart: e.MIGRATE_ON_START,
     storage,
     authMode: e.AUTH_MODE,
+    clerk,
+    mcp,
     sessionSecret: e.SESSION_SECRET,
     publicOrigin: e.PUBLIC_ORIGIN.replace(/\/$/, ''),
     limits: {
@@ -163,7 +252,16 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       generationConcurrency: e.GENERATION_CONCURRENCY,
       maxOutputTokens: e.MAX_OUTPUT_TOKENS,
     },
-    model: { apiKey: e.OPENROUTER_API_KEY, baseUrl: e.OPENROUTER_BASE_URL, model: e.AUTHORING_MODEL },
+    model: {
+      apiKey: e.OPENROUTER_API_KEY,
+      baseUrl: e.OPENROUTER_BASE_URL,
+      model: e.AUTHORING_MODEL,
+      allowed: [...new Set([e.AUTHORING_MODEL, ...list(e.AUTHORING_MODELS)])],
+      reasoningEffort: e.AUTHORING_REASONING_EFFORT,
+      openAI: { apiKey: e.OPENAI_API_KEY, baseUrl: e.OPENAI_BASE_URL },
+    },
+    corsOrigins: e.CORS_ORIGINS !== undefined ? list(e.CORS_ORIGINS) : e.NODE_ENV === 'production' ? [] : DEV_CORS_ORIGINS,
+    webRoot: e.WEB_ROOT,
     worker: {
       id: e.WORKER_ID,
       concurrency: e.WORKER_CONCURRENCY,

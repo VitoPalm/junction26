@@ -17,9 +17,12 @@ For an engineer or agent starting cold. Read in this order:
 | Authoring pipeline proof (PDF → Luna via OpenRouter → validated JSON → rendered guide) | **Proven** in `experiments/openrouter-ikea-v2` (local scripts, not a service) |
 | Verda bucket + credentials, OpenRouter key | **Provisioned** |
 | Aiven PostgreSQL + Runtime | Not provisioned |
-| Applet format v1 (general, beyond guides) | **Draft below**, not implemented |
-| Backend: API, worker, DB schema, storage adapter (`apps/api`, `apps/worker`, `packages/db`, `packages/storage`, `packages/server-common`) | **Built (M3 skeleton)**, tested against PostgreSQL 18 locally, container image builds. Not deployed. User auth is a dev placeholder; generation is a placeholder ([backend-development.md](backend-development.md)) |
-| Glasses app shell, authoring client, WebMCP adapter, applet format/runtime, model adapter, ingest | Not implemented |
+| Backend: API, worker, DB schema, storage adapter (`apps/api`, `apps/worker`, `packages/db`, `packages/storage`, `packages/server-common`) | **Built**, tested against PostgreSQL 18 locally, container image builds. Not deployed. User auth is a dev placeholder; generation uses the model adapter ([apps.md](apps.md)) |
+| Applet format v1 + runtime + renderer (`packages/applet-format`, `applet-runtime`, `applet-renderer`) | **Built (MVP)**, unit-tested; see [apps.md](apps.md) |
+| Model adapter (`packages/model`) + real `generate_revision` | **Built**: OpenRouter / OpenAI-compatible / free `fake` provider, swappable by spec. Luna not yet run against the format |
+| Glasses app (`apps/glasses`): library, runtime host, IndexedDB, sync, pairing, WebMCP, SW | **Built (MVP)**, checked in headless Chrome at 600×600; not on hardware |
+| Authoring app (`apps/author`): web + Capacitor iOS/Android | **Built (MVP)**, checked in Chrome and the Android emulator; iOS project generated, not built |
+| Model-side source ingest, public links/image search, generated-image packaging, measured fit | Built and paid-tested locally; [pipeline and evidence](model-pipeline.md). Server-side change review and direct-publish fit validation remain open |
 | Hardware verification (WebMCP, storage, band, readability) | Not done |
 
 The experiments contain copies of the component library (`experiments/*/app/src/lib`)
@@ -54,7 +57,11 @@ Playwright 1.65, zod 4.6 or ajv 8.20 (for JSON Schema), pg 8.23, @aws-sdk/client
 Fastify 5.12 or Hono 4.13 for HTTP. Use plain SQL migrations and avoid a heavy ORM.
 Workspaces are already set up at the root `package.json`.
 
-## Applet format v1 (draft to finalize in milestone 1)
+## Applet format v1 (historical draft; implemented contract in apps.md)
+
+The draft below records the original design, not the current wire schema.
+Use [apps.md](apps.md#applet-format-v1) and `packages/applet-format/src/schema.ts`
+for the implemented contract; the runtime is `packages/applet-runtime`.
 
 Design rules (from the product spec): data not code; **views, state and
 actions are separate**; every element has a stable `id`; no scrolling (every
@@ -127,22 +134,26 @@ and reserved names → **measured fit** (render each view headless at 600×600 a
 480×480; any `role=alert` fit error rejects) → package size budget.
 
 WebMCP adapter: for the open applet, register one tool per action
-(`j26_<prefix>_<action>`), plus generic navigation tools (`..._next`,
-`..._previous`, `..._open_view`). Unregister on leaving. Coerce and validate
+(`j26_<prefix>_<action>`), plus built-ins (`read_state`, `open_view`,
+`next_step`, `previous_step`, with the same applet prefix). Keep one
+registration per open applet across screen transitions; unregister on leaving.
+Coerce and validate
 arguments in `runtime.dispatch`. Return `{ ok, summary, next_action }`.
 
 ## Milestones (build in this order)
 
 Each milestone ends with its acceptance checks passing and the docs updated.
 
-### M0. Feasibility on real glasses (half a day, do first)
+### M0. Feasibility on real glasses (half a day, when hardware is available)
 
 Deploy a static "hello" page (any HTTPS host) that registers one WebMCP tool and
 writes to IndexedDB. Verify "Hey Meta" invokes it, IndexedDB survives a close
 and a reboot, `navigator.storage.estimate()` reports a quota, band focus/select
 works, and a 1 MB download takes an acceptable time. **If WebMCP isn't
-available on the device, stop and tell the owner**: voice architecture depends
-on it.
+available or Meta AI never invokes a registered tool, report the blocker**:
+the voice path is unverified. Until hardware is available, continue the
+runtime, manual controls and desktop checks; do not mark M0 complete or promise
+device voice behavior. See [WebMCP audit and verification plan](webmcp-audit.md).
 
 ### M1. Applet format + runtime (no network)
 
@@ -214,10 +225,21 @@ An MCP server exposing authoring tools (`list_capabilities`, `create_applet`,
 `revise_applet`, `validate`, `publish`) so ChatGPT/Codex/Claude/local models can
 author. Same validation and change review apply.
 
+Integration research and proposed tool/service boundaries:
+[assistant-integrations.md](assistant-integrations.md). Status (2026-11-14): the
+shared MCP tool set (capabilities, list/get, validate, create/revise draft; no
+publish) is implemented in `apps/assistant-mcp` and served by the API at `/mcp`
+behind Clerk OAuth (`applets:read`, `applets:draft`). Verified locally with a real
+Clerk consent flow; not yet deployed over HTTPS or tested inside Claude/ChatGPT.
+See [assistant-mcp.md](assistant-mcp.md).
+
 ## Open decisions (owner input needed)
 
-1. Authentication for the authoring client (passkeys / OAuth provider / magic
-   link) and the glasses pairing UX.
+1. Authentication provider **decided: Clerk**. Web sign-in and session verification
+   are implemented and verified locally with the development instance; production
+   configuration and native sign-in remain. Delegated MCP OAuth is implemented
+   and verified locally ([assistant-mcp.md](assistant-mcp.md)).
+   See [authentication-plan.md](authentication-plan.md).
 2. Aiven region and exact plans (Startup PG recommended); when to upgrade for HA.
 3. Whether to subsidize the first applet and with which credits.
 4. Package size limit and whether to downscale or WebP-encode diagrams at

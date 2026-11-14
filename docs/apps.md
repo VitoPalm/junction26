@@ -1,0 +1,252 @@
+# Apps: authoring (phone/web) and glasses
+
+Status (2026-11-14): **MVP built**. The full loop runs locally: describe →
+generate → preview → publish → pair glasses → sync → use offline → back up
+state. Checked in headless Chrome (phone viewport and 600×600 glasses) and in
+the Android emulator (Pixel 6 Pro, Android 17). **Not checked on real glasses
+or on iOS** (iOS needs a Mac). WebMCP was exercised only through the
+development stub, not Meta AI.
+
+## Pieces
+
+```text
+packages/applet-format/   format v1 (zod), validator, change diff, capability catalog, authoring prompt, fixtures
+packages/applet-runtime/  pure state machine: dispatch, initialState, migrateState, built-in step navigation
+packages/applet-renderer/ React renderer on glasses-ui + WebMCP adapter; used by glasses AND the phone preview
+packages/model/           provider-neutral model adapter (OpenRouter / OpenAI-compatible / fake)
+apps/glasses/             Meta Ray-Ban Display web app (served at /glasses/)
+apps/author/              authoring app: web (served at /author/) + Capacitor iOS/Android shells
+```
+
+Dependencies point down: apps → renderer → runtime → format. The worker uses
+format + model. Nothing on the glasses imports the model package.
+
+## Applet format v1
+
+Source of truth: `packages/applet-format/src/schema.ts` (structure) and
+`validate.ts` (references, copy budgets, op/field types, WebMCP names).
+Differences from the draft in [implementation-plan.md](implementation-plan.md):
+collections are arrays with `id` (models handle them better than records), and
+action args are an array. Views: `text`, `value`, `list` (checklist with
+`check`), `sequence`, `image`. Ops: `add`, `subtract`, `set`, `toggle`, `reset`,
+`listAppend`, `listRemove`, `listUpdate`, `listAdd`, `listToggle`, `listClear`,
+`move`, `goto`. Fixtures in `src/fixtures/` (row counter, D&D sheet, packing
+list, pancake guide) double as glasses demo content and the fake model's output.
+
+State migration on a new release keeps values with the same ID and type,
+defaults new fields, and moves dropped/retyped values to `orphaned` instead of
+deleting them (a later revision that brings the field back restores them).
+
+## Models (swappable)
+
+The worker never talks to a provider directly. A model is a spec
+`provider:model`:
+
+| Spec | Provider |
+| --- | --- |
+| `openai/gpt-6-luna` (bare = OpenRouter) or `openrouter:<model>` | OpenRouter, any model it routes |
+| `openai:<model>` | Any OpenAI-compatible endpoint (`OPENAI_BASE_URL`, `OPENAI_API_KEY`): OpenAI, vLLM, Ollama… |
+| `fake:demo` | Free, deterministic: picks a fixture by keyword. For dev, demos without credit, tests |
+
+`AUTHORING_MODEL` is the default; `AUTHORING_MODELS` (comma list) adds choices
+for the in-app model picker. The API refuses anything not on the list. Adding a
+provider (direct Anthropic, Gemini, a BYO key) = one `ModelProvider` class in
+`packages/model` + one line in `createModelRegistry`. The prompt
+(`systemPrompt()` in applet-format) and validation are provider-neutral.
+
+Generation (`apps/worker/src/generate.ts`): thread + attachments (text inline,
+images and PDFs as parts when the model supports them) + the current
+definition → model (JSON schema response format) → validate → one repair call
+with the exact issues → save revision + assistant reply. Usage and cost are
+recorded on the job. Failures post a plain-language reply in the thread.
+
+## Glasses app (`apps/glasses`)
+
+- Home: latest 3 applets + `Older` + `Sync`/`Pair phone`. Unpaired, it shows
+  the bundled examples.
+- Opening resumes the last view; Back goes to the applet's view menu, then home.
+- State in IndexedDB, written before an action is acknowledged. **No network
+  during normal use.** Network only on Pair and Sync: library manifest →
+  download changed packages (SHA-256 verified, validated, then activated) →
+  restore server state for new installs → batched state backup → last-opened.
+- WebMCP: one tool per action (`j26_<prefix>_<action>`) plus `read_state`,
+  `open_view`, `next_step`/`previous_step`. Registered once per open applet
+  (page transitions keep two routes mounted, and duplicate names are rejected).
+- Service worker precaches the shell and every asset it references at install
+  (runtime caching alone misses the first load's assets), and refreshes shell +
+  assets together in the background. The router keeps home at `/glasses/` so
+  reloads stay inside the worker's scope. Offline launch checked over HTTPS
+  with the server unreachable (headless Chrome).
+- First load ≈ 238 KB gzipped (budget 300 KB).
+- Dev: `npm run dev -w @junction26/glasses` → http://127.0.0.1:5174/glasses/
+  (proxies `/v1` to :8080). Add `?webmcp` to install the test stub, then
+  `webmcp.list()` / `await webmcp.call('j26_dnd_heal', { amount: 2 })` in the console.
+- Back on the device/simulator is browser history (the toolkit doesn't bind Esc).
+
+## Authoring app (`apps/author`)
+
+One React codebase: web build served at `/author/`, and Capacitor 8.5 shells
+(`android/`, `ios/`). Hash routing so it works identically in both.
+
+- Sign-in: Clerk accounts on the web, with a fresh session token per API request.
+  The Vite dev server retains optional name-based `dev:<name>` login. Native
+  Clerk sign-in remains pending; Clerk-mode native builds point to the web app.
+  Setup: [authentication-plan.md](authentication-plan.md). Library + `+`.
+  First-run "what you can make" from the
+  capability catalog. Chat with attachments and model picker. Preview: the real
+  renderer in a 600×600 iframe (`preview.html`), separate in-memory state, plus
+  "Try a voice command" (calls the same WebMCP tools). Change review: the
+  program diffs against what's on the glasses; data loss needs an explicit tick
+  before publishing (client-side only until the reviews endpoint exists).
+  Publish. Glasses screen: install deep link, pairing code, device list.
+- Web dev: `npm run dev -w @junction26/author` → http://127.0.0.1:5173/author/
+
+### Android (emulator)
+
+```sh
+cd apps/author
+npm run build:native && CAP_DEV=1 npx cap sync android    # CAP_DEV allows http://localhost API (dev only)
+echo "sdk.dir=$HOME/Android/Sdk" > android/local.properties
+(cd android && JAVA_HOME=<jdk-21> ./gradlew assembleDebug)
+adb reverse tcp:8080 tcp:8080                              # emulator's localhost:8080 → host API
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Sign in with server `http://localhost:8080` (prefilled). On this machine the
+emulator only boots with `-gpu host`; `-gpu auto`/software rendering segfaults
+in the Vulkan/ANGLE renderer.
+
+### iOS
+
+`npx cap sync ios` then open `apps/author/ios/App` in Xcode on a Mac (Swift
+Package Manager, no CocoaPods). Not built yet.
+
+### Release builds
+
+Set `VITE_API_BASE=https://<api-origin>` for `build:native`, don't set
+`CAP_DEV`, and keep `capacitor://localhost` (iOS) and `https://localhost`
+(Android) in the API's `CORS_ORIGINS`. App icons/splash are still Capacitor
+defaults (`@capacitor/assets` can generate them from `assets/icon-1024.png`).
+
+## Testing on real glasses (public HTTPS, dev backend)
+
+The glasses need a public HTTPS URL, but the dev API trusts `dev:<name>`
+tokens, which must never be public. `scripts/glasses-gateway.mjs` forwards only
+the glasses app, pairing (rate-limited) and device-token requests; everything
+else is 404. Authoring stays local.
+
+```sh
+mkdir -p /tmp/j26web && ln -sfn "$PWD/apps/glasses/dist" /tmp/j26web/glasses
+npm run build -w @junction26/glasses
+node scripts/glasses-gateway.mjs 8095 &
+cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8095     # prints https://<random>.trycloudflare.com
+AUTHORING_MODELS=fake:demo WEB_ROOT=/tmp/j26web PUBLIC_ORIGIN=https://<random>.trycloudflare.com npm run dev:api
+```
+
+Install on the glasses with `fb-viewapp://web_app_deep_link?appName=Applets&appUrl=<url>/glasses/`
+(as a QR code or a tapped link on the phone), or add the URL manually in the
+Meta AI app. Get a pairing code from the authoring app's Glasses screen. Quick
+tunnels are temporary: the URL changes every time cloudflared restarts.
+
+## Running everything locally
+
+```sh
+npm run dev:db
+AUTHORING_MODELS=fake:demo npm run dev:api        # terminal 1
+AUTHORING_MODELS=fake:demo npm run dev:worker     # terminal 2
+npm run dev -w @junction26/author                 # terminal 3 → :5173/author/
+npm run dev -w @junction26/glasses                # terminal 4 → :5174/glasses/
+```
+
+Pick "Demo (canned examples, free)" in the chat's model picker to avoid
+spending OpenRouter credit. The real default (Luna) needs `OPENROUTER_API_KEY`
+in `.env.openrouter.local`; it has **not** been run against the applet format yet.
+
+## Planned: images in applets (not built)
+
+**Today:** the format (`image` views, `image` steps, `assets[]` with `uploadId`
+or `data`) and the renderer (`Diagram`, re-inked for the additive display)
+support images. Photos attached in the app reach the model as context only, so
+it can read a photographed recipe but can't put the picture on the glasses.
+Nothing fetches images from the internet. An asset with only an `uploadId`
+renders "This picture isn't downloaded yet." on the glasses.
+
+**Build order** (each step reuses the one before):
+
+1. **Upload → applet asset.**
+   - *Prompt:* list the request's image attachments with stable asset IDs
+     (e.g. `img_1` = upload `<id>`, "photo of the finished joint"), and allow
+     `assets[{ id, uploadId, mediaType }]`.
+   - *Validation:* the worker accepts only upload IDs owned by the project
+     owner, and never an inline `data` field from the model.
+   - *Packaging:* `package_release` resolves every `uploadId` to bytes,
+     downscales to fit 600×600 and re-encodes (WebP or PNG; open decision 4),
+     dedupes by SHA-256 (`assets` table, `objectKeys.asset`), and inlines the
+     result as `data` in the immutable package.
+   - *Limits:* enforce a package size budget. The glasses download at about
+     500 Kbps, so roughly 1 MB ≈ 16 s.
+   - *Preview:* the authoring preview needs the same bytes. Either an
+     authenticated asset endpoint the preview fetches, or a preview package
+     built on demand.
+2. **PDF ingest.** In `prepare_upload` (or a new `ingest` job), render pages
+   and extract text (Poppler in the container, or pdf.js). Crop diagram
+   regions and store them as derived uploads/assets. Give the model page
+   images plus text, as in `experiments/openrouter-ikea-v2` (`run.py` +
+   `bundle.py`). Keep source page/region references for fidelity review.
+3. **Images from links.** The link import (next section) downloads the main
+   images through the same SSRF-safe fetcher, stores them as uploads, and
+   from there follows step 1.
+
+## Planned: applets from web links (not built)
+
+**Trial (2026-11-14, ~$0.02 total, `openai/gpt-6-luna` via OpenRouter).** Test
+pages: Capacitor release notes published after the model's training (8.6.2,
+8.6.0), checked against GitHub's API.
+
+- Plain chat completion: the model can't fetch URLs. It said so instead of
+  guessing ($0.00004).
+- OpenRouter web plugin (`plugins: [{ id: 'web', max_results: 3 }]`): correct
+  both times, including all 8 changes on 8.6.0, with a `url_citation`
+  annotation. About $0.01 extra per request, 2–3 s. It works from search
+  results, so long pages (manuals, recipes), JavaScript-rendered pages and
+  pages behind a login are untested and probably come back as excerpts only.
+
+**Design:**
+
+1. **"Make an applet from this link"**: fetch it ourselves; don't rely on the
+   model. The worker fetches the page in a preparation step (like
+   `prepare_upload`), extracts readable text and the main images, stores them
+   as uploads, and passes them to the model as ordinary attachments (images
+   then become applet assets as in "Planned: images in applets", step 1). Reasons:
+   it works with every provider, there's no per-search fee, the result is
+   deterministic, and the exact source stays available for fidelity review.
+   - The API accepts `urls` on a message (or `POST /v1/uploads` with a URL).
+     Add a new job kind with a new migration for the CHECK constraint; see
+     [jobs.md](jobs.md#adding-a-job-kind).
+   - **SSRF:** the server fetches URLs that users supply, so allow only
+     http(s), resolve DNS and refuse private, loopback, link-local and metadata
+     addresses (re-check after redirects), cap redirects, size and time, and
+     sniff the content type. PDFs go down the existing PDF path.
+   - JavaScript-heavy pages may need a headless renderer or an extraction
+     service (Exa / Context.dev sponsor credits) behind the same interface.
+2. **Open-ended lookups ("find me a recipe for X")** use provider search.
+   Add an optional `webSearch` capability and request field to
+   `packages/model`. The OpenRouter provider maps it to the web plugin; other
+   providers report it unsupported. Turn it on per model, record the search
+   cost in job usage, and keep the citations so the authoring app can show
+   sources.
+
+## Known gaps (next)
+
+- Real sign-in (open decision 1); `POST /v1/projects/:id/reviews` so data-loss
+  acceptance is enforced server-side.
+- Images in applets and PDF ingest: see "Planned: images in applets".
+- The API's `POST …/revisions` still uses the interim definition check; switch
+  it to `validateDefinition` (tests post minimal definitions today).
+- Measured fit at publish time (headless render at 600/480); today the fit guard
+  catches overflow on the device/preview only.
+- Hardware verification: WebMCP via Meta AI, IndexedDB persistence, band focus.
+
+## Real-model source pipeline (2026-11-14)
+
+Managed generation now prepares PDF pages and images, accepts text/Markdown/CSV/JSON/HTML/Word sources, reads public links, searches source material and Commons images, and crops known diagrams. Referenced image bytes are resolved server-side into revision definitions and offline packages. Generated candidates pass canonical headless-Chromium fit checks with bounded repair. See [model-pipeline.md](model-pipeline.md), [paid evidence](model-pipeline-results.md), and [adjacent follow-ups](model-pipeline-followups.md). These checks are local desktop/backend evidence, not on-device verification.

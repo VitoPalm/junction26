@@ -4,23 +4,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "npm run build -w @junction26/assistant-mcp && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --env-file-if-exists=../../.env.backend.local --conditions=junction26-source --test --test-concurrency=1 'src/**/*.test.ts'",
     "dev": "node --env-file-if-exists=../../.env.backend.local --env-file-if-exists=../../.env.verda.local --env-file-if-exists=../../.env.openrouter.local --conditions=junction26-source --watch src/main.ts",
     "start": "node dist/main.js"
   },
   "dependencies": {
-    "@junction26/db": "*",
-    "@junction26/storage": "*",
-    "@junction26/server-common": "*",
-    "hono": "4.13.18",
+    "@clerk/backend": "3.29.0",
     "@hono/node-server": "2.1.8",
-    "zod": "4.6.7"
+    "@junction26/applet-format": "*",
+    "@junction26/db": "*",
+    "@junction26/model": "*",
+    "@junction26/server-common": "*",
+    "@junction26/storage": "*",
+    "hono": "4.13.18",
+    "zod": "4.6.7",
+    "@junction26/assistant-mcp": "*",
+    "@modelcontextprotocol/sdk": "1.32.2"
   },
   "devDependencies": {
+    "@junction26/worker": "*",
     "@types/node": "22.20.5",
-    "typescript": "7.0.2",
-    "@junction26/worker": "*"
+    "typescript": "7.0.2"
   }
 }

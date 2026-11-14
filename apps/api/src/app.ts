@@ -2,15 +2,19 @@ import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
+import { cors } from 'hono/cors';
 import type { AppEnv, Deps } from './context.ts';
+import { mcpRoutes } from './mcp.ts';
 import { authenticate } from './auth.ts';
 import { ApiError, errorBody } from './errors.ts';
+import { assistantRoutes } from './routes/assistant.ts';
 import { projectRoutes } from './routes/projects.ts';
 import { authoringRoutes } from './routes/authoring.ts';
 import { projectReleaseRoutes, releaseRoutes } from './routes/releases.ts';
 import { stateRoutes } from './routes/state.ts';
 import { uploadRoutes } from './routes/uploads.ts';
 import { deviceRoutes, healthRoutes, jobRoutes, pairRoute } from './routes/misc.ts';
+import { authoringMetaRoutes, webRoutes } from './routes/web.ts';
 
 /**
  * Builds the HTTP application. Pure: no listening socket, so tests call
@@ -50,6 +54,22 @@ export function createApp(deps: Deps) {
   app.notFound((c) => c.json(errorBody('not_found', 'No such endpoint'), 404));
 
   app.route('/', healthRoutes(deps));
+  if (deps.config.mcp) app.route('/', mcpRoutes(deps));
+
+  // Native app shells (Capacitor) and dev servers run on other origins. Bearer
+  // tokens, not cookies, so credentials mode stays off.
+  if (deps.config.corsOrigins.length) {
+    app.use(
+      '/v1/*',
+      cors({
+        origin: deps.config.corsOrigins,
+        allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowHeaders: ['authorization', 'content-type', 'idempotency-key', 'if-none-match', 'x-request-id'],
+        exposeHeaders: ['x-request-id', 'etag', 'x-content-sha256'],
+        maxAge: 600,
+      }),
+    );
+  }
 
   // JSON bodies are small; uploads have their own streaming limit.
   const jsonLimit = bodyLimit({
@@ -71,7 +91,11 @@ export function createApp(deps: Deps) {
   v1.route('/uploads', uploadRoutes(deps));
   v1.route('/jobs', jobRoutes(deps));
   v1.route('/devices', deviceRoutes(deps));
+  v1.route('/authoring', authoringMetaRoutes(deps));
+  v1.route('/assistant', assistantRoutes(deps));
   app.route('/v1', v1);
+
+  if (deps.config.webRoot) app.route('/', webRoutes(deps.config.webRoot));
 
   return app;
 }

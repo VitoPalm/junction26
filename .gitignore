@@ -3,6 +3,7 @@
 .env*
 !.env.example
 !.env.*.example
+!apps/author/.env.production
 .venv/
 
 # JavaScript dependencies and build output
@@ -15,3 +16,6 @@ test-results/
 playwright-report/
 __pycache__/
 .data/
+
+# Worker renderer measurement bundle
+apps/worker/fit/

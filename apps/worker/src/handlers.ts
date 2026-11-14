@@ -13,17 +13,20 @@ import {
   type Revision,
 } from '@junction26/db';
 import { objectKeys } from '@junction26/storage';
+import type { ModelRegistry } from '@junction26/model';
+import { prepareUploadSource } from './sources.ts';
+import { generateRevisionHandler } from './generate.ts';
 import { JobError, type HandlerRegistry, type JobHandler } from './types.ts';
 
 // ---------------------------------------------------------------- prepare_upload
 
 /**
  * Confirms the stored object matches what the API recorded and marks the
- * upload ready for authoring. Milestone M4 adds real preparation here (render
- * PDF pages, extract text, crop diagrams; see docs/implementation-plan.md).
+ * upload ready for authoring, with a cached text/page-image manifest. See
+ * docs/model-pipeline.md for format support and processing limits.
  */
 export const prepareUpload: JobHandler = {
-  async run(job, { deps }) {
+  async run(job, { deps, signal }) {
     const uploadId = job.input.uploadId as string;
     const upload = await getUploadById(deps.pool, uploadId);
     if (!upload) throw new JobError('upload_missing', 'The upload record no longer exists');
@@ -36,8 +39,9 @@ export const prepareUpload: JobHandler = {
         details: { stored: head.contentLength, recorded: upload.byteSize },
       });
     }
+    const source = await prepareUploadSource(upload, deps.store, signal);
     await setUploadStatus(deps.pool, uploadId, 'ready');
-    return { result: { uploadId, status: 'ready' } };
+    return { result: { uploadId, status: 'ready', images: source.images.length, warnings: source.warnings } };
   },
   async onFailed(job, error, deps) {
     await setUploadStatus(deps.pool, job.input.uploadId as string, 'failed', { code: error.code });
@@ -64,8 +68,8 @@ export function buildPackage(release: Release, revision: Revision): Buffer {
     minimumRuntimeVersion: revision.minimumRuntimeVersion,
     publishedAt: release.createdAt.toISOString(),
     definition: revision.definition,
-    // Applet-specific assets, inlined by content hash. Populated once M4
-    // produces assets; shared fonts/icons ship with the glasses app instead.
+    // Images are hydrated in definition.assets before a model revision is saved.
+    // Keep this reserved manifest slot for package-format compatibility.
     assets: {},
   };
   return Buffer.from(JSON.stringify(pkg));
@@ -125,20 +129,13 @@ export const packageRelease: JobHandler = {
   },
 };
 
-// ---------------------------------------------------------------- generate_revision
+// ---------------------------------------------------------------- registry
 
-/**
- * Placeholder until milestone M4 (model adapter + ingest). Fails with a clear,
- * non-retryable error so no money is spent and the client can show why.
- */
-export const generateRevision: JobHandler = {
-  async run() {
-    throw new JobError('not_implemented', 'Automatic generation is not available yet. Submit a definition with POST /v1/projects/:id/revisions.');
-  },
-};
-
-export const defaultHandlers: HandlerRegistry = {
-  prepare_upload: prepareUpload,
-  package_release: packageRelease,
-  generate_revision: generateRevision,
-};
+/** All job handlers. Generation needs the model registry (see generate.ts). */
+export function createHandlers(models: ModelRegistry): HandlerRegistry {
+  return {
+    prepare_upload: prepareUpload,
+    package_release: packageRelease,
+    generate_revision: generateRevisionHandler(models),
+  };
+}

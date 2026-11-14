@@ -1,0 +1,4 @@
+{
+  "extends": "../../../packages/applet-renderer/tsconfig.json",
+  "include": ["check.tsx", "styles.d.ts"]
+}

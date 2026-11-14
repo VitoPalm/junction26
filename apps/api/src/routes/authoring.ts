@@ -15,7 +15,7 @@ import {
 } from '@junction26/db';
 import { checkDefinition } from '@junction26/server-common';
 import type { AppEnv, Deps } from '../context.ts';
-import { authorId } from '../auth.ts';
+import { authorId, assistantAuthorId } from '../auth.ts';
 import { ApiError, badRequest, conflict, notFound } from '../errors.ts';
 import { idempotencyKey, jobView, messageView, param, readJson, requestFingerprint, revisionSummaryView, revisionView, uuid } from '../http.ts';
 
@@ -23,6 +23,8 @@ const MessageBody = z.object({
   text: z.string().trim().min(1).max(8000),
   attachmentIds: z.array(uuid).max(20).default([]),
   baseRevisionId: uuid.nullable().default(null),
+  /** A model spec from GET /v1/authoring/models; default when omitted. */
+  model: z.string().max(200).optional(),
 });
 
 const RevisionBody = z.object({
@@ -50,6 +52,9 @@ export function authoringRoutes(deps: Deps) {
     const projectId = param(c, 'projectId');
     const key = idempotencyKey(c, false);
     const body = await readJson(c, MessageBody);
+    if (body.model !== undefined && !deps.config.model.allowed.includes(body.model)) {
+      throw badRequest('That model is not available', { allowed: deps.config.model.allowed });
+    }
     const fingerprint = requestFingerprint({ projectId, ...body });
 
     const replay = key ? await findJobByIdempotencyKey(deps.pool, userId, key) : null;
@@ -71,7 +76,13 @@ export function authoringRoutes(deps: Deps) {
         ownerId: userId,
         projectId,
         kind: 'generate_revision',
-        input: { projectId, baseRevisionId: body.baseRevisionId, attachmentIds: body.attachmentIds, fingerprint },
+        input: {
+          projectId,
+          baseRevisionId: body.baseRevisionId,
+          attachmentIds: body.attachmentIds,
+          model: body.model ?? deps.config.model.model,
+          fingerprint,
+        },
         idempotencyKey: key,
         maxAttempts: 2,
       });
@@ -103,7 +114,7 @@ export function authoringRoutes(deps: Deps) {
   }
 
   app.get('/:projectId/revisions', async (c) => {
-    const userId = authorId(c);
+    const userId = assistantAuthorId(c, 'applets:read');
     const projectId = param(c, 'projectId');
     if (!(await getProject(deps.pool, userId, projectId))) throw notFound('Project');
     return c.json({ revisions: (await listRevisions(deps.pool, projectId)).map(revisionSummaryView) });
@@ -142,7 +153,7 @@ export function authoringRoutes(deps: Deps) {
   });
 
   app.get('/:projectId/revisions/:revisionId', async (c) => {
-    const userId = authorId(c);
+    const userId = assistantAuthorId(c, 'applets:read');
     const projectId = param(c, 'projectId');
     if (!(await getProject(deps.pool, userId, projectId))) throw notFound('Project');
     const revision = await getRevision(deps.pool, projectId, param(c, 'revisionId'));

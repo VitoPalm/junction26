@@ -83,8 +83,12 @@ light to the real world. Consequences that are easy to get wrong:
 
 ## WebMCP ("Hey Meta" voice → our actions)
 
-Status: per the agent-tools guide, "implemented and stable, but expect it to
-track revisions to the W3C draft". **Off by default, enabled per device** by
+Status: Meta's [public FAQ](https://developers.meta.com/wearables/faq/) labels
+WebMCP **developer preview**. The agent-tools guide describes the API surface as
+implemented and stable while tracking W3C draft revisions; that does not verify
+availability or invocation on our device/account. See [the WebMCP audit](webmcp-audit.md)
+for open invocation reports and the distinction between local registration and
+actual Meta AI callbacks. **Off by default, enabled per device** by
 Developer Mode or by Meta's rollout. After toggling Developer Mode you may need
 to restart both the glasses and the Meta AI app. Eligibility is decided once at
 app launch; relaunch the app after enabling.
@@ -94,7 +98,9 @@ app launch; relaunch the app after enabling.
 // Never ship a WebMCP polyfill (a test-only stub is fine).
 if (document.modelContext) registerAppletTools();
 
-// React lifecycle: register per screen on mount, unregister on unmount.
+// Illustrative lifecycle: one owner per open applet; clean up on leaving it.
+// Keep registrations across view transitions. Product adapter:
+// packages/applet-renderer/src/webmcp.ts; apps/glasses owns its lifetime.
 useEffect(() => {
   const ac = new AbortController();
   try {
@@ -118,7 +124,7 @@ useEffect(() => {
     if (r && typeof (r as Promise<unknown>).then === 'function') (r as Promise<unknown>).then(undefined, reportRegistrationError);
   } catch (e) { reportRegistrationError(e); }      // missing/mistyped members throw TypeError synchronously
   return () => ac.abort();
-}, [appletId, screenId]);
+}, [appletId]);
 ```
 
 Contract details that constrain our applet format:
@@ -212,7 +218,10 @@ Our approach (verify on hardware):
   acceptance gate).
 - Simulator: 600×600 surface, additive blend, scenes, webcam background, D-pad
   shortcuts (arrows / Enter / Esc), recording, QR, QA test, perf score, and
-  "Test with Agent". It doesn't simulate WebMCP voice or spatial AR.
+  "Test with Agent". Live agent-tools docs describe desktop WebMCP enumeration,
+  invocation and a tool-response chat log with WebMCP enabled in Chrome; the
+  available extension/browser combination still needs checking. Desktop checks
+  do not verify glasses-side voice routing or spatial AR. See [audit](webmcp-audit.md).
 
 ## Native alternative (not the plan of record)
 

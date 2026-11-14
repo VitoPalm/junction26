@@ -2,17 +2,16 @@ import { createHmac, randomBytes, randomInt } from 'node:crypto';
 import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { authenticateDevice, upsertUserByExternalId } from '@junction26/db';
+import { clerkUserExternalId } from './clerk.ts';
 import type { AppEnv, Deps, Principal } from './context.ts';
 import { ApiError, forbidden } from './errors.ts';
 
 /**
  * Authentication.
  *
- * User sessions: the identity provider is an open decision (docs/implementation-plan.md,
- * "Open decisions" #1). Until it's chosen, AUTH_MODE=dev accepts
- * `Authorization: Bearer dev:<name>` and trusts <name> as the user. Config
- * refuses dev mode in production, so this never faces the internet. A real
- * provider plugs in by resolving a token to an external ID in `resolveUser`.
+ * User sessions: AUTH_MODE=clerk verifies first-party Clerk session JWTs.
+ * AUTH_MODE=dev accepts `Bearer dev:<name>` locally and is refused in production.
+ * Delegated OAuth credentials are not accepted as full authoring sessions.
  *
  * Device sessions are real: opaque random tokens issued by pairing, stored only
  * as an HMAC keyed with SESSION_SECRET, revocable per device.
@@ -53,6 +52,12 @@ async function resolvePrincipal(deps: Deps, token: string): Promise<Principal | 
 }
 
 async function resolveUser(deps: Deps, token: string): Promise<Principal | null> {
+  if (deps.config.authMode === 'clerk' && deps.config.clerk) {
+    const externalId = await clerkUserExternalId(token, deps.config.clerk);
+    if (!externalId) return null;
+    const user = await upsertUserByExternalId(deps.pool, externalId);
+    return { kind: 'user', userId: user.id };
+  }
   if (deps.config.authMode === 'dev' && token.startsWith('dev:')) {
     const subject = token.slice(4);
     if (!DEV_SUBJECT.test(subject)) return null;
@@ -92,4 +97,14 @@ export function authorId(c: Context<AppEnv>): string {
   const p = c.get('principal');
   requireUser(p);
   return p.userId;
+}
+
+/** Delegated principals exist only behind /mcp; regular user APIs refuse them. */
+export function assistantAuthorId(c: Context<AppEnv>, scope: 'applets:read' | 'applets:draft'): string {
+  const p = c.get('principal');
+  if (p.kind === 'assistant') {
+    if (!p.scopes.includes(scope)) throw new ApiError(403, 'insufficient_scope', `This operation requires ${scope}`);
+    return p.userId;
+  }
+  return authorId(c);
 }
