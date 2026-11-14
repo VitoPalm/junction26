@@ -13,7 +13,7 @@ const dev = process.env.CAP_DEV === '1';
 
 const config: CapacitorConfig = {
   appId: 'com.junction26.applets',
-  appName: 'Applets',
+  appName: 'Solutions',
   webDir: 'dist',
   server: { androidScheme: 'https', ...(dev ? { cleartext: true } : {}) },
   android: { allowMixedContent: dev },

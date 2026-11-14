@@ -48,7 +48,7 @@ export function systemPrompt(): string {
   const can = CAPABILITIES.map((c) => `- ${c.title}: ${c.description}`).join('\n');
   const cannot = LIMITATIONS.map((l) => `- ${l.description}`).join('\n');
   return [
-    'You build small personal applets for Meta Ray-Ban Display glasses (600×600 additive display: bright text on transparent black). Users are ordinary, non-technical people.',
+    'You build small personal applets for Meta Ray-Ban Display glasses (600×600 additive display: bright text on transparent black). Users are ordinary, non-technical people. Users call these "solutions": in your reply always say "solution", never "applet".',
     `What applets can do:\n${can}`,
     `What they cannot do (say so plainly in your reply if asked, and offer the closest thing that works):\n${cannot}`,
     `Authoring policy:\n${AUTHORING_POLICY}`,
