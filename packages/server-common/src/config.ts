@@ -75,6 +75,12 @@ const EnvSchema = z.object({
   /** Voice-bridge resolver: audio/text utterance + open applet tools → one action. "fake:voice" is free. */
   VOICE_MODEL: z.string().default('google/gemini-3.5-flash-lite'),
   /**
+   * Task coach (docs/task-coach.md): grounded answers and recovery proposals
+   * from the open manual. Free "fake:coach" by default so nothing spends money
+   * unless configured; set a real spec (e.g. google/gemini-3.5-flash-lite) to enable.
+   */
+  COACH_MODEL: z.string().default('fake:coach'),
+  /**
    * Voice notes (docs/voice-notes.md): final transcription of the whole recording.
    * Chosen by published word error rate (Artificial Analysis AA-WER, 2026-11-14):
    * Voxtral Mini Transcribe 3 = 2.2% at $3.50 / 1000 min. "fake:notes" is free.
@@ -165,6 +171,7 @@ export interface Config {
   };
   /** Always-listening voice fallback (docs/voice-fallback.md). */
   voice: { model: string };
+  coach: { model: string };
   /** Voice notes on applet pages (docs/voice-notes.md). */
   notes: { transcribeModel: string; liveModel: string; maxSeconds: number; maxAudioBytes: number; mistral: { apiKey: string | undefined; baseUrl: string } };
   corsOrigins: string[];
@@ -328,6 +335,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       compatible,
     },
     voice: { model: e.VOICE_MODEL },
+    coach: { model: e.COACH_MODEL },
     // 16 kHz mono PCM16 WAV is 32 KB/s; allow 25% headroom over the longest note.
     notes: { transcribeModel: e.NOTES_TRANSCRIBE_MODEL, liveModel: e.NOTES_LIVE_MODEL, maxSeconds: e.NOTES_MAX_SECONDS, maxAudioBytes: Math.ceil(e.NOTES_MAX_SECONDS * 32_000 * 1.25) + 4096, mistral: { apiKey: e.MISTRAL_API_KEY, baseUrl: e.MISTRAL_BASE_URL } },
     corsOrigins: e.CORS_ORIGINS !== undefined ? list(e.CORS_ORIGINS) : e.NODE_ENV === 'production' ? [] : DEV_CORS_ORIGINS,

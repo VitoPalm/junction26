@@ -10,6 +10,7 @@ import { store, type InstalledApplet } from './store.ts';
 import { installDemos, library, loadState, markOpened, pair, pairing, saveState, sync } from './sync.ts';
 import { setVoiceEnabled, startVoiceBridge, useVoiceChip, useVoicePref } from './voice.ts';
 import { useVoiceNotes } from './notes.ts';
+import { useCoachRunner } from './coach.ts';
 
 const HOME_COUNT = 3;
 
@@ -227,6 +228,8 @@ function AppletHost({ applet, initial }: { applet: InstalledApplet; initial: App
   }, [currentView, session]);
 
   const notes = useVoiceNotes(applet, () => sessionRef.current);
+  // Task coach: sends questions/problem reports the wearer started and applies results (no-op otherwise).
+  useCoachRunner(applet, () => sessionRef.current);
 
   // Voice tools exist only while this applet is open.
   useAppletTools(applet.projectId, def, { session: () => sessionRef.current, openView: (id) => open({ kind: 'view', viewId: id }), currentView: () => viewRef.current, notes: notes.host });

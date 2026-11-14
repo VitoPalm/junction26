@@ -38,6 +38,7 @@ import { prepareUploadSource } from './sources.ts';
 import { AuthoringSources, SOURCE_TOOLS } from './authoring-tools.ts';
 import { JobError, type JobHandler } from './types.ts';
 import { fakeTranscribe, isTranscribeRequest } from './transcribe.ts';
+import { fakeCoach, isCoachRequest } from './coach.ts';
 
 const MAX_HISTORY_MESSAGES = 12;
 export const DEFAULT_PROJECT_TITLE = 'New solution';
@@ -45,7 +46,7 @@ export const DEFAULT_PROJECT_TITLE = 'New solution';
 const PLACEHOLDER_TITLES = new Set([DEFAULT_PROJECT_TITLE, 'New applet']);
 
 export function modelRegistryFromConfig(config: Config): ModelRegistry {
-  return registryFromSettings(config.model, (req) => isTranscribeRequest(req) ? fakeTranscribe(req) : fakeAuthor(req));
+  return registryFromSettings(config.model, (req) => isTranscribeRequest(req) ? fakeTranscribe(req) : isCoachRequest(req) ? fakeCoach(req) : fakeAuthor(req));
 }
 
 /**
@@ -59,7 +60,10 @@ export function fakeAuthor(req: CompletionRequest): string {
       ?.content.map((p) => (p.type === 'text' ? p.text : ''))
       .join(' ') ?? '';
   const ask = (/User request:\n([\s\S]*)$/.exec(last)?.[1] ?? last).toLowerCase();
-  const pick = /d&d|dnd|character|health|hp|spell|inventory/.test(ask)
+  // An attached assembly manual (or a request for one) becomes the task-coach fixture.
+  const pick = /bookcase|assembly (manual|instructions)|furniture|flat-?pack/.test(last.toLowerCase())
+    ? FIXTURES.bookcaseGuide
+    : /d&d|dnd|character|health|hp|spell|inventory/.test(ask)
     ? FIXTURES.characterSheet
     : /pack|checklist|list|todo|to-do/.test(ask)
       ? FIXTURES.packingList

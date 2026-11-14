@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@junction26/applet-format": "*",
+    "@junction26/applet-runtime": "*",
     "@junction26/db": "*",
     "@junction26/model": "*",
     "@junction26/server-common": "*",

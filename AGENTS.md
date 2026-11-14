@@ -24,6 +24,8 @@ Band and by "Hey Meta" voice through WebMCP.
    [docs/voice-fallback.md](docs/voice-fallback.md).
 12. Voice notes on applet pages (Meta triggers, phone records and transcribes):
    [docs/voice-notes.md](docs/voice-notes.md).
+13. Task coach for assembly manuals (grounded Q&A, recovery branches):
+   [docs/task-coach.md](docs/task-coach.md).
 
 ## Commands
 

@@ -17,7 +17,7 @@ import { z } from 'zod';
 
 export const FORMAT_VERSION = 1;
 /** Bump when the runtime learns new kinds/ops; definitions declare the minimum they need. */
-export const RUNTIME_VERSION = '0.3.0';
+export const RUNTIME_VERSION = '0.4.0';
 
 /** Copy budgets (code points). Mirrors COPY_LIMITS in packages/glasses-ui. */
 export const LIMITS = {
@@ -37,6 +37,11 @@ export const LIMITS = {
   textField: 120,
   /** WebMCP names: 57 usable characters after Meta's prefix. */
   toolName: 57,
+  /** Task coach (guide block): parts, verbatim source excerpts. */
+  maxParts: 60,
+  maxExcerpts: 120,
+  excerpt: 600,
+  sourceSection: 60,
 } as const;
 
 export const ID = /^[a-z][a-z0-9_]{0,39}$/;
@@ -173,6 +178,19 @@ const viewBase = {
   voiceNote: VoiceNote.optional(),
 };
 
+/**
+ * Where an instruction came from in the source manual. Every task-coach step
+ * and answer cites one, so the wearer (and a reviewer) can check it.
+ */
+export const SourceRef = z
+  .object({
+    /** 1-based page in the uploaded source. */
+    page: z.number().int().min(1).max(2000).optional(),
+    /** Section or step label as printed, e.g. "Step 4". */
+    section: z.string().optional(),
+  })
+  .strict();
+
 export const SequenceStep = z
   .object({
     id,
@@ -182,6 +200,18 @@ export const SequenceStep = z
     /** Asset ID; image-only steps are complete steps. */
     image: id.optional(),
     alt: z.string().optional(),
+    /** Task coach (runtime 0.4.0): where this step is in the source manual. */
+    source: SourceRef.optional(),
+    /** Task coach: IDs into `guide.parts` that this step uses. */
+    parts: z.array(id).max(12).optional(),
+    /** Task coach: a caution printed in the manual for this step, verbatim or closely paraphrased. */
+    warning: z.string().optional(),
+    /**
+     * Task coach: the source was ambiguous or unreadable here. The step shows
+     * the flag instead of invented detail; `flagNote` says what's unclear.
+     */
+    flag: z.enum(['ambiguous', 'unreadable']).optional(),
+    flagNote: z.string().optional(),
   })
   .strict();
 
@@ -231,6 +261,45 @@ export const Asset = z
   })
   .strict();
 
+/** A part or tool listed in the manual (task coach). */
+export const GuidePart = z
+  .object({
+    id,
+    /** As the wearer would say or see it, e.g. "Short screw (A)". */
+    label: z.string(),
+    /** Quantity printed in the parts list, when there is one. */
+    quantity: z.number().int().min(1).max(999).optional(),
+    /** Distinguishing detail from the manual, e.g. "30 mm, silver". */
+    detail: z.string().optional(),
+    source: SourceRef.optional(),
+  })
+  .strict();
+
+/** Verbatim source text kept for grounded answers (task coach). Never shown as task copy. */
+export const GuideExcerpt = z
+  .object({
+    /** Step this text belongs to, or omit for general text (safety notes, parts list). */
+    stepId: id.optional(),
+    text: z.string(),
+    source: SourceRef,
+  })
+  .strict();
+
+/**
+ * Task coach block (runtime 0.4.0). Present when the applet was made from an
+ * assembly or repair manual: lets the glasses answer questions from the manual
+ * and propose recovery steps. `sequence` names the guide's sequence view.
+ */
+export const Guide = z
+  .object({
+    sequence: id,
+    /** Source title or filename, for citations. */
+    sourceTitle: z.string().max(120).optional(),
+    parts: z.array(GuidePart).max(LIMITS.maxParts).default([]),
+    excerpts: z.array(GuideExcerpt).max(LIMITS.maxExcerpts).default([]),
+  })
+  .strict();
+
 export const AppletDefinition = z
   .object({
     formatVersion: z.literal(FORMAT_VERSION),
@@ -253,6 +322,8 @@ export const AppletDefinition = z
       .strict()
       .default({}),
     assets: z.array(Asset).max(60).default([]),
+    /** Task coach metadata; see Guide. */
+    guide: Guide.optional(),
   })
   .strict();
 
@@ -268,6 +339,10 @@ export type SequenceStep = z.infer<typeof SequenceStep>;
 export type View = z.infer<typeof View>;
 export type VoiceNote = z.infer<typeof VoiceNote>;
 export type Asset = z.infer<typeof Asset>;
+export type SourceRef = z.infer<typeof SourceRef>;
+export type GuidePart = z.infer<typeof GuidePart>;
+export type GuideExcerpt = z.infer<typeof GuideExcerpt>;
+export type Guide = z.infer<typeof Guide>;
 export type AppletDefinition = z.infer<typeof AppletDefinition>;
 export type ListItem = Record<string, Scalar> & { id: string };
 

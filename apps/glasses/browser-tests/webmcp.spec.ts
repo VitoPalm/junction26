@@ -9,10 +9,17 @@ declare global {
   }
 }
 
-async function open(page: Page, name = 'Brakka the Bold') {
+/** Opens an example; returns true when it was reached through Older (one more Back to get home). */
+async function open(page: Page, name = 'Brakka the Bold'): Promise<boolean> {
   await page.goto('/glasses/?webmcp');
+  // Home shows the latest three; the rest are under Older.
+  const tile = page.getByRole('button', { name: new RegExp(name) });
+  await expect(page.getByRole('button', { name: /Example/ }).first()).toBeVisible();
+  const viaOlder = !(await tile.isVisible());
+  if (viaOlder) await page.getByRole('button', { name: 'Older', exact: true }).click();
   await page.getByRole('button', { name: new RegExp(name) }).click();
   await expect.poll(() => page.evaluate(() => window.webmcp.list().length)).toBeGreaterThan(0);
+  return viaOlder;
 }
 
 test('tool writes are immediately readable, serialize, and survive reload', async ({ page }) => {
@@ -48,7 +55,7 @@ test('manual and tool actions share state; invalid arguments do not mutate it', 
 });
 
 test('navigation keeps tools usable and switching applets removes old tools', async ({ page }) => {
-  await open(page);
+  const viaOlder = await open(page);
   await page.evaluate(() => window.webmcp.call('j26_dnd_open_view', { page: 'Inventory' }));
   await expect(page.getByRole('heading', { name: 'Inventory', exact: true })).toBeVisible();
   await page.evaluate(() => window.webmcp.call('j26_dnd_add_item', { name: 'Test crystal', qty: 2 }));
@@ -59,6 +66,7 @@ test('navigation keeps tools usable and switching applets removes old tools', as
   await page.goBack();
   await expect(page.getByRole('heading', { name: 'Brakka the Bold', exact: true })).toBeVisible();
   await page.goBack();
+  if (viaOlder) await page.goBack();
   await expect(page.getByRole('heading', { name: 'Your solutions', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.webmcp.list().length)).toBe(0);
   await page.getByRole('button', { name: /Pancakes/ }).click();

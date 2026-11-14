@@ -113,6 +113,9 @@ and kept forever (they live on the job row).
 | `GET /v1/voice/events` | device | 200 | Server-sent `command` events |
 | `POST /v1/voice/utterances` | user, device | 200 | One utterance (`audio/wav`, `audio/mpeg` or JSON `{ text }`) → outcome |
 | `GET /v1/notes/recorder/events` | user | 200 | Phone recorder: server-sent `start` / `stop`; see [voice notes](#voice-notes) |
+| `POST /v1/coach/requests` | device | 202 / 200 | Task coach question/problem → `coach_request` job; idempotent per operation; see [task coach](#task-coach) |
+| `GET /v1/coach/requests/:id` | device | 200 | `{ request: { id, status, result, error } }` |
+| `POST /v1/coach/requests/:id/cancel` | device | 202 | Best-effort cancel |
 | `POST /v1/notes` | device | 201 / 200 | Start a note on the open page; `409 no_recorder` when no phone recorder is on |
 | `GET /v1/notes?projectId=` | user | 200 | Notes of an applet, newest first |
 | `GET /v1/notes/counts?projectId=` | user, device | 200 | Saved notes per page |
@@ -300,6 +303,27 @@ audio ({ url, mediaType, bytes } or null), transcript, transcriptEdited,
 transcriptModel, language, error`. Object keys never leave the server.
 Audio is stored by design (owner decision); it and transcripts are never
 logged. Fan-out is in-process like the voice bridge (single API instance).
+
+### Task coach
+
+Questions and problem reports from a guide made from a manual
+([task-coach.md](task-coach.md)). Device sessions only; owner-scoped.
+
+```http
+POST /v1/coach/requests            (device session)
+{ "operationId": "…", "projectId": "…", "kind": "question" | "problem",
+  "stepId": "cam_locks", "text": "…", "clarifications": ["…"] }
+```
+
+- `operationId`: 8–128 of `[A-Za-z0-9_-]`, chosen by the glasses. Resending it
+  returns the same request (`200`, `replayed: true`) instead of a new job.
+- The project must be published (`409 not_published`) and its current release's
+  revision must have a `guide` (`409 not_a_guide`); `stepId` must be in it
+  (`422 unknown_step`). Text ≤ 500, up to 3 clarifications ≤ 200 each.
+- Responses expose only `{ id, status, result, error: { code, retryable } }`:
+  no usage, attempts or internal details. `result` is
+  `{ kind: "question", answer: { status: answered|insufficient|clarify, text, sources[], options[] } }`
+  or `{ kind: "problem", recovery: { status: proposal|clarify|unsupported, … } }`.
 
 ### State backup
 

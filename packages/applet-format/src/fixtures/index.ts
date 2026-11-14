@@ -200,4 +200,7 @@ export const pancakeGuide: Input = {
   ],
 };
 
-export const FIXTURES = { rowCounter, characterSheet, packingList, pancakeGuide } as const;
+import { bookcaseGuide } from './bookcase.ts';
+export { bookcaseGuide, BOOKCASE_SOURCE_TITLE } from './bookcase.ts';
+
+export const FIXTURES = { rowCounter, characterSheet, packingList, pancakeGuide, bookcaseGuide } as const;

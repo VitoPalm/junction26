@@ -40,6 +40,7 @@ window.renderFit = (definition, screen, cursor = 0) => {
     notice: null,
     run: async () => ({ ok: true, state, summary: 'Fit preview', changed: [] }),
     step: async () => {},
+    update: async () => state,
     setView: () => {},
     clearNotice: () => {},
   };

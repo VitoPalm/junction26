@@ -9,7 +9,7 @@ export function camelRows<T>(rows: Record<string, unknown>[]): T[] {
   return rows.map((r) => camel<T>(r));
 }
 
-export type JobKind = 'prepare_upload' | 'generate_revision' | 'package_release' | 'transcribe_voice_note';
+export type JobKind = 'prepare_upload' | 'generate_revision' | 'package_release' | 'transcribe_voice_note' | 'coach_request';
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
 export interface User {

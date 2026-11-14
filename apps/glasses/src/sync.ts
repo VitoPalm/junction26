@@ -11,7 +11,7 @@ import { store, type InstalledApplet, type Pairing, type SavedState } from './st
 
 const API = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? '';
 
-class HttpError extends Error {
+export class HttpError extends Error {
   status: number;
   code: string;
   constructor(status: number, code: string, message: string) {
@@ -21,7 +21,7 @@ class HttpError extends Error {
   }
 }
 
-async function call<T>(path: string, init: RequestInit & { token?: string } = {}): Promise<{ status: number; body: T }> {
+export async function call<T>(path: string, init: RequestInit & { token?: string } = {}): Promise<{ status: number; body: T }> {
   const headers = new Headers(init.headers);
   if (init.token) headers.set('authorization', `Bearer ${init.token}`);
   if (init.body && !headers.has('content-type')) headers.set('content-type', 'application/json');

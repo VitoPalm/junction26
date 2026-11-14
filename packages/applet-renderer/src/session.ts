@@ -8,6 +8,11 @@ export interface AppletSession {
   /** Runs an action. Resolves after the new state is persisted (an action isn't done until it's saved). */
   run(actionId: string, args?: Record<string, unknown>): Promise<DispatchResult>;
   step(viewId: string, by: 1 | -1): Promise<void>;
+  /**
+   * Applies a pure state transition (task coach), serialized with actions and
+   * persisted before it resolves. Resolves with the committed state.
+   */
+  update(fn: (state: AppletState) => AppletState): Promise<AppletState>;
   /** Remembers the current view so reopening resumes there. */
   setView(viewId: string): void;
   /** Last handled error, for a brief on-screen notice. */
@@ -66,9 +71,13 @@ export function useAppletSession(
   );
 
   const step = useCallback((viewId: string, by: 1 | -1) => serial(() => commit(stepSequence(definition, ref.current, viewId, by))), [definition, commit, serial]);
+  const update = useCallback(
+    (fn: (s: AppletState) => AppletState) => serial(async () => { await commit(fn(ref.current)); return ref.current; }),
+    [commit, serial],
+  );
   const setView = useCallback((viewId: string) => void serial(() => commit(withView(ref.current, viewId))), [commit, serial]);
 
   // Tool callers can read again before React renders the committed update.
   // Always expose the latest persisted state, including through older handles.
-  return { definition, get state() { return ref.current; }, run, step, setView, notice, clearNotice: () => setNotice(null) };
+  return { definition, get state() { return ref.current; }, run, step, update, setView, notice, clearNotice: () => setNotice(null) };
 }
