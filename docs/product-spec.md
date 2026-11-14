@@ -212,6 +212,7 @@ applet-specific assets ship in the applet package.
 | Object storage | Verda S3 bucket (already provisioned) | IronShard, Cloudinary (unneeded for now) |
 | Authoring model | GPT-6 Luna via OpenRouter | Direct OpenAI API (no funded API credit) |
 | Dice | Dropped | Private display can't show a verifiable roll |
+| User-facing name (2026-11-14) | **"Solutions"** in every screen, chat reply and app name. Code, API, database and docs keep "applet" as the technical term; native app IDs and the OAuth scheme stay `com.junction26.applets` | "Applets" (owner preferred "solutions") |
 
 ## Sponsors and credits (Junction 2026)
 

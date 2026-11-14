@@ -185,7 +185,7 @@ private final class NativeNoteRecorder: NSObject, URLSessionDataDelegate {
     }
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { completionHandler(.cancel); return }
+        guard let status = (response as? HTTPURLResponse)?.statusCode, (200..<300).contains(status) else { completionHandler(.cancel); return }
         queue.async { if dataTask === self.eventTask { self.connected = true; self.publish() } }
         completionHandler(.allow)
     }

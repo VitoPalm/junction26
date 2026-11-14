@@ -1,12 +1,21 @@
+import { chooseModel, modelSummary } from './model-selection.ts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { diffDefinitions, validateDefinition, type AppletDefinition, type ChangeFinding } from '@junction26/applet-format';
 import { ApiError, waitForJob, type Job, type Message, type ModelOption, type Project, type Release, type RevisionSummary, type Upload } from './api.ts';
-import { useApp } from './App.tsx';
+import { useApp, useAutosize } from './App.tsx';
 import { GlassesPreview } from './GlassesPreview.tsx';
 import { NotesPanel } from './Notes.tsx';
+import { BrandMark, IconArrowRight, IconArrowUp, IconBack, IconCheck, IconClip, IconClose, IconFile, IconGlasses, IconWarn } from './icons.tsx';
+import { FILE_ACCEPT, SUGGESTIONS, takeStartRequest } from './ui.ts';
 
-const STAGES: Record<string, string> = { preparing: 'Reading your files…', generating: 'Designing your applet…', repairing: 'Fixing a few details…' };
+
+const STAGES = [
+  { id: 'preparing', label: 'Reading your files…' },
+  { id: 'generating', label: 'Designing your solution…' },
+  { id: 'repairing', label: 'Polishing the details…' },
+];
+const PROVIDER_LABELS: Record<string, string> = { openai: 'OpenAI', openrouter: 'OpenRouter', anthropic: 'Anthropic', gemini: 'Google Gemini', fake: 'Demo' };
 
 export function ProjectScreen() {
   const { projectId = '' } = useParams();
@@ -65,21 +74,34 @@ export function ProjectScreen() {
   const liveDef = liveRevisionId ? (definitions[liveRevisionId] as { views?: { id: string }[] } | undefined) : undefined;
   const viewOrder = useMemo(() => liveDef?.views?.map((v) => v.id) ?? [], [liveDef]);
 
-  if (error) return <main className="page"><p className="error">{error}</p><Link to="/">Back</Link></main>;
+  if (error)
+    return (
+      <main className="page narrow">
+        <div className="empty-note">
+          <p className="error">{error}</p>
+          <Link className="secondary" to="/">Back to your solutions</Link>
+        </div>
+      </main>
+    );
+  const hasPreview = revisions.some((r) => r.validationStatus === 'valid');
+
   return (
     <main className="page project">
-      <header className="bar">
-        <Link to="/" className="ghost" aria-label="Back to library">‹</Link>
-        <h1 className="grow">{project?.title ?? '…'}</h1>
-        <div className="tabs" role="tablist">
+      <header className="topbar sticky">
+        <Link to="/" className="icon-btn" aria-label="Back to library"><IconBack size={22} /></Link>
+        <EditableTitle project={project} onRenamed={setProject} />
+        <div className="segmented" role="tablist">
           <button role="tab" aria-selected={tab === 'chat'} onClick={() => setTab('chat')}>Chat</button>
-          <button role="tab" aria-selected={tab === 'preview'} onClick={() => setTab('preview')}>Preview</button>
+          <button role="tab" aria-selected={tab === 'preview'} onClick={() => setTab('preview')}>
+            Preview{hasPreview && tab !== 'preview' && <span className="tab-dot" />}
+          </button>
           <button role="tab" aria-selected={tab === 'notes'} onClick={() => setTab('notes')}>Notes</button>
+
         </div>
       </header>
       {tab === 'notes' ? <NotesPanel projectId={projectId} viewOrder={viewOrder} /> : (
       <div className="split" data-tab={tab}>
-        <Chat projectId={projectId} messages={messages} onSent={refresh} onDone={onGenerated} />
+        <Chat projectId={projectId} messages={messages} onSent={refresh} onDone={onGenerated} hasPreview={hasPreview} onShowPreview={() => setTab('preview')} />
         <PreviewPanel
           projectId={projectId}
           project={project}
@@ -96,23 +118,74 @@ export function ProjectScreen() {
   );
 }
 
-function Chat({ projectId, messages, onSent, onDone }: { projectId: string; messages: Message[]; onSent: () => Promise<unknown>; onDone: (j: Job) => void }) {
+/** Tap the title to rename the solution. */
+function EditableTitle({ project, onRenamed }: { project: Project | null; onRenamed: (p: Project) => void }) {
+  const { api } = useApp();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState('');
+  const save = async () => {
+    setEditing(false);
+    const title = value.trim().slice(0, 80);
+    if (!project || !title || title === project.title) return;
+    onRenamed({ ...project, title });
+    try {
+      onRenamed((await api.renameProject(project.id, title)).project);
+    } catch {
+      onRenamed(project);
+    }
+  };
+  if (editing)
+    return (
+      <input
+        className="title-input grow"
+        value={value}
+        maxLength={80}
+        autoFocus
+        aria-label="Solution name"
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => void save()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') void save();
+          if (e.key === 'Escape') setEditing(false);
+        }}
+      />
+    );
+  return (
+    <button className="title-btn grow" disabled={!project} onClick={() => { setValue(project?.title ?? ''); setEditing(true); }} title="Rename">
+      <h1>{project?.title ?? '…'}</h1>
+    </button>
+  );
+}
+
+function Chat({ projectId, messages, onSent, onDone, hasPreview, onShowPreview }: { projectId: string; messages: Message[]; onSent: () => Promise<unknown>; onDone: (j: Job) => void; hasPreview: boolean; onShowPreview: () => void }) {
   const { api } = useApp();
   const [text, setText] = useState('');
   const [files, setFiles] = useState<{ file: File; upload?: Upload; error?: string }[]>([]);
   const [job, setJob] = useState<Job | null>(null);
   const [models, setModels] = useState<ModelOption[]>([]);
   const [model, setModel] = useState<string>('');
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+  const [modelReload, setModelReload] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const area = useAutosize(text);
+  /** Set when the library composer handed over a request to send on arrival. */
+  const autoSend = useRef(false);
 
   useEffect(() => {
+    let active = true;
+    setModelsLoading(true);
+    setModelsError(null);
     api.models().then((r) => {
+      if (!active) return;
       setModels(r.models);
-      setModel((m) => m || r.default);
-    }, () => {});
-  }, [api]);
+      setModel((m) => chooseModel(r.models, m || r.default));
+    }, () => { if (active) setModelsError('Couldn’t load models. Try again.'); })
+      .finally(() => { if (active) setModelsLoading(false); });
+    return () => { active = false; };
+  }, [api, modelReload]);
   useEffect(() => {
     void end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages.length, job?.status]);
@@ -131,7 +204,7 @@ function Chat({ projectId, messages, onSent, onDone }: { projectId: string; mess
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages]);
 
-  const attach = async (list: FileList | null) => {
+  const attach = async (list: FileList | File[] | null) => {
     if (!list) return;
     for (const file of Array.from(list)) {
       setFiles((f) => [...f, { file }]);
@@ -144,8 +217,19 @@ function Chat({ projectId, messages, onSent, onDone }: { projectId: string; mess
     }
   };
 
+  // Pick up a request started from the library composer.
+  useEffect(() => {
+    const r = takeStartRequest(projectId);
+    if (!r) return;
+    setText(r.text);
+    autoSend.current = true;
+    if (r.files.length) void attach(r.files);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
   const send = async () => {
     const body = text.trim();
+    if (!models.find((m) => m.id === model)?.available || modelsLoading || modelsError) return;
     if (!body || job || files.some((f) => !f.upload && !f.error)) return;
     setError(null);
     try {
@@ -164,68 +248,136 @@ function Chat({ projectId, messages, onSent, onDone }: { projectId: string; mess
     }
   };
 
+  // Send the handed-over request once its uploads and the model list are ready.
+  // A failed upload or unavailable model leaves it in the composer for the user.
+  useEffect(() => {
+    if (!autoSend.current || modelsLoading || job) return;
+    if (files.some((f) => !f.upload && !f.error)) return;
+    if (files.some((f) => f.error) || modelsError || !models.find((m) => m.id === model)?.available) {
+      autoSend.current = false;
+      return;
+    }
+    if (!text.trim()) return;
+    autoSend.current = false;
+    void send();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelsLoading, modelsError, files, text, model, models, job]);
+
+  const selectedModel = models.find((m) => m.id === model);
+  const providerGroups = [...new Set(models.map((m) => m.provider))];
   const running = job && (job.status === 'queued' || job.status === 'running');
+  const stage = job?.progress?.stage;
+  const stageIndex = STAGES.findIndex((s) => s.id === stage);
+  const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant')?.id;
+  const canSend = !!text.trim() && !running && !modelsLoading && !modelsError && !!selectedModel?.available;
+
   return (
     <section className="chat">
       <div className="messages">
-        {messages.length === 0 && (
-          <div className="empty">
-            <p>Describe the tool you need. You can attach a manual, recipe or pattern (PDF, photo or text).</p>
-            <div className="suggestions">
-              {['A row counter for crochet', 'Track my D&D character: health, spell slots and inventory', 'A packing checklist for a weekend hike'].map((s) => (
-                <button key={s} className="chip" onClick={() => setText(s)}>{s}</button>
+        {messages.length === 0 && !running && (
+          <div className="chat-empty">
+            <BrandMark size={52} />
+            <h2 className="display sm">What should we make?</h2>
+            <p className="muted">Describe the tool you need. You can attach a manual, recipe or pattern as a PDF, photo or text.</p>
+            <div className="ideas center">
+              {SUGGESTIONS.slice(0, 3).map((s) => (
+                <button key={s.label} className="idea" onClick={() => { setText(s.text); area.current?.focus(); }}>{s.label}</button>
               ))}
             </div>
           </div>
         )}
         {messages.map((m) => (
-          <div key={m.id} className={`bubble ${m.role}`}>
-            {m.body}
-            {m.attachmentIds.length > 0 && <span className="tiny muted"> · {m.attachmentIds.length} file(s)</span>}
+          <div key={m.id} className={`msg ${m.role}`}>
+            {m.role !== 'user' && <span className="msg-avatar"><BrandMark size={28} /></span>}
+            <div className="msg-body">
+              <div className="bubble">
+                {m.body}
+                {m.attachmentIds.length > 0 && (
+                  <span className="bubble-files"><IconFile size={14} /> {m.attachmentIds.length} file{m.attachmentIds.length > 1 ? 's' : ''}</span>
+                )}
+              </div>
+              {m.id === lastAssistant && hasPreview && !running && (
+                <button className="see-preview" onClick={onShowPreview}>
+                  See it on the glasses <IconArrowRight size={16} />
+                </button>
+              )}
+            </div>
           </div>
         ))}
         {running && (
-          <div className="bubble assistant pending">
-            <span className="spinner" /> {STAGES[job.progress?.stage ?? ''] ?? 'Queued…'}
-            <button className="link" onClick={() => void api.cancelJob(job.id)}>Stop</button>
+          <div className="msg assistant">
+            <span className="msg-avatar thinking"><BrandMark size={28} /></span>
+            <div className="msg-body">
+              <div className="bubble working">
+                <span className="shimmer">{STAGES[stageIndex]?.label ?? 'Getting started…'}</span>
+                <span className="progress-steps" aria-hidden>
+                  {STAGES.map((s, i) => <span key={s.id} className={i < stageIndex ? 'done' : i === stageIndex ? 'now' : ''} />)}
+                </span>
+                <button className="text-btn" onClick={() => void api.cancelJob(job.id)}>Stop</button>
+              </div>
+            </div>
           </div>
         )}
         <div ref={end} />
       </div>
       {error && <p className="error">{error}</p>}
-      <div className="composer card">
-        {files.length > 0 && (
-          <div className="files">
-            {files.map((f, i) => (
-              <span key={i} className={f.error ? 'chip bad' : 'chip'} title={f.error}>
-                {f.file.name} {f.error ? '⚠' : f.upload ? '✓' : '…'}
-                <button className="link" onClick={() => setFiles((x) => x.filter((_, j) => j !== i))} aria-label="Remove">×</button>
-              </span>
-            ))}
-          </div>
-        )}
-        <textarea
-          rows={2}
-          value={text}
-          placeholder={messages.length ? 'Ask for a change…' : 'What do you need?'}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void send();
-          }}
-        />
-        <div className="row">
-          <button className="ghost" onClick={() => fileInput.current?.click()} aria-label="Attach files">📎</button>
-          <input ref={fileInput} type="file" hidden multiple accept="application/pdf,image/gif,.gif,image/png,image/jpeg,image/webp,text/plain,text/markdown,text/csv,text/html,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.md,.txt,.csv,.json,.html,.docx" onChange={(e) => { void attach(e.target.files); e.target.value = ''; }} />
-          {models.length > 1 && (
-            <select value={model} onChange={(e) => setModel(e.target.value)} aria-label="Model">
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>{m.label}</option>
+      <div className="composer-dock">
+        <div className="composer">
+          {files.length > 0 && (
+            <div className="files">
+              {files.map((f, i) => (
+                <span key={i} className={f.error ? 'file-chip bad' : 'file-chip'} title={f.error}>
+                  {f.error ? <IconWarn size={14} /> : f.upload ? <IconCheck size={14} /> : <span className="spinner xs" />}
+                  <span className="file-name">{f.file.name}</span>
+                  <button className="chip-x" onClick={() => setFiles((x) => x.filter((_, j) => j !== i))} aria-label={`Remove ${f.file.name}`}><IconClose size={14} /></button>
+                </span>
               ))}
-            </select>
+            </div>
           )}
-          <span className="grow" />
-          <button className="primary" disabled={!text.trim() || !!running} onClick={() => void send()}>Send</button>
+          <textarea
+            ref={area}
+            rows={1}
+            value={text}
+            placeholder={messages.length ? 'Ask for a change…' : 'What do you need?'}
+            aria-label="Message"
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+              const desktop = window.matchMedia('(hover: hover)').matches;
+              if (e.metaKey || e.ctrlKey || (desktop && !e.shiftKey)) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+          />
+          <div className="composer-row">
+            <button className="icon-btn soft" onClick={() => fileInput.current?.click()} aria-label="Attach files"><IconClip size={20} /></button>
+            <input ref={fileInput} type="file" hidden multiple accept={FILE_ACCEPT} onChange={(e) => { void attach(e.target.files); e.target.value = ''; }} />
+            {models.length > 0 && (
+              <label className="model-chip" title={selectedModel ? modelSummary(selectedModel) : undefined}>
+                <span className="sr-only">Model</span>
+                <select value={model} onChange={(e) => setModel(e.target.value)} aria-label="Model" aria-describedby="model-help" disabled={!!running || modelsLoading}>
+                  {providerGroups.map((provider) => (
+                    <optgroup key={provider} label={PROVIDER_LABELS[provider] ?? provider}>
+                      {models.filter((m) => m.provider === provider).map((m) => (
+                        <option key={m.id} value={m.id} disabled={!m.available}>{m.label}{m.default ? ' · Default' : ''}{!m.available ? ' · Unavailable' : ''}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </label>
+            )}
+            <span className="grow" />
+            <button className="send-btn" disabled={!canSend} onClick={() => void send()} aria-label="Send">
+              <IconArrowUp size={20} />
+            </button>
+          </div>
         </div>
+        <p id="model-help" className="composer-note" role="status">
+          {modelsLoading ? 'Loading models…' : modelsError ? modelsError : selectedModel ? modelSummary(selectedModel) : 'No models are available on this server.'}
+          {modelsError && <button className="text-btn" onClick={() => setModelReload((n) => n + 1)}>Retry</button>}
+        </p>
+        {files.length > 0 && selectedModel?.capabilities?.images === false && <p className="composer-note">This model cannot see images. Extracted document text can still be used.</p>}
       </div>
     </section>
   );
@@ -261,6 +413,7 @@ function PreviewPanel(props: {
   }, [def, liveRevisionId, selected, definitions]);
   const losses = findings.filter((f) => f.severity === 'data_loss');
   useEffect(() => setAccepted(false), [selected]);
+  useEffect(() => setPublishing(null), [selected]);
 
   const publish = async () => {
     if (!selected) return;
@@ -285,48 +438,70 @@ function PreviewPanel(props: {
   if (!revisions.length) {
     return (
       <section className="preview">
-        <p className="muted">Your applet shows up here once the assistant has made it.</p>
+        <div className="lens-placeholder">
+          <div className="lens-empty">
+            <IconGlasses size={34} />
+            <p>Your solution appears here, exactly as it looks on your glasses.</p>
+          </div>
+        </div>
       </section>
     );
   }
   const isLive = selected !== null && selected === liveRevisionId;
+  const selectedNumber = revisions.find((r) => r.id === selected)?.number;
+  const sending = publishing === 'Publishing…';
   return (
     <section className="preview">
-      <div className="row">
-        <select value={selected ?? ''} onChange={(e) => props.onSelect(e.target.value)} aria-label="Version">
-          {revisions.map((r) => (
-            <option key={r.id} value={r.id} disabled={r.validationStatus !== 'valid'}>
-              Version {r.number}{r.id === liveRevisionId ? ' (on glasses)' : ''}{r.validationStatus !== 'valid' ? ' (invalid)' : ''}
-            </option>
-          ))}
-        </select>
+      <div className="preview-head">
+        <div>
+          <p className="eyebrow">Glasses view</p>
+          <p className="preview-sub">{isLive ? 'On your glasses' : liveRevisionId ? 'Not sent yet' : 'Try it here first'}</p>
+        </div>
+        <label className="version-chip">
+          {isLive && <span className="live-dot" />}
+          <select value={selected ?? ''} onChange={(e) => props.onSelect(e.target.value)} aria-label="Version">
+            {revisions.map((r) => (
+              <option key={r.id} value={r.id} disabled={r.validationStatus !== 'valid'}>
+                Version {r.number}{r.id === liveRevisionId ? ' · on glasses' : ''}{r.validationStatus !== 'valid' ? ' · invalid' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       {parsed && !parsed.ok && (
-        <div className="card warn">
-          <b>This version can’t run on the glasses.</b>
-          <ul>{parsed.issues.slice(0, 5).map((i, n) => <li key={n}><code>{i.path}</code> {i.message}</li>)}</ul>
+        <div className="notice warn">
+          <IconWarn size={20} />
+          <div>
+            <b>This version can’t run on the glasses.</b>
+            <ul>{parsed.issues.slice(0, 5).map((i, n) => <li key={n}><code>{i.path}</code> {i.message}</li>)}</ul>
+          </div>
         </div>
       )}
       {def && <GlassesPreview definition={def} resetKey={selected ?? ''} />}
       {findings.length > 0 && (
-        <div className={losses.length ? 'card warn' : 'card'}>
-          <b>{losses.length ? 'This change would lose information' : 'Changes'}</b>
-          <ul>{findings.map((f) => <li key={f.kind + f.ref}>{f.message}</li>)}</ul>
-          {losses.length > 0 && (
-            <>
-              <label className="check">
-                <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} /> That’s what I want
-              </label>
-              <p className="tiny muted">Not what you meant? Say in the chat what to keep and why.</p>
-            </>
-          )}
+        <div className={losses.length ? 'notice warn' : 'notice'}>
+          {losses.length ? <IconWarn size={20} /> : <IconCheck size={20} />}
+          <div>
+            <b>{losses.length ? 'This change would lose information' : `What changes from the version on your glasses`}</b>
+            <ul>{findings.map((f) => <li key={f.kind + f.ref}>{f.message}</li>)}</ul>
+            {losses.length > 0 && (
+              <>
+                <label className="check">
+                  <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} /> That’s what I want
+                </label>
+                <p className="tiny muted">Not what you meant? Say in the chat what to keep and why.</p>
+              </>
+            )}
+          </div>
         </div>
       )}
-      {error && <p className="error">{error}</p>}
-      <button className="primary wide" disabled={!def || isLive || (losses.length > 0 && !accepted) || publishing === 'Publishing…'} onClick={() => void publish()}>
-        {isLive ? 'On your glasses' : 'Send to glasses'}
-      </button>
-      {publishing && <p className="muted center">{publishing}</p>}
+      <div className="publish-bar">
+        {error && <p className="error">{error}</p>}
+        <button className={isLive ? 'primary lg wide is-live' : 'primary lg wide'} disabled={!def || isLive || (losses.length > 0 && !accepted) || sending} onClick={() => void publish()}>
+          {sending ? <><span className="spinner" /> Sending…</> : isLive ? <><IconCheck size={20} /> On your glasses</> : <><IconGlasses size={22} /> Send {selectedNumber ? `version ${selectedNumber} ` : ''}to glasses</>}
+        </button>
+        {publishing && !sending && <p className="publish-note">{publishing}</p>}
+      </div>
     </section>
   );
 }

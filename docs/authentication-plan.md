@@ -38,8 +38,9 @@ to a production instance (own domain) and remove both opt-ins for a real release
    from the signed-in account using the existing pairing flow.
 5. For deployment, set HTTPS allowed origins and build with a `pk_live_…` key.
    Production config refuses dev auth and Clerk development issuers/secret keys.
-   Keep native shells in local dev mode until their system-browser/callback flow
-   is implemented; Clerk-mode native currently links to web authoring.
+   Native shells run Clerk's web sign-in inside the WebView (`apps/author/.env.native`,
+   plus `https://localhost` in `CLERK_AUTHORIZED_PARTIES`). Email/code works; Google
+   OAuth needs the system-browser/callback flow, which is not implemented.
 
 No first-party session credentials are saved by our app in localStorage; Clerk
 owns its session lifecycle. API requests call the SDK token getter every time.

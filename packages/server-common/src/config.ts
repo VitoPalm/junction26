@@ -13,6 +13,20 @@ const bool = z
 
 const positiveInt = z.coerce.number().int().positive();
 
+const capabilityOverrides = z.object({ images: z.boolean().optional(), files: z.boolean().optional(), audio: z.boolean().optional(),
+  structuredOutput: z.boolean().optional(), tools: z.boolean().optional(), webSearch: z.literal(false).optional() }).strict();
+const compatibleProviders = z.array(z.object({
+  id: z.string().regex(/^[a-z][a-z0-9_-]*$/).refine((id) => !['openrouter', 'openai', 'anthropic', 'gemini', 'fake'].includes(id), 'Provider ID is reserved'),
+  baseUrl: z.string().url().refine((url) => ['https:', 'http:'].includes(new URL(url).protocol), 'Use an HTTP(S) endpoint'),
+  apiKeyEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/).optional(),
+  auth: z.enum(['bearer', 'none']).default('bearer'),
+  responseFormat: z.enum(['json_schema', 'json_object', 'prompt']).default('prompt'),
+  tokenParameter: z.enum(['max_tokens', 'max_completion_tokens']).default('max_tokens'),
+  capabilities: capabilityOverrides.optional(),
+  modelCapabilities: z.record(z.string(), capabilityOverrides).optional(),
+}).strict()).refine((items) => new Set(items.map((i) => i.id)).size === items.length, 'Duplicate provider IDs');
+type CompatibleProvider = Omit<z.infer<typeof compatibleProviders>[number], 'apiKeyEnv'> & { apiKey: string | undefined };
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
@@ -76,6 +90,14 @@ const EnvSchema = z.object({
   NOTES_MAX_SECONDS: positiveInt.default(300),
   /** Any OpenAI-compatible endpoint, used by "openai:<model>" specs. */
   OPENAI_API_KEY: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_BASE_URL: z.string().url().default('https://api.anthropic.com/v1'),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_BASE_URL: z.string().url().default('https://generativelanguage.googleapis.com/v1beta'),
+  /** JSON endpoint definitions; secrets are referenced by environment variable name. */
+  MODEL_PROVIDERS: z.string().optional(),
+  OPENAI_RESPONSE_FORMAT: z.enum(['json_schema', 'json_object', 'prompt']).default('json_schema'),
+  OPENAI_TOKEN_PARAMETER: z.enum(['max_tokens', 'max_completion_tokens']).default('max_completion_tokens'),
   OPENAI_BASE_URL: z.string().url().default('https://api.openai.com/v1'),
 
   /** Origins allowed to call the API from a browser (native app shells, dev servers), comma-separated. */
@@ -136,7 +158,10 @@ export interface Config {
     /** Every spec a user may choose (default first). */
     allowed: string[];
     reasoningEffort: 'low' | 'medium' | 'high' | undefined;
-    openAI: { apiKey: string | undefined; baseUrl: string };
+    openAI: { apiKey: string | undefined; baseUrl: string; responseFormat?: 'json_schema' | 'json_object' | 'prompt'; tokenParameter?: 'max_tokens' | 'max_completion_tokens' };
+    anthropic?: { apiKey: string | undefined; baseUrl: string };
+    gemini?: { apiKey: string | undefined; baseUrl: string };
+    compatible?: CompatibleProvider[];
   };
   /** Always-listening voice fallback (docs/voice-fallback.md). */
   voice: { model: string };
@@ -185,6 +210,15 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
   const e = parsed.data;
   const problems: string[] = [];
+  let compatible: CompatibleProvider[] = [];
+  if (e.MODEL_PROVIDERS) {
+    try {
+      const entries = compatibleProviders.safeParse(JSON.parse(e.MODEL_PROVIDERS));
+      if (!entries.success) problems.push('MODEL_PROVIDERS: invalid provider definitions (check IDs, HTTP URLs, auth, output format and capability fields)');
+      else compatible = entries.data.map(({ apiKeyEnv, ...provider }) => ({ ...provider, apiKey: apiKeyEnv ? cleaned[apiKeyEnv] : undefined,
+        capabilities: { images: false, files: false, audio: false, structuredOutput: provider.responseFormat !== 'prompt', tools: false, ...provider.capabilities } }));
+    } catch { problems.push('MODEL_PROVIDERS must be a JSON array of provider definitions'); }
+  }
   let mcp: Config['mcp'];
   if (e.MCP_RESOURCE_URL) {
     const url = new URL(e.MCP_RESOURCE_URL);
@@ -288,7 +322,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       model: e.AUTHORING_MODEL,
       allowed: [...new Set([e.AUTHORING_MODEL, ...list(e.AUTHORING_MODELS)])],
       reasoningEffort: e.AUTHORING_REASONING_EFFORT,
-      openAI: { apiKey: e.OPENAI_API_KEY, baseUrl: e.OPENAI_BASE_URL },
+      openAI: { apiKey: e.OPENAI_API_KEY, baseUrl: e.OPENAI_BASE_URL, responseFormat: e.OPENAI_RESPONSE_FORMAT, tokenParameter: e.OPENAI_TOKEN_PARAMETER },
+      anthropic: { apiKey: e.ANTHROPIC_API_KEY, baseUrl: e.ANTHROPIC_BASE_URL },
+      gemini: { apiKey: e.GEMINI_API_KEY, baseUrl: e.GEMINI_BASE_URL },
+      compatible,
     },
     voice: { model: e.VOICE_MODEL },
     // 16 kHz mono PCM16 WAV is 32 KB/s; allow 25% headroom over the longest note.

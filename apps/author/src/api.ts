@@ -88,6 +88,7 @@ export function createApi(session: Session, getToken: () => Promise<string | nul
     projects: () => req<{ projects: Project[] }>('GET', '/v1/projects'),
     createProject: (title: string) => req<{ project: Project }>('POST', '/v1/projects', { body: { title } }),
     project: (id: string) => req<{ project: Project }>('GET', `/v1/projects/${id}`),
+    renameProject: (id: string, title: string) => req<{ project: Project }>('PATCH', `/v1/projects/${id}`, { body: { title } }),
     messages: (id: string) => req<{ messages: Message[] }>('GET', `/v1/projects/${id}/messages`),
     send: (id: string, text: string, attachmentIds: string[], model?: string) =>
       req<{ message: Message; job: Job }>('POST', `/v1/projects/${id}/messages`, { body: { text, attachmentIds, model }, headers: { 'idempotency-key': key() } }),
@@ -189,6 +190,9 @@ export interface Upload {
   status: string;
 }
 export interface ModelOption {
+  available: boolean;
+  unavailableReason: string | null;
+  capabilities?: { images: boolean; files: boolean; audio: boolean; structuredOutput: boolean; tools?: boolean; webSearch?: boolean };
   id: string;
   label: string;
   provider: string;

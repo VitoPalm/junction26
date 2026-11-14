@@ -59,7 +59,7 @@ test('navigation keeps tools usable and switching applets removes old tools', as
   await page.goBack();
   await expect(page.getByRole('heading', { name: 'Brakka the Bold', exact: true })).toBeVisible();
   await page.goBack();
-  await expect(page.getByRole('heading', { name: 'Your applets', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your solutions', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.webmcp.list().length)).toBe(0);
   await page.getByRole('button', { name: /Pancakes/ }).click();
   await expect.poll(() => page.evaluate(() => window.webmcp.list().map(t => t.name))).toEqual([

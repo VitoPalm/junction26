@@ -13,7 +13,7 @@ development stub, not Meta AI.
 packages/applet-format/   format v1 (zod), validator, change diff, capability catalog, authoring prompt, fixtures
 packages/applet-runtime/  pure state machine: dispatch, initialState, migrateState, built-in step navigation
 packages/applet-renderer/ React renderer on glasses-ui + WebMCP adapter; used by glasses AND the phone preview
-packages/model/           provider-neutral model adapter (OpenRouter / OpenAI-compatible / fake)
+packages/model/           provider-neutral model adapter (OpenRouter / OpenAI-compatible / Anthropic / Gemini / fake)
 apps/glasses/             Meta Ray-Ban Display web app (served at /glasses/)
 apps/author/              authoring app: web (served at /author/) + Capacitor iOS/Android shells
 ```
@@ -47,13 +47,24 @@ The worker never talks to a provider directly. A model is a spec
 | --- | --- |
 | `openai/gpt-6-luna` (bare = OpenRouter) or `openrouter:<model>` | OpenRouter, any model it routes |
 | `openai:<model>` | Any OpenAI-compatible endpoint (`OPENAI_BASE_URL`, `OPENAI_API_KEY`): OpenAI, vLLM, Ollama… |
+| `anthropic:<model>` | Native Anthropic Messages API (`ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`) |
+| `gemini:<model>` | Native Google Gemini generateContent API (`GEMINI_API_KEY`, `GEMINI_BASE_URL`) |
+| `<configured-id>:<model>` | Independent OpenAI-compatible endpoints configured with `MODEL_PROVIDERS` (hosted or local) |
 | `fake:demo` | Free, deterministic: picks a fixture by keyword. For dev, demos without credit, tests |
 
 `AUTHORING_MODEL` is the default; `AUTHORING_MODELS` (comma list) adds choices
-for the in-app model picker. The API refuses anything not on the list. Adding a
-provider (direct Anthropic, Gemini, a BYO key) = one `ModelProvider` class in
-`packages/model` + one line in `createModelRegistry`. The prompt
-(`systemPrompt()` in applet-format) and validation are provider-neutral.
+for the in-app model picker. The API refuses anything not on the list. The picker
+groups choices by provider, disables providers without local credentials, and
+chooses an available model if the default is unavailable. This checks configuration,
+not key validity, credit balance or live provider access. Secrets stay on the server.
+Images/PDF pages are prepared by the backend; text-only models can use extracted
+text but cannot interpret source diagrams. The picker explains that limitation.
+
+See [model-providers.md](model-providers.md) for setup, compatibility options and
+verification limits. All model access, including the API voice resolver, goes
+through `packages/model`. New protocol adapters implement `ModelProvider`; hosted
+services using Chat Completions need configuration rather than new worker code.
+The prompt and local validation are provider-neutral.
 
 Generation (`apps/worker/src/generate.ts`): thread + attachments (text inline,
 images and PDFs as parts when the model supports them) + the current
@@ -131,14 +142,23 @@ One React codebase: web build served at `/author/`, and Capacitor 8.5 shells
 - Sign-in: Clerk accounts on the web, with a fresh session token per API request.
   The Vite dev server retains optional name-based `dev:<name>` login. Native
   Clerk sign-in remains pending; Clerk-mode native builds point to the web app.
-  Setup: [authentication-plan.md](authentication-plan.md). Library + `+`.
-  First-run "what you can make" from the
-  capability catalog. Chat with attachments and model picker. Preview: the real
-  renderer in a 600×600 iframe (`preview.html`), separate in-memory state, plus
-  "Try a voice command" (calls the same WebMCP tools). Change review: the
+  Setup: [authentication-plan.md](authentication-plan.md). Library home: a
+  "What do you need?" composer (text + files) that creates the project and
+  starts generation in one step (in-memory hand-off, `src/ui.ts`), a
+  connect-your-glasses nudge while nothing is paired, and applet tiles.
+  First-run "what you can make" sheet from the capability catalog. Chat with
+  attachments and model picker; tap the title to rename. Preview: the real
+  renderer in a 600×600 iframe (`preview.html`) framed as a lens, separate
+  in-memory state, plus "Try saying" chips (calls the same WebMCP tools). Change review: the
   program diffs against what's on the glasses; data loss needs an explicit tick
   before publishing (client-side only until the reviews endpoint exists).
-  Publish. Glasses screen: install deep link, pairing code, device list.
+  Publish. Glasses screen: install deep link, pairing code with countdown
+  (notices when pairing completes), device list.
+- Naming: people see "solutions" (brand "Solutions"); the code says applet.
+  See the decision log in [product-spec.md](product-spec.md).
+- Look: warm light/dark themes from `prefers-color-scheme`, tokens at the top of
+  `src/styles.css`, Bricolage Grotesque + Figtree from Google Fonts (system
+  fallbacks), inline icons in `src/icons.tsx`.
 - Web dev: `npm run dev -w @junction26/author` → http://127.0.0.1:5173/author/
 
 ### Android (emulator)
@@ -152,7 +172,17 @@ adb reverse tcp:8080 tcp:8080                              # emulator's localhos
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Sign in with server `http://localhost:8080` (prefilled). On this machine the
+Native builds read `apps/author/.env.native` (committed, public): Clerk mode
+with the development `pk_test_…` key and `VITE_CLERK_ALLOW_DEVELOPMENT=true`.
+Email sign-in is Clerk's web UI inside the WebView. Social sign-in (Google,
+Apple, Facebook) uses our own buttons (`src/native-oauth.ts`): the provider page
+opens in a Custom Tab / Safari sheet and Clerk redirects to
+`com.junction26.applets://oauth-callback`, which reopens the app to finish the
+sign-in (Clerk's own social buttons are hidden on native: Google refuses
+WebViews). Production Clerk instances must allowlist that redirect under Native
+applications. Not yet verified end to end on the emulator. The API must list
+the WebView origin in `CLERK_AUTHORIZED_PARTIES`: `https://localhost` (Android),
+`capacitor://localhost` (iOS, not yet accepted by config validation). On this machine the
 emulator only boots with `-gpu host`; `-gpu auto`/software rendering segfaults
 in the Vulkan/ANGLE renderer.
 

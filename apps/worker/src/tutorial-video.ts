@@ -112,7 +112,7 @@ export async function renderTutorialGifs(path: string, value: unknown, out: stri
       if (bytes.length > VIDEO_LIMITS.gifBytes || !gif.pages || gif.pages < 2 || Math.abs(actual - expected) > 1000 / clip.fps + 30)
         throw new Error(`${clip.id}: GIF is too large or incomplete. Shorten the excerpt, crop it, or reduce width/fps.`);
       total += bytes.length;
-      if (total > 2 * 1024 * 1024) throw new Error('GIFs exceed the 2 MiB applet motion budget. Use fewer/shorter clips.');
+      if (total > 2 * 1024 * 1024) throw new Error('GIFs exceed the 2 MiB motion budget for a solution. Use fewer/shorter clips.');
       await writeFile(join(out, file), bytes, { flag: 'wx' });
       await sharp(bytes).png().toFile(join(out, `${clip.id}.png`));
       clips.push({ ...clip, file, poster: `${clip.id}.png`, mediaType: 'image/gif', bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), source: plan.sourceUrl ? `${plan.sourceUrl}${plan.sourceUrl.includes('?') ? '&' : '?'}t=${clip.start}` : undefined });

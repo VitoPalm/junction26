@@ -120,11 +120,11 @@ function Home() {
   if (paired) actions.push({ id: 'home.voice', label: voice ? 'Voice off' : 'Voice on', onActivate: () => { setVoiceEnabled(!voice); setStatus(voice ? 'Voice bridge off' : 'Voice bridge on'); } });
 
   return (
-    <ContentScreen title={status ?? 'Your applets'} actions={actions}>
+    <ContentScreen title={status ?? 'Your solutions'} actions={actions}>
       {latest.length ? (
         <ButtonList items={latest.map((a) => ({ id: a.projectId, label: a.title, hint: a.demo ? 'Example' : undefined, onActivate: () => void openApplet(navigate, a) }))} />
       ) : (
-        <TextBlock text="Nothing here yet. Make an applet in the phone app, then choose Sync." />
+        <TextBlock text="Nothing here yet. Make a solution in the phone app, then choose Sync." />
       )}
     </ContentScreen>
   );
@@ -136,7 +136,7 @@ function Older() {
   if (!items) return <ContentScreen><TextBlock text="Loading…" /></ContentScreen>;
   return (
     <ChoiceScreen
-      title="Older applets"
+      title="Older solutions"
       items={items.slice(HOME_COUNT).map((a) => ({ id: a.projectId, label: a.title }))}
       onChoose={(id) => { const a = items.find((x) => x.projectId === id); if (a) void openApplet(navigate, a); }}
     />
@@ -197,7 +197,7 @@ function AppletRoute() {
       alive = false;
     };
   }, [projectId]);
-  if (loaded === 'missing') return <ContentScreen title="Not found"><TextBlock text="This applet isn’t on these glasses. Try Sync." /></ContentScreen>;
+  if (loaded === 'missing') return <ContentScreen title="Not found"><TextBlock text="This solution isn’t on these glasses. Try Sync." /></ContentScreen>;
   if (!loaded) return <ContentScreen><TextBlock text="Opening…" /></ContentScreen>;
   return <AppletHost applet={loaded.applet} initial={loaded.state} />;
 }

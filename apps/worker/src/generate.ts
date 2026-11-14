@@ -22,7 +22,7 @@ import {
 } from '@junction26/db';
 import {
   addUsage,
-  createModelRegistry,
+  registryFromSettings,
   extractJson,
   ModelError,
   ZERO_USAGE,
@@ -40,14 +40,12 @@ import { JobError, type JobHandler } from './types.ts';
 import { fakeTranscribe, isTranscribeRequest } from './transcribe.ts';
 
 const MAX_HISTORY_MESSAGES = 12;
-export const DEFAULT_PROJECT_TITLE = 'New applet';
+export const DEFAULT_PROJECT_TITLE = 'New solution';
+/** Placeholder titles the first generation replaces (older clients used 'New applet'). */
+const PLACEHOLDER_TITLES = new Set([DEFAULT_PROJECT_TITLE, 'New applet']);
 
 export function modelRegistryFromConfig(config: Config): ModelRegistry {
-  return createModelRegistry({
-    openRouter: { apiKey: config.model.apiKey, baseUrl: config.model.baseUrl },
-    openAI: config.model.openAI,
-    fake: (req) => (isTranscribeRequest(req) ? fakeTranscribe(req) : fakeAuthor(req)),
-  });
+  return registryFromSettings(config.model, (req) => isTranscribeRequest(req) ? fakeTranscribe(req) : fakeAuthor(req));
 }
 
 /**
@@ -68,7 +66,7 @@ export function fakeAuthor(req: CompletionRequest): string {
       : /recipe|pancake|cook|guide|step/.test(ask)
         ? FIXTURES.pancakeGuide
         : FIXTURES.rowCounter;
-  return JSON.stringify({ reply: `Here's a “${pick.title}” applet (demo model, no AI involved).`, definition: pick });
+  return JSON.stringify({ reply: `Here's a “${pick.title}” solution (demo model, no AI involved).`, definition: pick });
 }
 
 /**
@@ -126,6 +124,7 @@ export function generateRevisionHandler(models: ModelRegistry): JobHandler {
         throw new JobError('model_not_configured', (e as Error).message);
       }
       const { provider, spec } = resolved;
+      if (provider.configured === false) throw new JobError('model_not_configured', 'The selected model provider needs server credentials');
       const caps = provider.capabilities(spec.model);
       if (spec.provider !== 'fake') {
         try {
@@ -141,7 +140,7 @@ export function generateRevisionHandler(models: ModelRegistry): JobHandler {
       const sources = new AuthoringSources(
         caps.images,
         signal,
-        spec.provider === 'openrouter'
+        caps.webSearch
           ? async (query) => {
               if (++searches > 2) throw new Error('Search budget reached (2 searches per generation).');
               const r = await provider.complete({
@@ -165,7 +164,7 @@ export function generateRevisionHandler(models: ModelRegistry): JobHandler {
       if (attachmentIds.length > 20)
         throw new JobError(
           'source_count_limit',
-          'This conversation has more than 20 source files. Start a focused applet with fewer files.',
+          'This conversation has more than 20 source files. Start a focused solution with fewer files.',
         );
       const attachments = await getUploadsByIds(pool, job.ownerId, attachmentIds);
       const parts: Part[] = [];
@@ -208,9 +207,7 @@ export function generateRevisionHandler(models: ModelRegistry): JobHandler {
         model: spec.model,
         system: systemPrompt(),
         messages: msgs,
-        responseSchema: caps.structuredOutput
-          ? { name: 'applet_authoring', schema: authoringResponseJsonSchema() }
-          : undefined,
+        responseSchema: { name: 'applet_authoring', schema: authoringResponseJsonSchema() },
         maxOutputTokens: config.limits.maxOutputTokens,
         reasoningEffort: config.model.reasoningEffort,
         signal,
@@ -221,7 +218,7 @@ export function generateRevisionHandler(models: ModelRegistry): JobHandler {
         try {
           const conversation = msgs;
           for (let round = 0; round < 9; round++) {
-            const canUseTools = round < 8 && toolUses < 8 && spec.provider !== 'fake';
+            const canUseTools = caps.tools !== false && round < 8 && toolUses < 8 && spec.provider !== 'fake';
             const contextBytes = conversation.reduce(
               (n, m) => n + m.content.reduce((a, p) => a + (p.type === 'text' ? p.text.length : p.data.length), 0),
               0,
@@ -248,6 +245,7 @@ export function generateRevisionHandler(models: ModelRegistry): JobHandler {
               role: 'assistant',
               content: r.text ? [{ type: 'text', text: r.text }] : [],
               toolCalls: r.toolCalls,
+              providerState: r.providerState,
             });
             const returnedImages: Part[] = [];
             for (const t of r.toolCalls) {
@@ -315,7 +313,7 @@ export function generateRevisionHandler(models: ModelRegistry): JobHandler {
         log.warn('generation invalid after repair', { issues: outcome.issues.length, usage: usageRecord });
         throw new JobError(
           'invalid_output',
-          "The assistant couldn't produce a valid applet. Try rephrasing or asking for something smaller.",
+          "The assistant couldn't produce a valid solution. Try rephrasing or asking for something smaller.",
           {
             details: { issues: outcome.issues.slice(0, 20), usage: usageRecord },
           },
@@ -348,7 +346,7 @@ export function generateRevisionHandler(models: ModelRegistry): JobHandler {
           jobId: job.id,
         });
         // Name the project after its first applet.
-        if (definition && locked.title === DEFAULT_PROJECT_TITLE)
+        if (definition && PLACEHOLDER_TITLES.has(locked.title))
           await updateProject(tx, job.ownerId, projectId, { title: definition.title });
         return { revision, message };
       });

@@ -67,7 +67,12 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `MISTRAL_BASE_URL` | worker | Default `https://api.mistral.ai/v1` |
 | `NOTES_MAX_SECONDS` | api, worker | Longest voice note, default 300. Also sets the audio upload limit (40 KB per second) |
 | `AUTHORING_REASONING_EFFORT` | worker | Optional `low`/`medium`/`high` |
-| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | worker | For `openai:<model>` specs (any OpenAI-compatible endpoint) |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | api, worker | For `openai:<model>` specs (any OpenAI-compatible endpoint); URL defaults to `https://api.openai.com/v1` |
+| `OPENAI_RESPONSE_FORMAT` | api, worker | `json_schema` (default), `json_object`, or `prompt` |
+| `OPENAI_TOKEN_PARAMETER` | api, worker | `max_completion_tokens` (default), or `max_tokens` for older/compatible endpoints |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_BASE_URL` | api, worker | Native `anthropic:<model>`; URL defaults to `https://api.anthropic.com/v1` |
+| `GEMINI_API_KEY` / `GEMINI_BASE_URL` | api, worker | Native `gemini:<model>`; URL defaults to `https://generativelanguage.googleapis.com/v1beta` |
+| `MODEL_PROVIDERS` | api, worker | JSON array of independent compatible endpoint definitions, referencing secret env variable names. [Setup and capabilities](model-providers.md) |
 | `CORS_ORIGINS` | api | Browser origins allowed to call `/v1` (native shells: `capacitor://localhost,https://localhost`). Dev default includes those and the Vite ports; production default is none |
 | `WEB_ROOT` | api | Directory with the built `glasses/` and `author/` apps; `/app/web` in the image |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | api, worker | Verda key `junction26-backend-storage` (project-scoped: can read every bucket in the project) |

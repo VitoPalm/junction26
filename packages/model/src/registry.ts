@@ -1,9 +1,11 @@
-import { OpenAICompatibleProvider } from './openai-compatible.ts';
+import { AnthropicProvider, type AnthropicOptions } from './anthropic.ts';
+import { GeminiProvider, type GeminiOptions } from './gemini.ts';
+import { OpenAICompatibleProvider, type OpenAICompatibleOptions } from './openai-compatible.ts';
 import { ModelError, type CompletionRequest, type CompletionResult, type ModelProvider, type ToolCall } from './types.ts';
 
 /**
  * Model specs are "provider:model", e.g. "openrouter:openai/gpt-6-luna" or
- * "fake:demo". A bare name (no known provider prefix) means OpenRouter, so the
+ * "fake:demo". A bare name means OpenRouter, so the
  * existing AUTHORING_MODEL=openai/gpt-6-luna keeps working.
  */
 export interface ModelSpec {
@@ -13,11 +15,12 @@ export interface ModelSpec {
   id: string;
 }
 
-export function parseModelSpec(spec: string, knownProviders: Iterable<string> = ['openrouter', 'openai', 'fake']): ModelSpec {
+export function parseModelSpec(spec: string, knownProviders: Iterable<string> = ['openrouter', 'openai', 'anthropic', 'gemini', 'fake']): ModelSpec {
   const s = spec.trim();
   const i = s.indexOf(':');
   const known = new Set(knownProviders);
-  if (i > 0 && known.has(s.slice(0, i))) {
+  if (!s || (i === s.length - 1)) throw new ModelError('bad_request', 'A model spec must include a model name');
+  if (i > 0 && (known.has(s.slice(0, i)) || /^[a-z][a-z0-9_-]*$/.test(s.slice(0, i)))) {
     const provider = s.slice(0, i);
     const model = s.slice(i + 1);
     return { provider, model, id: `${provider}:${model}` };
@@ -60,13 +63,17 @@ export class FakeProvider implements ModelProvider {
 export interface ProviderConfig {
   openRouter?: { apiKey: string | undefined; baseUrl: string };
   /** Any OpenAI-compatible endpoint (OpenAI, a local vLLM/Ollama...). */
-  openAI?: { apiKey: string | undefined; baseUrl: string };
+  openAI?: Omit<OpenAICompatibleOptions, 'id'>;
+  anthropic?: AnthropicOptions;
+  gemini?: GeminiOptions;
+  compatible?: OpenAICompatibleOptions[];
   fake?: FakeResponder;
 }
 
 export class ModelRegistry {
   private readonly providers = new Map<string, ModelProvider>();
   register(p: ModelProvider): this {
+    if (this.providers.has(p.id)) throw new ModelError('bad_request', `Duplicate model provider: ${p.id}`);
     this.providers.set(p.id, p);
     return this;
   }
@@ -97,6 +104,18 @@ export function createModelRegistry(config: ProviderConfig): ModelRegistry {
     );
   }
   if (config.openAI) r.register(new OpenAICompatibleProvider({ id: 'openai', ...config.openAI }));
+  if (config.anthropic) r.register(new AnthropicProvider(config.anthropic));
+  if (config.gemini) r.register(new GeminiProvider(config.gemini));
+  for (const provider of config.compatible ?? []) r.register(new OpenAICompatibleProvider(provider));
   if (config.fake) r.register(new FakeProvider(config.fake));
   return r;
+}
+
+/** Structural config contract shared by API metadata, voice and worker. Secrets never leave the server. */
+export function registryFromSettings(settings: {
+  apiKey: string | undefined; baseUrl: string; openAI: ProviderConfig['openAI'];
+  anthropic?: AnthropicOptions; gemini?: GeminiOptions; compatible?: OpenAICompatibleOptions[];
+}, fake?: FakeResponder): ModelRegistry {
+  return createModelRegistry({ openRouter: { apiKey: settings.apiKey, baseUrl: settings.baseUrl },
+    openAI: settings.openAI, anthropic: settings.anthropic, gemini: settings.gemini, compatible: settings.compatible, fake });
 }

@@ -3,7 +3,8 @@
 Status (2026-11-14): **M1 built; web and native recorder implementations added.**
 Checked in headless Chrome only: the glasses app at 600×600 (WebMCP stub and
 band clicks), the authoring app at phone size, and the real recorder code
-against Chrome's fake microphone fed with a spoken WAV. **Nothing has been tried on the glasses or a physical phone.** Android builds, JVM tests and lint pass;
+against Chrome's fake microphone fed with a spoken WAV. **Nothing has been tried on the glasses or a physical phone.** Android
+builds, JVM tests and lint pass;
 the Android emulator crashed twice before boot. iOS source and project wiring
 are present but **not compiled** (no macOS/Xcode host available). A separate
 3-second synthetic clip was transcribed by real Voxtral through OpenRouter for

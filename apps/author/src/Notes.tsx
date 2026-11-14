@@ -21,8 +21,8 @@ export function RecorderScreen() {
   }, [state.phase]);
   const on = state.phase !== 'off' && state.phase !== 'error';
   return (
-    <main className="page narrow">
-      <header className="bar">
+    <main className="page narrow recorder-screen">
+      <header className="topbar">
         <Link to="/" className="ghost" aria-label="Back">‹</Link>
         <h1 className="grow">Note recorder</h1>
       </header>

@@ -444,3 +444,20 @@ unverified. Setup and revocation limits: [assistant-mcp.md](assistant-mcp.md).
   event streams close on the next event or heartbeat (at most 25 seconds).
 - Successful audio upload responses include `note.audio.sha256`; all recorders
   compare it against the local WAV before deleting their queued copy.
+
+
+### Authoring model metadata and provider configuration
+
+`GET /v1/authoring/models` retains `default` and `models[]` (`id`, `label`,
+`provider`, `free`, `default`). Each option also includes `available`,
+`unavailableReason` (null when available), and `capabilities` when the adapter is
+registered: `images`, `files`, `audio`, `structuredOutput`, `tools`, `webSearch`.
+`available` means the provider is registered and credentials are present, or
+explicitly configured with no authentication. It does not probe the provider,
+verify credits, or make a billable request. Credentials and endpoint URLs are
+never returned. Unknown explicit provider prefixes remain unknown rather than
+being sent to OpenRouter. The model allowlist remains enforced on message sends.
+
+The authoring client groups providers, disables unavailable choices, falls back
+to an available choice, shows image-input limits, and blocks sends while metadata
+is loading or unavailable. Setup: [model-providers.md](model-providers.md).
