@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Provider-neutral authoring model adapter (OpenRouter / OpenAI-compatible / fake).",
+  "description": "Provider-neutral authoring model adapter (OpenRouter / OpenAI-compatible / Anthropic / Gemini / fake).",
   "exports": {
     ".": {
       "junction26-source": "./src/index.ts",

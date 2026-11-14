@@ -20,3 +20,20 @@ test('API retrieves current credentials for each request and refuses a signed-ou
     assert.deepEqual(headers, ['Bearer first', 'Bearer refreshed']);
   } finally { globalThis.fetch = original; }
 });
+
+import { chooseModel, modelSummary } from './model-selection.ts';
+import type { ModelOption } from './api.ts';
+
+test('model selection skips unavailable defaults and respects an available preference', () => {
+  const models: ModelOption[] = [
+    { id: 'anthropic:x', label: 'Claude', provider: 'anthropic', free: false, default: true, available: false, unavailableReason: 'Needs configuration' },
+    { id: 'fake:demo', label: 'Demo', provider: 'fake', free: true, default: false, available: true, unavailableReason: null },
+    { id: 'local:x', label: 'Local', provider: 'local', free: false, default: false, available: true, unavailableReason: null, capabilities: { images: false, files: false, audio: false, structuredOutput: false } },
+  ];
+  assert.equal(chooseModel(models, 'anthropic:x'), 'fake:demo');
+  assert.equal(chooseModel(models, 'local:x'), 'local:x');
+  assert.equal(chooseModel([], ''), '');
+  assert.match(modelSummary(models[0]!), /Needs configuration/);
+  assert.match(modelSummary(models[1]!), /Free demo/);
+  assert.equal(modelSummary(models[2]!), 'Text only');
+});

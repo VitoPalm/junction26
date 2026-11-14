@@ -373,3 +373,20 @@ Origin are checked against configuration. Proxy the canonical Host unchanged.
 Responses are not cached; JSON body limits apply. Local signed-token tests and a
 real Clerk consent/draft flow have passed; public Claude/ChatGPT clients remain
 unverified. Setup and revocation limits: [assistant-mcp.md](assistant-mcp.md).
+
+
+### Authoring model metadata and provider configuration
+
+`GET /v1/authoring/models` retains `default` and `models[]` (`id`, `label`,
+`provider`, `free`, `default`). Each option also includes `available`,
+`unavailableReason` (null when available), and `capabilities` when the adapter is
+registered: `images`, `files`, `audio`, `structuredOutput`, `tools`, `webSearch`.
+`available` means the provider is registered and credentials are present, or
+explicitly configured with no authentication. It does not probe the provider,
+verify credits, or make a billable request. Credentials and endpoint URLs are
+never returned. Unknown explicit provider prefixes remain unknown rather than
+being sent to OpenRouter. The model allowlist remains enforced on message sends.
+
+The authoring client groups providers, disables unavailable choices, falls back
+to an available choice, shows image-input limits, and blocks sends while metadata
+is loading or unavailable. Setup: [model-providers.md](model-providers.md).

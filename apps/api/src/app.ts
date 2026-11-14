@@ -17,7 +17,7 @@ import { deviceRoutes, healthRoutes, jobRoutes, pairRoute } from './routes/misc.
 import { authoringMetaRoutes, webRoutes } from './routes/web.ts';
 import { voiceRoutes } from './routes/voice.ts';
 import { fakeVoice, VoiceHub } from './voice.ts';
-import { createModelRegistry } from '@junction26/model';
+import { registryFromSettings } from '@junction26/model';
 
 /**
  * Builds the HTTP application. Pure: no listening socket, so tests call
@@ -28,11 +28,7 @@ export function createApp(deps: Deps) {
   const voiceHub = deps.voice ?? new VoiceHub();
   const models =
     deps.models ??
-    createModelRegistry({
-      openRouter: { apiKey: deps.config.model.apiKey, baseUrl: deps.config.model.baseUrl },
-      openAI: deps.config.model.openAI,
-      fake: fakeVoice,
-    });
+    registryFromSettings(deps.config.model, fakeVoice);
 
   app.use('*', async (c, next) => {
     const incoming = c.req.header('x-request-id');
@@ -103,7 +99,7 @@ export function createApp(deps: Deps) {
   v1.route('/uploads', uploadRoutes(deps));
   v1.route('/jobs', jobRoutes(deps));
   v1.route('/devices', deviceRoutes(deps));
-  v1.route('/authoring', authoringMetaRoutes(deps));
+  v1.route('/authoring', authoringMetaRoutes(deps, models));
   v1.route('/assistant', assistantRoutes(deps));
   v1.route('/voice', voiceRoutes(deps, voiceHub, models));
   app.route('/v1', v1);

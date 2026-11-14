@@ -116,7 +116,8 @@ Input: `{ projectId, messageId, baseRevisionId, attachmentIds, model }`.
    `{ reply, definition|null }`; validate with `validateDefinition`. If invalid,
    one repair call with the exact issues.
 6. In one transaction: revision (`source: model`, `job_id`), assistant message,
-   and the project title if it was still "New applet". Result
+   and the project title if it was still the placeholder "New solution" (or the
+   older "New applet"). Result
    `{ revisionId, revisionNumber, messageId }`; `usage` =
    `{ inputTokens, outputTokens, costUsd, model }`.
 
@@ -197,3 +198,24 @@ GIF steps with essential instruction text are measured together in the canonical
 `GifScreen`. GIF decode recovery messages also produce an `image_decode` issue
 in generation checks, so a broken animation cannot pass merely because the
 component replaces it with fallback text.
+
+
+### Multiple model providers
+
+Generation and voice resolution share the server-configured model registry.
+`anthropic:` uses native Messages, `gemini:` uses native generateContent, and
+operator-defined prefixes use independent Chat Completions endpoints. Missing
+credentials fail as `model_not_configured` before generation/fit work. Models
+configured without tools skip source-tool rounds; prepared source text is still
+provided. Search is enabled by the adapter's `webSearch` capability (currently
+OpenRouter only), rather than by checking a provider name.
+
+The response schema always reaches the adapter. Native Anthropic/Gemini and
+compatible `prompt` mode include it as prompt guidance, avoiding rejection of
+our complex schema by providers with restricted JSON Schema support. Existing
+local definition validation, repairs and rendered-fit checks remain required.
+Gemini's complete signed model parts are retained across tool rounds; function
+results are paired with their calls. Direct providers report token usage, including
+Gemini thinking tokens and Anthropic cache input, with `costUsd: null` when no
+actual cost is returned. No price estimates are invented. Offline contract tests
+cover wire formats and errors; direct paid-provider behavior is unverified.

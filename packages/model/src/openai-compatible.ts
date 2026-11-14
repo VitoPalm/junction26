@@ -6,6 +6,7 @@ import {
   type ModelProvider,
   type Part,
 } from './types.ts';
+import { postJson, schemaPrompt, validateRequest } from './http.ts';
 
 export interface OpenAICompatibleOptions {
   /** Registry key ("openrouter", or e.g. "openai", "local"). */
@@ -14,6 +15,12 @@ export interface OpenAICompatibleOptions {
   apiKey: string | undefined;
   /** Enables OpenRouter-only request fields (provider routing, usage accounting). */
   openRouter?: boolean;
+  /** Explicitly allow endpoints without credentials (local servers only, by operator choice). */
+  auth?: 'bearer' | 'none';
+  responseFormat?: 'json_schema' | 'json_object' | 'prompt';
+  tokenParameter?: 'max_tokens' | 'max_completion_tokens';
+  capabilities?: Partial<ModelCapabilities>;
+  modelCapabilities?: Record<string, Partial<ModelCapabilities>>;
   /** Extra headers (OpenRouter app attribution etc.). Never put secrets other than the key here. */
   headers?: Record<string, string>;
   timeoutMs?: number;
@@ -32,26 +39,34 @@ export class OpenAICompatibleProvider implements ModelProvider {
     this.o = options;
   }
 
+  get configured(): boolean { return this.o.auth === 'none' || Boolean(this.o.apiKey); }
+
   capabilities(model: string): ModelCapabilities {
     // Conservative defaults; refine per model as they're tested.
     const vision = /gpt|claude|gemini|luna|vision|vl|llava|qwen.*vl/i.test(model);
     // Models OpenRouter lists with audio input (checked 2026-11-14); unknown models say no.
     const audio = /gemini|gpt-audio|gpt-4o-audio|omni|mimo|voxtral/i.test(model);
-    return { images: vision, files: this.o.openRouter === true, audio, structuredOutput: true };
+    return { images: vision, files: this.o.openRouter === true, audio, structuredOutput: true,
+      tools: true, webSearch: this.o.openRouter === true, ...this.o.capabilities, ...this.o.modelCapabilities?.[model] };
   }
 
   async complete(req: CompletionRequest): Promise<CompletionResult> {
-    if (!this.o.apiKey) throw new ModelError('not_configured', `No API key for model provider "${this.id}"`);
+    if (this.o.auth !== 'none' && !this.o.apiKey) throw new ModelError('not_configured', `No API key for model provider "${this.id}"`);
+    const caps = this.capabilities(req.model);
+    validateRequest(req, caps);
+    const format = caps.structuredOutput ? this.o.responseFormat ?? 'json_schema' : 'prompt';
     const body: Record<string, unknown> = {
       model: req.model,
       messages: [
-        { role: 'system', content: req.system },
+        { role: 'system', content: format === 'prompt' || format === 'json_object' ? schemaPrompt(req) : req.system },
         ...req.messages.map((m) => ({
           role: m.role,
           content:
             m.role === 'tool'
               ? m.content.map((p) => (p.type === 'text' ? p.text : '')).join('\n')
-              : m.content.map(toWire),
+              : m.content.every((p) => p.type === 'text')
+                ? m.content.map((p) => p.type === 'text' ? p.text : '').join('\n') || (m.toolCalls?.length ? null : '')
+                : m.content.map(toWire),
           ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
           ...(m.toolCalls?.length
             ? {
@@ -64,22 +79,23 @@ export class OpenAICompatibleProvider implements ModelProvider {
             : {}),
         })),
       ],
-      max_tokens: req.maxOutputTokens,
+      [this.o.tokenParameter ?? 'max_tokens']: req.maxOutputTokens,
     };
     if (req.tools?.length) {
       body.tools = req.tools.map((t) => ({ type: 'function', function: t }));
       if (req.toolChoice) body.tool_choice = req.toolChoice;
     }
     if (req.webSearch && !this.o.openRouter) throw new ModelError('bad_request', 'Web search requires OpenRouter');
-    if (req.responseSchema) {
-      body.response_format = {
+    if (req.responseSchema && format !== 'prompt') {
+      body.response_format = format === 'json_object' ? { type: 'json_object' } : {
         type: 'json_schema',
         // Not strict: OpenAI strict mode forbids optional properties, which the
         // applet format relies on. We validate locally either way.
         json_schema: { name: req.responseSchema.name, strict: false, schema: req.responseSchema.schema },
       };
     }
-    if (req.reasoningEffort) body.reasoning = { effort: req.reasoningEffort };
+    if (req.reasoningEffort && this.o.openRouter) body.reasoning = { effort: req.reasoningEffort };
+    else if (req.reasoningEffort && this.id === 'openai') body.reasoning_effort = req.reasoningEffort;
     if (this.o.openRouter) {
       body.usage = { include: true };
       // Only route to endpoints that honour response_format; don't silently fall back to another model.
@@ -89,6 +105,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
     if (req.webSearch) {
       delete body.messages;
       delete body.max_tokens;
+      delete body.max_completion_tokens;
       body.input = req.messages.flatMap((m) =>
         m.content
           .filter((p) => p.type === 'text')
@@ -104,35 +121,13 @@ export class OpenAICompatibleProvider implements ModelProvider {
       ];
       body.max_tool_calls = 1;
     }
-    const timeout = AbortSignal.timeout(this.o.timeoutMs ?? 180_000);
-    const signal = req.signal ? AbortSignal.any([req.signal, timeout]) : timeout;
-    let res: Response;
-    try {
-      res = await (this.o.fetch ?? fetch)(
-        `${this.o.baseUrl.replace(/\/$/, '')}/${req.webSearch ? 'responses' : 'chat/completions'}`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', authorization: `Bearer ${this.o.apiKey}`, ...this.o.headers },
-          body: JSON.stringify(body),
-          signal,
-        },
-      );
-    } catch (err) {
-      if (req.signal?.aborted) throw err;
-      if (timeout.aborted) throw new ModelError('timeout', 'The model took too long to answer');
-      throw new ModelError('unavailable', `Could not reach the model provider: ${(err as Error).message}`);
-    }
-    const raw = await res.text();
-    let json: any;
-    try {
-      json = JSON.parse(raw);
-    } catch {
-      throw res.ok
-        ? new ModelError('invalid_response', 'The provider returned non-JSON')
-        : statusError(res.status, raw.slice(0, 200));
-    }
-    if (!res.ok || json.error)
-      throw statusError(json.error?.code ?? res.status, json.error?.message ?? `HTTP ${res.status}`);
+    const json = await postJson(this.o, req, req.webSearch ? 'responses' : 'chat/completions', {
+      ...(this.o.apiKey && this.o.auth !== 'none' ? { authorization: `Bearer ${this.o.apiKey}` } : {}), ...this.o.headers,
+    }, body);
+    if (!req.webSearch && !json.choices?.[0]?.message)
+      throw new ModelError('invalid_response', 'The provider returned no completion');
+    if (req.webSearch && !Array.isArray(json.output))
+      throw new ModelError('invalid_response', 'The provider returned no search output');
 
     const choice = json.choices?.[0];
     const searchText = req.webSearch
@@ -189,17 +184,4 @@ function toWire(p: Part): unknown {
     case 'audio':
       return { type: 'input_audio', input_audio: { data: p.data, format: p.format } };
   }
-}
-
-function statusError(status: number | string, message: string): ModelError {
-  const s = typeof status === 'string' ? Number(status) || 0 : status;
-  const m = String(message);
-  if (s === 401 || s === 403) return new ModelError('auth', `The model provider refused the key: ${m}`, s);
-  if (s === 402) return new ModelError('insufficient_credits', 'The authoring budget is used up', s);
-  if (s === 429) return new ModelError('rate_limited', 'The model provider is rate limiting us', s);
-  if (s === 408) return new ModelError('timeout', m, s);
-  if (s === 400 && /context|too long|maximum.*tokens/i.test(m))
-    return new ModelError('context_too_long', 'The request is too long for this model', s);
-  if (s >= 400 && s < 500) return new ModelError('bad_request', m, s);
-  return new ModelError('unavailable', m, s || null);
 }

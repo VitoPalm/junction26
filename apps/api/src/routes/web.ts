@@ -4,28 +4,32 @@ import { extname, join, normalize, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import { Hono } from 'hono';
 import { CAPABILITIES, LIMITATIONS } from '@junction26/applet-format';
-import { parseModelSpec } from '@junction26/model';
+import { parseModelSpec, type ModelRegistry } from '@junction26/model';
 import type { AppEnv, Deps } from '../context.ts';
 
 /** Model picker and capability catalog for authoring clients (ours or bring-your-own). */
-export function authoringMetaRoutes(deps: Deps) {
+export function authoringMetaRoutes(deps: Deps, models: ModelRegistry) {
   const app = new Hono<AppEnv>();
   app.get('/models', (c) =>
     c.json({
       default: deps.config.model.model,
-      models: deps.config.model.allowed.map((spec) => ({ id: spec, ...describeModel(spec), default: spec === deps.config.model.model })),
+      models: deps.config.model.allowed.map((spec) => ({ id: spec, ...describeModel(spec, models), default: spec === deps.config.model.model })),
     }),
   );
   app.get('/capabilities', (c) => c.json({ capabilities: CAPABILITIES, limitations: LIMITATIONS }));
   return app;
 }
 
-function describeModel(spec: string): { label: string; provider: string; free: boolean } {
+export function describeModel(spec: string, models: ModelRegistry) {
   const s = parseModelSpec(spec);
-  if (s.provider === 'fake') return { label: 'Demo (canned examples, free)', provider: 'fake', free: true };
+  let available = false;
+  let capabilities;
+  try { const resolved = models.resolve(spec); available = resolved.provider.configured !== false; capabilities = resolved.provider.capabilities(resolved.spec.model); } catch { /* unknown provider */ }
+  const status = { available, capabilities, unavailableReason: available ? null : 'Provider is not configured on this server' };
+  if (s.provider === 'fake') return { ...status, label: 'Demo (canned examples, free)', provider: 'fake', free: true };
   const name = s.model.split('/').at(-1)!.replace(/[-_]/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase()).replace(/\bGpt\b/g, 'GPT');
   const via = s.provider === 'openrouter' ? 'OpenRouter' : s.provider === 'openai' ? 'OpenAI-compatible' : s.provider;
-  return { label: `${name} (${via})`, provider: s.provider, free: false };
+  return { ...status, label: `${name} (${via})`, provider: s.provider, free: false };
 }
 
 const TYPES: Record<string, string> = {

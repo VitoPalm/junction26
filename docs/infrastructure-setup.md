@@ -62,7 +62,12 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `AUTHORING_MODELS` | api, worker | Extra specs users may pick, comma-separated (e.g. `fake:demo`) |
 | `VOICE_MODEL` | api | Voice-bridge resolver, default `google/gemini-3.5-flash-lite` (needs audio input + tools); `fake:voice` is free. See [voice-fallback.md](voice-fallback.md) |
 | `AUTHORING_REASONING_EFFORT` | worker | Optional `low`/`medium`/`high` |
-| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | worker | For `openai:<model>` specs (any OpenAI-compatible endpoint) |
+| `OPENAI_API_KEY` / `OPENAI_BASE_URL` | api, worker | For `openai:<model>` specs (any OpenAI-compatible endpoint); URL defaults to `https://api.openai.com/v1` |
+| `OPENAI_RESPONSE_FORMAT` | api, worker | `json_schema` (default), `json_object`, or `prompt` |
+| `OPENAI_TOKEN_PARAMETER` | api, worker | `max_completion_tokens` (default), or `max_tokens` for older/compatible endpoints |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_BASE_URL` | api, worker | Native `anthropic:<model>`; URL defaults to `https://api.anthropic.com/v1` |
+| `GEMINI_API_KEY` / `GEMINI_BASE_URL` | api, worker | Native `gemini:<model>`; URL defaults to `https://generativelanguage.googleapis.com/v1beta` |
+| `MODEL_PROVIDERS` | api, worker | JSON array of independent compatible endpoint definitions, referencing secret env variable names. [Setup and capabilities](model-providers.md) |
 | `CORS_ORIGINS` | api | Browser origins allowed to call `/v1` (native shells: `capacitor://localhost,https://localhost`). Dev default includes those and the Vite ports; production default is none |
 | `WEB_ROOT` | api | Directory with the built `glasses/` and `author/` apps; `/app/web` in the image |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | api, worker | Verda key `junction26-backend-storage` (project-scoped: can read every bucket in the project) |
