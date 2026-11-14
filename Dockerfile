@@ -20,11 +20,10 @@ COPY apps/author/package.json apps/author/index.html apps/author/preview.html ap
 COPY apps/author/src apps/author/src
 COPY apps/author/.env.production apps/author/
 COPY apps/author/public apps/author/public
-ENV BACKEND="-w @junction26/server-common -w @junction26/storage -w @junction26/db -w @junction26/applet-format -w @junction26/model -w @junction26/worker -w @junction26/assistant-mcp -w @junction26/api"
-ENV WEB="-w @junction26/glasses-ui -w @junction26/applet-runtime -w @junction26/applet-renderer -w @junction26/glasses -w @junction26/author"
+ENV BACKEND="-w @junction26/server-common -w @junction26/storage -w @junction26/db -w @junction26/applet-format -w @junction26/applet-runtime -w @junction26/model -w @junction26/worker -w @junction26/assistant-mcp -w @junction26/api"
+ENV WEB="-w @junction26/glasses-ui -w @junction26/applet-renderer -w @junction26/glasses -w @junction26/author"
 RUN npm ci $BACKEND $WEB --include-workspace-root \
  && npm run build $BACKEND \
- && npm run build -w @junction26/applet-runtime \
  && npm run build -w @junction26/glasses -w @junction26/author \
  && mkdir -p /app/web && cp -r apps/glasses/dist /app/web/glasses && cp -r apps/author/dist /app/web/author \
  && npm prune --omit=dev $BACKEND
@@ -44,6 +43,9 @@ COPY --from=build /app/packages/db/dist /app/packages/db/dist
 COPY --from=build /app/packages/db/migrations /app/packages/db/migrations
 COPY --from=build /app/packages/applet-format/package.json /app/packages/applet-format/
 COPY --from=build /app/packages/applet-format/dist /app/packages/applet-format/dist
+# The API and worker use the runtime's coach helpers (validation, retrieval, output checks).
+COPY --from=build /app/packages/applet-runtime/package.json /app/packages/applet-runtime/
+COPY --from=build /app/packages/applet-runtime/dist /app/packages/applet-runtime/dist
 COPY --from=build /app/packages/model/package.json /app/packages/model/
 COPY --from=build /app/packages/model/dist /app/packages/model/dist
 COPY --from=build /app/web /app/web
