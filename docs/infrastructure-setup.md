@@ -1,0 +1,301 @@
+# Infrastructure setup (step by step)
+
+How to stand up every piece of infrastructure from zero, in order. Facts were
+verified against provider docs on 2026-11-14. Prices and plan names change;
+re-check the linked pages before spending money.
+
+What already exists is marked **[done]**. Everything else is **[todo]**.
+
+## 0. Overview
+
+```text
+ Phone / laptop browser            Meta Ray-Ban Display (web app, offline-first)
+ ┌──────────────────────┐          ┌───────────────────────────────────────────┐
+ │ Authoring PWA        │          │ Glasses app: library + applet runtime     │
+ │ chat, uploads,       │          │ IndexedDB state, SW cache, WebMCP tools   │
+ │ preview, publish     │          └───────▲───────────────────────▲──────────┘
+ └──────────┬───────────┘                  │ explicit sync only    │ "Hey Meta"
+            │ HTTPS (same origin)          │ HTTPS (same origin)   │
+ ┌──────────▼──────────────────────────────┴──────────┐    ┌──────┴──────┐
+ │ Aiven Runtime: `api` app                            │    │ Meta AI      │
+ │  serves /glasses/*, /author/* static + /v1/* API    │    │ (Meta cloud) │
+ │  streams uploads/packages to/from Verda (no CORS)   │    └─────────────┘
+ ├─────────────────────────────────────────────────────┤
+ │ Aiven Runtime: `worker` app (same image, other CMD) │──► OpenRouter
+ │  durable jobs: prepare upload, generate, package    │    (openai/gpt-6-luna)
+ └──────────┬──────────────────────────┬───────────────┘
+            │ DATABASE_URL             │ S3 API (path-style)
+   ┌────────▼─────────┐       ┌────────▼─────────────────────────┐
+   │ Aiven PostgreSQL │       │ Verda Object Storage (FIN-03)     │
+   │ (Startup plan)   │       │ bucket junction26-applets [done]  │
+   └──────────────────┘       └───────────────────────────────────┘
+```
+
+Key constraint discovered during verification: **Verda Object Storage doesn't
+support CORS, bucket policies, ACLs or public buckets.** Browsers (authoring
+client and glasses) therefore can't upload to or download from Verda directly,
+not even with presigned URLs via `fetch`. **All object traffic goes through our
+API**, which also keeps every request same-origin (no CORS anywhere).
+
+## 1. Accounts and credentials
+
+| Service | Account | State | Where the secret lives locally |
+| --- | --- | --- | --- |
+| GitHub | `VitoPalm/junction26` (private) | **[done]** | gh CLI keyring |
+| OpenRouter | owner's account, ~$17.59 balance at setup | **[done]** key with $17 cap, **expires 2026-11-21 04:14 UTC** | `.env.openrouter.local` (0600, git-ignored) |
+| Verda | project `Junction26`, €200 credits | **[done]** | `.env.verda.local` (0600, git-ignored) |
+| Aiven | trial, $50 credits, 30 days, no card | **[todo]** nothing provisioned | — |
+| Meta | Developer Mode on the glasses | **[todo]** verify on the team's device | — |
+
+Never commit `.env*.local`. `.gitignore` allows only `*.example` files.
+Templates: [`.env.openrouter.example`](../.env.openrouter.example),
+[`.env.verda.example`](../.env.verda.example).
+
+### Full environment contract for the services
+
+| Variable | Used by | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | api, worker | Injected by the Aiven service integration (full URI, includes `sslmode`) |
+| `OPENROUTER_API_KEY` | worker | Runtime secret. Never in a frontend bundle |
+| `OPENROUTER_BASE_URL` | worker | `https://openrouter.ai/api/v1` |
+| `AUTHORING_MODEL` | worker | `openai/gpt-6-luna` |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | api, worker | Verda key `junction26-backend-storage` (project-scoped: can read every bucket in the project) |
+| `AWS_ENDPOINT_URL` | api, worker | `https://objects.eu-north-3.verda.storage` |
+| `AWS_REGION` | api, worker | `eu-north-3` |
+| `VERDA_S3_BUCKET` | api, worker | `junction26-applets` |
+| `S3_FORCE_PATH_STYLE` | api, worker | `true` |
+| `PORT` | api | `8080` (matches Dockerfile `EXPOSE`) |
+| `SESSION_SECRET` | api | Random 32+ bytes. Signs device/session tokens |
+| `PUBLIC_ORIGIN` | api | The Aiven HTTPS URL; used in QR/deep links |
+| `MAX_UPLOAD_BYTES`, `GENERATION_CONCURRENCY`, `MAX_OUTPUT_TOKENS` | api, worker | Abuse and budget limits |
+
+## 2. Object storage: Verda **[done]**
+
+Already provisioned (details in [verda.md](verda.md)): bucket
+`junction26-applets`, FIN-03, endpoint `https://objects.eu-north-3.verda.storage`,
+region `eu-north-3`, path-style. An upload/read/delete round trip was verified.
+
+Facts that shape the design (from <https://docs.verda.com/storage/object-storage/>,
+updated 2026-10-16):
+
+- S3-compatible (AWS SDK v3, boto3, rclone, s5cmd). **Beta.** Quota: 1 TiB,
+  100k objects, 100 buckets (check Account settings → Quotas).
+- **Buckets can't be created through the S3 API**: use the console or the Verda API.
+- Presigned URLs work (server-to-server or for links); **no CORS, policies,
+  ACLs or public access**.
+- Billing is per GiB-month from the prepaid balance every 10 minutes; requests
+  and egress are free. **If the balance hits zero, S3 access is suspended.**
+- Maintenance was announced for FIN-03 on 2026-11-15, 19:00–22:00 UTC.
+
+To recreate from scratch:
+
+1. Sign up at verda.com and create project `Junction26` **before** redeeming
+   credits (credits attach to the selected project). Redeem: Project →
+   Billing & settings → Top-up → Credit coupon → `JUNCTION-2026`. A payment
+   method must be on file first.
+2. Console → Object storage → create bucket `junction26-applets` in FIN-03.
+3. Create an access key, store it in `.env.verda.local` (chmod 600).
+4. Smoke test (Node, AWS SDK v3, `@aws-sdk/client-s3` 3.1169.0 current):
+
+```ts
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+const s3 = new S3Client({ endpoint: process.env.AWS_ENDPOINT_URL, region: process.env.AWS_REGION, forcePathStyle: true });
+const Bucket = process.env.VERDA_S3_BUCKET!, Key = 'healthcheck/smoke.txt';
+await s3.send(new PutObjectCommand({ Bucket, Key, Body: 'ok' }));
+console.log(await (await s3.send(new GetObjectCommand({ Bucket, Key }))).Body!.transformToString());
+await s3.send(new DeleteObjectCommand({ Bucket, Key }));
+```
+
+Key prefixes: `uploads/<user-id>/<upload-id>/original`,
+`assets/<sha256>.<ext>`, `releases/<project-id>/<release-id>/package.json`
+(plus `assets/` inside). Keep storage behind a small adapter interface so the
+provider can change.
+
+## 3. Database: Aiven PostgreSQL **[todo]**
+
+Plan facts (aiven.io/pricing and docs, 2026-11-14):
+
+| Plan | From | Nodes | Backups / PITR | PgBouncer pooling |
+| --- | --- | --- | --- | --- |
+| Developer | $5/mo | 1 | none | no |
+| Hobbyist | $12/mo | 1 | single DR backup (docs disagree) | no |
+| **Startup** | **$75/mo ($0.10/h)** | 1 | **2 days** | **yes** |
+| Business | $180/mo | primary + standby (HA) | 14 days | yes |
+| Premium | $270/mo | primary + 2 standbys | 30 days | yes |
+
+**Choose Startup** (the agreed "backups + pooling" requirement). Note the $50
+trial credit covers Startup for roughly 20 days. Upgrade to Business for HA.
+
+Steps:
+
+1. Sign in to console.aiven.io (trial active: $50 for 30 days, no card).
+   Pick a region close to Finland/EU (e.g. Google `europe-north1` or AWS
+   `eu-central-1`). Keep Runtime and PostgreSQL in the same cloud/region.
+2. Create service: PostgreSQL → plan `startup-4` (or the smallest Startup) →
+   name `j26-pg`. CLI equivalent:
+   `avn service create j26-pg --service-type pg --plan startup-4 --cloud google-europe-north1 --project <project>`
+3. Enable a **connection pool** (Pools tab): database `defaultdb`, mode
+   `transaction`, size ~20. Use the pooled URI for the API; use the direct URI
+   for migrations (transaction pooling breaks session features and named
+   prepared statements unless `pgbouncer.max_prepared_statements` is set).
+4. Set the backup window (`backup_hour`, `backup_minute`) to quiet hours.
+5. Before calling anything production-ready, run a restore drill (fork from a
+   backup) and record the result.
+
+Node driver: `pg` 8.23.x (or `postgres` 4.1.x). Aiven's Node example appends
+`uselibpqcompat=true` to the URI; `sslmode=require` encrypts but doesn't
+verify the server cert. Download the project CA and verify it in production.
+
+## 4. Hosting: Aiven Runtime **[todo]**
+
+Facts (aiven.io/docs/products/runtime, pages updated Sep–Nov 2026; status is
+labelled "New", with no GA/beta statement):
+
+- Deploys containers built from **Dockerfiles in the repo**. Multi-service
+  apps use a **Compose file** (`compose.yaml` and similar names are
+  auto-discovered). App services must use `build:`. `image:` is honored only
+  for recognized data services (`postgres:*` provisions an Aiven PostgreSQL;
+  version tags are ignored).
+- Connect GitHub by installing the "Aiven Platform" GitHub app (Runtime →
+  Deploy application → Connect GitHub account; needs org admin role).
+- **Pushing to GitHub doesn't redeploy.** Redeploy from Console → Application →
+  Overview → Actions → "Deploy latest commit" (no documented CLI/API for this).
+  Saving env vars or ports also redeploys the last deployed commit.
+- **Public endpoint is always HTTPS :443**, with TLS terminated by Aiven and
+  forwarded as plain HTTP to the container port. HTTP/1 only (no gRPC, HTTP/2 or
+  raw TCP). WebSockets aren't documented.
+- **No pre-deploy hooks or one-off tasks.** Run migrations from the container
+  entrypoint (guarded by a Postgres advisory lock) or from CI before deploying.
+- Scaling = plan change only (Startup app plans from $7/mo ≈ $0.01/h, 0.5 CPU,
+  0.25–8 GB RAM, 9 sizes). Replicas and autoscaling aren't documented.
+- Env vars and secrets: Console → app → Environment variables (tick
+  "Secret"), or the API (`"kind": "secret"`).
+- Database: a service integration injects `DATABASE_URL` (full URI only).
+  A Runtime app **can't** integrate with another Runtime app.
+
+### Files to add to the repo
+
+`Dockerfile` (one image for both processes):
+
+```dockerfile
+FROM node:26-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY packages ./packages
+COPY apps ./apps
+RUN npm ci && npm run build
+
+FROM node:26-alpine
+WORKDIR /app
+ENV NODE_ENV=production PORT=8080
+COPY --from=build /app /app
+RUN npm prune --omit=dev
+EXPOSE 8080
+CMD ["node", "apps/api/dist/main.js"]
+```
+
+`compose.yaml`:
+
+```yaml
+services:
+  api:
+    build: { context: ., dockerfile: Dockerfile }
+    environment:
+      - SERVICE_ROLE=api
+  worker:
+    build: { context: ., dockerfile: Dockerfile.worker }   # same as Dockerfile, CMD apps/worker
+    environment:
+      - SERVICE_ROLE=worker
+```
+
+Untested assumption to verify on the first deploy: that a port-less `worker`
+service becomes its own Runtime app. If it doesn't, give the worker a tiny
+`/healthz` HTTP listener on 8080 so it deploys like the API, without a public
+route being used.
+
+### Deploy steps
+
+1. Add the files above, build locally with `docker build .`, push to `main`.
+2. Console → Runtime → Deploy application → pick repo/branch `main` → select
+   `compose.yaml` → Scan → Deploy. Choose the smallest Startup app plan for each.
+3. Integrate the database with each app:
+   `avn service integration-create --project <p> -t application_service_credential -s j26-pg -d <app> --user-config-json '{"service_type":"pg","exposed_values":{"connection_string":{"environment_variable_key":"DATABASE_URL"}}}'`
+   (Do this for `api` and `worker`. For the API, point it at the pooled URI if
+   the integration exposes the direct one; this isn't documented, so check.)
+4. Add the remaining env vars from section 1 as secrets.
+5. Ports: `api` → `[{"name":"http","port":8080,"protocol":"HTTP"}]`.
+6. Note the public HTTPS URL (Connection information). That URL is what the
+   glasses load (`<url>/glasses/`).
+7. Every later release: push → Console "Deploy latest commit" for each app.
+
+Health: `GET /healthz` (process up) and `GET /readyz` (DB reachable). Log
+JSON with request/job/revision IDs. Graceful shutdown on SIGTERM; workers
+release leases.
+
+## 5. Authoring model: OpenRouter **[done]**
+
+- Model `openai/gpt-6-luna`, providers OpenAI / Azure / Amazon Bedrock. Price
+  from **$0.05 / $0.25 per M input/output tokens** (cheapest OpenAI endpoint;
+  others up to $0.20/$1.00). Supports `response_format` (json_schema),
+  `tools`, `reasoning`, `max_tokens`. Measured: one 16-page manual took about
+  37k input + 4–5k output tokens, **42–48 s, ~$0.007 per generation**.
+- Always send `provider: { require_parameters: true, allow_fallbacks: false }`
+  with structured output, so requests route only to endpoints that honor the
+  schema. Strict mode is a strong hint on some providers, so **validate locally
+  anyway**.
+- PDFs: our trials render pages with Poppler (`pdftoppm -scale-to 1600`,
+  `pdftotext -layout`) and send page images + text. OpenRouter also accepts PDFs
+  directly (`file` content part, `plugins: [{id: 'file-parser', pdf: {engine}}]`,
+  engines `native` | `cloudflare-ai` (free) | `mistral-ocr` ($2/1000 pages)).
+  Keep our own rendering: we need page bitmaps to crop diagrams anyway.
+- Key endpoint `GET /api/v1/key` returns usage and limit without spending.
+- Handle 400 (unsupported parameter), 402 (credits/limit), 429, 502 and key
+  expiry explicitly. Failed generations aren't billed. Cap retries.
+- **Replace the key before 2026-11-21.** Newer models seen on OpenRouter
+  (Gemini 4 Hydrogen/Carbon, Nov 2026) cost 30–40× more. Luna remains the
+  sensible default; re-evaluate when the Gemini/Anthropic credits arrive.
+
+## 6. Local development
+
+Prerequisites: Node **≥22.12** (26 LTS recommended), npm, Google Chrome with
+the simulator extension, Python 3 with `requests` + `Pillow`, and Poppler
+(`pdftoppm`, `pdftotext`) for the experiment scripts.
+
+```sh
+git clone https://github.com/VitoPalm/junction26 && cd junction26
+npm ci                       # npm workspaces: packages/* and experiments/*/app
+npm run build && npm test    # all workspaces
+cd experiments/openrouter-ikea-v2/app && npx vite --host 127.0.0.1 --port 4182
+```
+
+Open the URL in Chrome and enable the simulator for the origin. Arrow keys,
+Enter and Esc drive focus/select/back. Set Background Blur to 0.
+Browser tests: `npx playwright test` in `packages/glasses-ui` (starts its own
+servers on 4180/4181) and in `experiments/openrouter-ikea-v2/app` (needs the
+4182 server running).
+
+Gotcha: Vite can cache a half-written file if you `cp` over a source it is
+watching (empty CSS, missing exports). Write to a temp file and `mv` it, or
+touch the file again.
+
+## 7. Glasses device setup **[todo, needs hardware]**
+
+1. Meta AI app v272+, glasses v125+.
+2. Enable Developer Mode (Settings → App Info → tap App version ×5 → Enable).
+   Restart the glasses and the app so WebMCP picks it up.
+3. Add our app: scan the QR for
+   `fb-viewapp://web_app_deep_link?appName=Junction26&appUrl=<PUBLIC_ORIGIN>/glasses/`
+   (generate it with the simulator's QR tool), then confirm on the glasses.
+4. First launch online; check that warm relaunch makes 0 requests; then test
+   airplane mode.
+5. Feasibility checklist to run first: WebMCP tool appears and is invoked by
+   "Hey Meta"; IndexedDB survives app close/reboot; `navigator.storage.estimate()`
+   quota; band focus/select; package download time for a ~1 MB applet;
+   readability outdoors.
+
+## 8. Cost envelope (hackathon week)
+
+- Aiven: Startup PG ~$2.40/day + 2 Startup apps ~$0.50/day → the $50 credit
+  lasts ~2.5 weeks.
+- Verda: storage of a few hundred MB costs cents. €200 balance.
+- OpenRouter: ~$0.007 per manual-sized generation; $17 cap ≈ 2,000 generations.

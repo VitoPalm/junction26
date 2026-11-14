@@ -1,0 +1,61 @@
+/* Fixed pages: clipping prevents scroll input; the measured fit guard rejects overflow. */
+html, body, #root {
+  block-size: 100%;
+  inline-size: 100%;
+  margin: 0;
+  background: var(--uit-color-background-window);
+  overflow: clip;
+}
+.g-screen-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  block-size: 100%;
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow: clip;
+}
+.g-page-title { padding: var(--uit-spacing-large); min-inline-size: 0; }
+.g-viewport { min-block-size: 0; min-inline-size: 0; overflow: clip; }
+.g-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uit-spacing-large);
+  box-sizing: border-box;
+  block-size: 100%;
+  padding: var(--uit-spacing-large);
+  min-block-size: 0;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.g-stack { display: grid; gap: var(--uit-spacing-small); min-inline-size: 0; flex: 0 0 auto; }
+.g-diagram { display: block; inline-size: 100%; block-size: 100%; min-block-size: 0; min-inline-size: 0; object-fit: contain; }
+.g-choices { display: flex; flex-direction: column; align-items: center; gap: var(--uit-spacing-large); }
+.g-fit-error { padding: var(--uit-spacing-large); }
+.g-action-dock { min-inline-size: 0; padding-block-end: var(--uit-spacing-xsmall); }
+
+/* Component-level optics, independent of the simulator scene controls.
+   The blur affects rendered backdrops; it cannot blur transmitted real-world light. */
+:root {
+  --g-readable-backdrop-blur: 16px;
+  --g-readable-line-glow: 1px;
+}
+.g-readable-surface {
+  min-inline-size: 0;
+  min-block-size: 0;
+  backdrop-filter: blur(var(--g-readable-backdrop-blur));
+  -webkit-backdrop-filter: blur(var(--g-readable-backdrop-blur));
+}
+.g-readable-content {
+  display: flex;
+  block-size: 100%;
+  min-block-size: 0;
+  min-inline-size: 0;
+}
+.g-readable-copy { padding: var(--uit-spacing-large); min-inline-size: 0; }
+.g-diagram {
+  filter: contrast(1.8) brightness(1.2) drop-shadow(0 0 var(--g-readable-line-glow) var(--uit-color-text-primary));
+}
+
+.g-diagram-filter { position: absolute; inline-size: 0; block-size: 0; pointer-events: none; }
+/* A material owns its content inset; do not double-pad the surrounding page. */
+.g-content:has(> .g-readable-surface) { padding: 0; }

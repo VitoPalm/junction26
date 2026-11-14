@@ -1,0 +1,16 @@
+{
+  "name": "junction26",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "experiments/*/app"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

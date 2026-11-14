@@ -1,0 +1,33 @@
+/* Style only our wrappers. Toolkit components own all control geometry. */
+html { background: var(--uit-color-background-window); }
+body { background: var(--uit-color-background-window); }
+#root { background: var(--uit-color-background-window); }
+html, body, #root {
+  block-size: 100%;
+  inline-size: 100%;
+  margin: 0;
+  background: var(--uit-color-background-window);
+}
+.g-screen-shell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  block-size: 100%;
+  min-block-size: 0;
+  min-inline-size: 0;
+}
+.g-content {
+  display: grid;
+  gap: var(--uit-spacing-large);
+  padding: var(--uit-spacing-large);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+.g-stack {
+  display: grid;
+  gap: var(--uit-spacing-small);
+  min-inline-size: 0;
+}
+.g-action-dock {
+  min-inline-size: 0;
+  padding-block-end: var(--uit-spacing-xsmall);
+}
