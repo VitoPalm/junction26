@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Route, Routes, useLocation, useNavigate, useParams, type NavigateFunction } from 'react-router-dom';
-import { ReactRouterPageTransition } from '@wearables-ui-toolkit/mrbd/react-router';
 import { Button } from '@wearables-ui-toolkit/mrbd';
 import { ChoiceScreen, ContentScreen, TextBlock, type GlassesAction } from '@junction26/glasses-ui';
 import { AppletScreen, ButtonList, hasMenu, registerAppletTools, useAppletSession, type AppletSession, type Screen, type ToolHost } from '@junction26/applet-renderer';
@@ -28,9 +27,9 @@ function useCanonicalHomeUrl() {
 
 export function GlassesApp() {
   useCanonicalHomeUrl();
+  const location = useLocation();
+  // Screens switch instantly: no slide transition between routes.
   return (
-    <ReactRouterPageTransition>
-      {({ location }) => (
         <Routes location={location}>
           <Route path="/" element={<Home />} />
           <Route path="/older" element={<Older />} />
@@ -39,8 +38,6 @@ export function GlassesApp() {
           <Route path="/a/:projectId/:viewId" element={<AppletRoute key={location.pathname} />} />
           <Route path="*" element={<Home />} />
         </Routes>
-      )}
-    </ReactRouterPageTransition>
   );
 }
 
@@ -213,8 +210,8 @@ function AppletHost({ applet, initial }: { applet: InstalledApplet; initial: App
 }
 
 /**
- * One registration per open applet, not per route: page transitions keep the
- * old and new route mounted together, and WebMCP rejects duplicate names. The
+ * One registration per open applet, not per route: moving between an applet's
+ * routes remounts the host, and WebMCP rejects duplicate names. The
  * newest host receives calls; tools go away shortly after the last host leaves.
  */
 const activeTools: { key: string | null; ac: AbortController | null; hosts: ToolHost[]; timer: number } = { key: null, ac: null, hosts: [], timer: 0 };
