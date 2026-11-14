@@ -83,6 +83,14 @@ recorded on the job. Failures post a plain-language reply in the thread.
   `webmcp.list()` / `await webmcp.call('j26_dnd_heal', { amount: 2 })` in the console.
 - Back on the device/simulator is browser history (the toolkit doesn't bind Esc).
 
+Browser regression checks: `npm run test:browser -w @junction26/glasses`.
+These run the real app in Chrome at 600×600 using the explicit development
+WebMCP stub: action/read ordering, concurrent writes, manual input, invalid
+arguments, IndexedDB reload persistence, page navigation and tool cleanup when
+leaving an applet. Tool reads use the latest persisted session state even before
+React renders an acknowledged write. This is local browser evidence; it does
+not test Meta AI, the simulator extension's agent, or glasses voice routing.
+
 ## Authoring app (`apps/author`)
 
 One React codebase: web build served at `/author/`, and Capacitor 8.5 shells
