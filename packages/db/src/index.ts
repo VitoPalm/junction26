@@ -1,4 +1,4 @@
-export { createPool, withTransaction, isUniqueViolation, type Pool, type PoolClient, type Queryable } from './pool.ts';
+export { createPool, connectionConfig, withTransaction, isUniqueViolation, type Pool, type PoolClient, type Queryable } from './pool.ts';
 export { migrate, migrateUrl, MIGRATIONS_DIR, type MigrationResult } from './migrate.ts';
 export * from './rows.ts';
 export * from './queries/core.ts';

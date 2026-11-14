@@ -44,7 +44,7 @@ API**, which also keeps every request same-origin (no CORS anywhere).
 | GitHub | `VitoPalm/junction26` (private) | **[done]** | gh CLI keyring |
 | OpenRouter | owner's account, ~$17.59 balance at setup | **[done]** key with $17 cap, **expires 2026-11-21 04:14 UTC** | `.env.openrouter.local` (0600, git-ignored) |
 | Verda | project `Junction26`, €200 credits | **[done]** | `.env.verda.local` (0600, git-ignored) |
-| Aiven | trial, $50 credits, 30 days, no card | **[todo]** nothing provisioned | — |
+| Aiven | trial, $50 credits, 30 days, no card (project `vitopalm1982-7b23`) | **[done]** 2026-11-14: `j26-pg`, `api`, `worker` (see sections 3–4) | Runtime secrets only |
 | Meta | Developer Mode on the glasses | **[todo]** verify on the team's device | — |
 
 Never commit `.env*.local`. `.gitignore` allows only `*.example` files.
@@ -77,6 +77,7 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `NODE_ENV` | api, worker | `production` in the image. **Refuses `AUTH_MODE=dev` and non-S3 storage** |
 | `SERVICE_ROLE` | container | `api` (default), `worker` or `migrate`; read by `scripts/entrypoint.sh` |
 | `MIGRATE_ON_START` | api, worker | `true` on the `api` app; migrations take an advisory lock |
+| `DATABASE_CA_CERT` | api, worker | PEM of the Aiven project CA (service page → CA certificate), one line with literal `\n` separators. Required on Aiven: node-postgres treats `sslmode=require` as full verification and the project CA isn't in the system store. When set, URL `ssl*` parameters are ignored and TLS is verified against this CA |
 | `MIGRATION_DATABASE_URL` | api, worker | Optional direct (non-PgBouncer) URI for migrations; defaults to `DATABASE_URL` |
 | `DATABASE_POOL_MAX` | api | Connections per API process (default 10) |
 | `STORAGE_DRIVER` | api, worker | `s3` (default, required in production), `fs` or `memory` for development |
@@ -139,7 +140,14 @@ Key prefixes: `uploads/<user-id>/<upload-id>/original`,
 (plus `assets/` inside). Keep storage behind a small adapter interface so the
 provider can change.
 
-## 3. Database: Aiven PostgreSQL **[todo]**
+## 3. Database: Aiven PostgreSQL **[done]**
+
+Provisioned 2026-11-14: service `j26-pg`, PostgreSQL 18, plan `startup-4`, Google
+`europe-west4` (Netherlands). It was created in `europe-north1` and migrated,
+because Aiven Runtime offers only `europe-west1/2/3/4` on Google. Connected to
+both Runtime apps through the canvas integration, which injects `DATABASE_URL`
+(direct URI, user `avnadmin`, database `defaultdb`). No PgBouncer pool yet: at
+the current scale the API pool (`DATABASE_POOL_MAX=10`) fits the 100-connection limit.
 
 Plan facts (aiven.io/pricing and docs, 2026-11-14):
 
@@ -170,11 +178,28 @@ Steps:
 5. Before calling anything production-ready, run a restore drill (fork from a
    backup) and record the result.
 
-Node driver: `pg` 8.23.x (or `postgres` 4.1.x). Aiven's Node example appends
-`uselibpqcompat=true` to the URI; `sslmode=require` encrypts but doesn't
-verify the server cert. Download the project CA and verify it in production.
+Node driver: `pg` 8.23.x. node-postgres treats `sslmode=require` as
+`verify-full`, so connecting to Aiven fails with `SELF_SIGNED_CERT_IN_CHAIN`
+until the project CA is trusted (seen on the first deploy). Set `DATABASE_CA_CERT`
+to the project CA; the pool then verifies the certificate and hostname against it.
 
-## 4. Hosting: Aiven Runtime **[todo]**
+## 4. Hosting: Aiven Runtime **[done]**
+
+Deployed 2026-11-14 from `main` via `compose.yaml`: `api` (`Startup-20-512`, port
+8080, public URL `https://humorous-active-ladybird.eur-1.aiven.app`) and
+`worker` (`Startup-50-1024`, because the worker runs Chromium for fit checks;
+port 8080 for `/healthz` only). Both in Google `europe-west4`. The GitHub app has
+read access to `VitoPalm/junction26` only. Findings from the first deploy:
+
+- The scan imports compose `environment` and the Dockerfile `ENV` lines as app
+  variables. The env editor accepts `.env` text with `# secret` line suffixes.
+- The port-less worker question is moot: `WORKER_HEALTH_PORT` makes Aiven treat it
+  as a normal app with its own (unused) public URL.
+- Until the app releases, its URL answers `302` to an Aiven status page, which
+  reports whether the latest release failed. Read the app's Runtime logs for the
+  config error.
+- URL-dependent variables (`PUBLIC_ORIGIN`, `CLERK_AUTHORIZED_PARTIES`, `CORS_ORIGINS`)
+  can only be set after the first deploy, so that deploy fails its config check.
 
 Facts (aiven.io/docs/products/runtime, pages updated Sep–Nov 2026; status is
 labelled "New", with no GA/beta statement):

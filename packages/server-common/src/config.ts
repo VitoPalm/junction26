@@ -19,6 +19,8 @@ const EnvSchema = z.object({
   PORT: positiveInt.default(8080),
   DATABASE_URL: z.string().min(1),
   MIGRATION_DATABASE_URL: z.string().min(1).optional(),
+  /** PEM CA that signs the database server certificate (Aiven project CA); literal \n separators allowed. */
+  DATABASE_CA_CERT: z.string().optional(),
   DATABASE_POOL_MAX: positiveInt.default(10),
   MIGRATE_ON_START: bool.default(false),
 
@@ -93,6 +95,8 @@ export interface Config {
   databaseUrl: string;
   /** Direct (non-PgBouncer) URL for migrations; falls back to databaseUrl. */
   migrationDatabaseUrl: string;
+  /** PEM CA for verifying the database server certificate, when the system store doesn't cover it. */
+  databaseCaCert?: string;
   databasePoolMax: number;
   migrateOnStart: boolean;
   storage: StorageConfig;
@@ -229,6 +233,11 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     if (storage.driver !== 's3') problems.push(`STORAGE_DRIVER=${storage.driver} is refused when NODE_ENV=production`);
   }
 
+  const databaseCaCert = e.DATABASE_CA_CERT?.replace(/\\n/g, '\n');
+  if (databaseCaCert && !databaseCaCert.includes('-----BEGIN CERTIFICATE-----')) {
+    problems.push('DATABASE_CA_CERT must be a PEM certificate');
+  }
+
   if (problems.length) throw new ConfigError(problems);
 
   return {
@@ -237,6 +246,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     port: e.PORT,
     databaseUrl: e.DATABASE_URL,
     migrationDatabaseUrl: e.MIGRATION_DATABASE_URL ?? e.DATABASE_URL,
+    databaseCaCert,
     databasePoolMax: e.DATABASE_POOL_MAX,
     migrateOnStart: e.MIGRATE_ON_START,
     storage,
