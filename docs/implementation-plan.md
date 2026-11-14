@@ -17,8 +17,7 @@ For an engineer or agent starting cold. Read in this order:
 | Authoring pipeline proof (PDF → Luna via OpenRouter → validated JSON → rendered guide) | **Proven** in `experiments/openrouter-ikea-v2` (local scripts, not a service) |
 | Verda bucket + credentials, OpenRouter key | **Provisioned** |
 | Aiven PostgreSQL + Runtime | Not provisioned |
-| Applet format v1 (general, beyond guides) | **Draft below**, not implemented |
-| Backend: API, worker, DB schema, storage adapter (`apps/api`, `apps/worker`, `packages/db`, `packages/storage`, `packages/server-common`) | **Built (M3 skeleton)**, tested against PostgreSQL 18 locally, container image builds. Not deployed. User auth is a dev placeholder; generation is a placeholder ([backend-development.md](backend-development.md)) |
+| Backend: API, worker, DB schema, storage adapter (`apps/api`, `apps/worker`, `packages/db`, `packages/storage`, `packages/server-common`) | **Built**, tested against PostgreSQL 18 locally, container image builds. Not deployed. User auth is a dev placeholder; generation uses the model adapter ([apps.md](apps.md)) |
 | Applet format v1 + runtime + renderer (`packages/applet-format`, `applet-runtime`, `applet-renderer`) | **Built (MVP)**, unit-tested; see [apps.md](apps.md) |
 | Model adapter (`packages/model`) + real `generate_revision` | **Built**: OpenRouter / OpenAI-compatible / free `fake` provider, swappable by spec. Luna not yet run against the format |
 | Glasses app (`apps/glasses`): library, runtime host, IndexedDB, sync, pairing, WebMCP, SW | **Built (MVP)**, checked in headless Chrome at 600×600; not on hardware |
@@ -58,7 +57,11 @@ Playwright 1.65, zod 4.6 or ajv 8.20 (for JSON Schema), pg 8.23, @aws-sdk/client
 Fastify 5.12 or Hono 4.13 for HTTP. Use plain SQL migrations and avoid a heavy ORM.
 Workspaces are already set up at the root `package.json`.
 
-## Applet format v1 (draft to finalize in milestone 1)
+## Applet format v1 (historical draft; implemented contract in apps.md)
+
+The draft below records the original design, not the current wire schema.
+Use [apps.md](apps.md#applet-format-v1) and `packages/applet-format/src/schema.ts`
+for the implemented contract; the runtime is `packages/applet-runtime`.
 
 Design rules (from the product spec): data not code; **views, state and
 actions are separate**; every element has a stable `id`; no scrolling (every
@@ -131,8 +134,10 @@ and reserved names → **measured fit** (render each view headless at 600×600 a
 480×480; any `role=alert` fit error rejects) → package size budget.
 
 WebMCP adapter: for the open applet, register one tool per action
-(`j26_<prefix>_<action>`), plus generic navigation tools (`..._next`,
-`..._previous`, `..._open_view`). Unregister on leaving. Coerce and validate
+(`j26_<prefix>_<action>`), plus built-ins (`read_state`, `open_view`,
+`next_step`, `previous_step`, with the same applet prefix). Keep one
+registration per open applet across screen transitions; unregister on leaving.
+Coerce and validate
 arguments in `runtime.dispatch`. Return `{ ok, summary, next_action }`.
 
 ## Milestones (build in this order)
