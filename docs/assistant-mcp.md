@@ -1,13 +1,15 @@
-# External assistant MCP: local development
+# External assistant MCP: Clerk account linking
 
-Implemented 2026-11-14. This is the first private, text-only implementation of
+Implemented 2026-11-14. This is the text-only implementation of
 [the assistant integration exploration](assistant-integrations.md). It shares one
-tool contract across Claude and OpenAI MCP clients. It is **not yet a deployed
-Claude/ChatGPT connector** and has not been tested inside either provider's UI.
+tool contract across Claude and OpenAI MCP clients. Clerk OAuth, consent, PKCE, MCP calls and web-account continuity have been
+verified locally with a real development account in Zen. It is **not yet a
+deployed Claude/ChatGPT connector** or tested inside either provider's UI.
 
 ## What works
 
-`apps/assistant-mcp` is a thin MCP transport adapter over the authenticated API.
+`apps/assistant-mcp` contains the shared tool contract. Local stdio uses the
+authenticated HTTP API; `/mcp` in the API uses an in-process, scoped backend.
 The user's assistant writes the definition itself using the relevant authorized
 conversation context. The adapter never calls a model or the managed generation
 message endpoint. No provider API key or assistant session is used by our backend.
@@ -32,6 +34,95 @@ assistant-side publishing and review acceptance are outside this first slice.
 Drafts with change findings are blocked by the existing publish API until a
 server-side acceptance workflow exists; the current UI checkbox cannot clear that
 block. Draft creation/revision never reads or writes live wearer state.
+
+## Clerk OAuth endpoint
+
+The API now serves `/mcp` when `AUTH_MODE=clerk` and `MCP_RESOURCE_URL` are
+configured. This is separate from the old `http-local` single-user adapter.
+Each POST verifies its own OAuth bearer credential and creates a fresh tool
+server. First-party session JWTs, cookies, device tokens and dev tokens cannot
+substitute for OAuth access tokens. The SDK checks the signature, audience and
+expiry; we additionally enforce the signed JWT issuer explicitly because the
+installed SDK's machine-token path did not enforce its issuer option in testing.
+Opaque access tokens are verified through Clerk's Backend API.
+
+Permissions:
+
+- `applets:read`: discover capabilities, list/read owned definitions, validate.
+- `applets:draft`: create/revise owned drafts. Initialization also requires read.
+- No delegated access to publishing, managed generation, uploads, pairing,
+  device administration or wearer state. OAuth credentials are rejected by all
+  ordinary `/v1` routes, including when a client calls them directly.
+
+The backend receives a distinct delegated principal. It passes identity and
+scopes into a bounded in-process dispatcher; no access token is forwarded to a
+second resource and no privileged shared token is installed. Both OAuth and web
+sessions map the same Clerk issuer/user tuple to `users.id`.
+
+Public discovery is served at `/.well-known/oauth-protected-resource/mcp`
+(with a root metadata alias). It advertises the exact resource and Clerk issuer.
+Missing/invalid credentials receive a 401 `WWW-Authenticate` discovery challenge;
+missing scopes receive 403. Write-tool failures also include the MCP
+`mcp/www_authenticate` metadata for reauthorization. Origin/Host checks, body
+limits, no-store responses and POST-only stateless transport apply. A reverse
+proxy must preserve the canonical Host header.
+
+### Configured development instance
+
+The existing Clerk development instance now has:
+
+- `applets:read` and `applets:draft` custom scopes, descriptions and discovery
+  advertising, created in Zen under OAuth Applications → Scopes;
+- the local MCP resource `http://127.0.0.1:8080/mcp` registered;
+- audience binding and mandatory PKCE S256 enabled;
+- CIMD and dynamic client registration enabled;
+- read/draft defaults and a dynamic-client ceiling of read/draft/offline access.
+  No email or Clerk metadata scopes are requested by our integration.
+
+Backend settings in the ignored `.env.backend.local` include
+`MCP_RESOURCE_URL` and `CLERK_PUBLISHABLE_KEY`, alongside the existing secret key.
+The secret key is required for opaque token verification even if a JWT public
+key is also configured. The user API service was restarted with these settings.
+
+To reproduce the instance settings after creating the custom scopes:
+
+```sh
+node --env-file=.env.backend.local scripts/assistant/configure-clerk.ts
+node --env-file=.env.backend.local scripts/assistant/configure-clerk.ts --apply
+```
+
+The first command prints the proposed settings only; the second saves and checks
+them. Configuration is idempotent and the script does not print credentials.
+
+To run the interactive live proof (creates one counter draft, no model call):
+
+```sh
+node --env-file=.env.backend.local --conditions=junction26-source scripts/assistant/smoke-oauth.ts
+```
+
+It writes an authorization URL under ignored `.data/mcp-smoke/`. Open that URL
+in the signed-in browser, authorize the local proof client and let its loopback
+callback complete. Keep the process alive throughout consent. Tokens, code and
+verifier stay in memory; the result receipt contains only IDs and verification
+metadata. Closing the browser before consent or restarting the process requires
+a fresh flow. Each run dynamically registers a test client; remove unused test
+clients from Clerk when they are no longer useful. The two temporary clients from
+our live verification were removed after the proof; the counter draft remains
+in the library for inspection.
+
+On 2026-11-14 at 10:18 UTC this flow completed with the actual Clerk account:
+six tools were discovered, the counter validated, a draft was created, and
+“MCP OAuth proof” appeared in the signed-in web library in Zen. This proves local
+account linking, not integration inside Claude/ChatGPT, public routing or glasses
+behavior. With separate Vite/API ports, open the project in Vite's `/author/`
+client; generated URLs use `PUBLIC_ORIGIN` and assume the deployed same-origin
+web host.
+
+JWT OAuth verification does not contact Clerk on every request: revoking a grant
+does not guarantee immediate rejection of an already issued JWT; it can remain
+usable until its expiry plus the SDK's clock tolerance. Opaque credentials use
+Clerk's verification API. Live expiry/refresh/revocation behavior in actual
+Claude/ChatGPT clients remains to be exercised.
 
 ## Run privately
 
@@ -108,20 +199,17 @@ local Streamable HTTP transports, validation, API ownership, device refusal, con
 write retries, stale edits, publication review blocks and no generation jobs or
 wearer-state writes. These checks are local, not provider or glasses hardware tests.
 
-Before a hosted connector:
+Before connecting a cloud-hosted Claude or ChatGPT client:
 
-1. Select real user authentication and an OAuth authorization provider. Add MCP
-   protected-resource metadata, audience/scopes, PKCE, client registration and
-   revocation, with each request bound to its own user. Do not publish this
-   single-user local HTTP listener.
-2. Mount the shared tool server behind that authenticated Streamable HTTP
-   boundary, without a shared authoring token. Verify proxy/HTTPS behavior.
-3. Complete measured-fit and exact-revision review acceptance in the shared
-   backend before adding a publish tool.
-4. Exercise the existing-conversation counter/checklist flow in a Claude custom
-   connector, then the intended ChatGPT/OpenAI account. Record tool discovery,
-   OAuth, confirmations, errors, account eligibility and explicit glasses sync.
-5. Add provider packaging/directory submissions and attachments after that proof.
+1. Choose a reachable HTTPS endpoint, register that exact `/mcp` URL in Clerk,
+   set `MCP_RESOURCE_URL` to match, and deploy the API with real Clerk auth.
+   This does not require switching away from the development instance for the
+   hackathon. Do not expose `AUTH_MODE=dev` or the single-user `http-local` adapter.
+2. Test the intended provider account: discovery, consent, requested scopes,
+   tool confirmations, reconnect/refresh and revocation. No provider-client
+   eligibility is implied by our local SDK proof.
+3. Complete measured fit and exact-revision review acceptance before adding an
+   assistant publish tool. Add attachments/provider packaging after that proof.
 
 The architecture follows the providers' MCP direction:
 [Claude server guide](https://claude.com/docs/connectors/building),

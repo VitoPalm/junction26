@@ -98,3 +98,13 @@ export function authorId(c: Context<AppEnv>): string {
   requireUser(p);
   return p.userId;
 }
+
+/** Delegated principals exist only behind /mcp; regular user APIs refuse them. */
+export function assistantAuthorId(c: Context<AppEnv>, scope: 'applets:read' | 'applets:draft'): string {
+  const p = c.get('principal');
+  if (p.kind === 'assistant') {
+    if (!p.scopes.includes(scope)) throw new ApiError(403, 'insufficient_scope', `This operation requires ${scope}`);
+    return p.userId;
+  }
+  return authorId(c);
+}

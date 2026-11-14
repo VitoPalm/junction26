@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { diffDefinitions, validateDefinition } from '@junction26/applet-format';
 import { createProject, createRevision, getProject, getReleaseForOwner, getRevision, listRevisions, withTransaction } from '@junction26/db';
-import { authorId } from '../auth.ts';
+import { assistantAuthorId } from '../auth.ts';
 import { assistantCapabilities, validateAssistantDefinition } from '../assistant-definition.ts';
 import type { AppEnv, Deps } from '../context.ts';
 import { ApiError, conflict, notFound } from '../errors.ts';
@@ -24,7 +24,7 @@ function canonical(value: unknown): unknown {
 /** Private external-authoring seam. All persistence uses the existing DB helpers. */
 export function assistantRoutes(deps: Deps) {
   const app = new Hono<AppEnv>();
-  app.use('*', async (c, next) => { authorId(c); await next(); });
+  app.use('*', async (c, next) => { assistantAuthorId(c, c.req.path.endsWith('/drafts') ? 'applets:draft' : 'applets:read'); await next(); });
   app.get('/capabilities', (c) => c.json(assistantCapabilities(deps.config.limits.maxDefinitionBytes)));
   app.post('/validate', async (c) => {
     const body = await readJson(c, z.object({ definition: z.unknown() }).strict());
@@ -32,7 +32,7 @@ export function assistantRoutes(deps: Deps) {
     return c.json({ valid: result.ok, issues: result.issues, measuredFit: 'not_checked', sourceFidelity: 'not_checked' });
   });
   app.post('/drafts', async (c) => {
-    const ownerId = authorId(c);
+    const ownerId = assistantAuthorId(c, 'applets:draft');
     const key = idempotencyKey(c, true)!;
     const body = await readJson(c, DraftBody);
     const fingerprint = requestFingerprint(canonical(body));

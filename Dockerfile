@@ -12,15 +12,14 @@ COPY experiments/openrouter-ikea/app/package.json experiments/openrouter-ikea/ap
 COPY experiments/openrouter-ikea-v2/app/package.json experiments/openrouter-ikea-v2/app/
 COPY packages packages
 COPY apps/api apps/api
-# Local MCP adapter is not shipped, but npm needs its workspace manifest.
-COPY apps/assistant-mcp/package.json apps/assistant-mcp/
+COPY apps/assistant-mcp apps/assistant-mcp
 COPY apps/worker apps/worker
 COPY apps/glasses apps/glasses
 # Only the web build of the authoring app (native shells are built separately).
 COPY apps/author/package.json apps/author/index.html apps/author/preview.html apps/author/vite.config.ts apps/author/tsconfig.json apps/author/
 COPY apps/author/src apps/author/src
 COPY apps/author/public apps/author/public
-ENV BACKEND="-w @junction26/server-common -w @junction26/storage -w @junction26/db -w @junction26/applet-format -w @junction26/model -w @junction26/worker -w @junction26/api"
+ENV BACKEND="-w @junction26/server-common -w @junction26/storage -w @junction26/db -w @junction26/applet-format -w @junction26/model -w @junction26/worker -w @junction26/assistant-mcp -w @junction26/api"
 ENV WEB="-w @junction26/glasses-ui -w @junction26/applet-runtime -w @junction26/applet-renderer -w @junction26/glasses -w @junction26/author"
 RUN npm ci $BACKEND $WEB --include-workspace-root \
  && npm run build $BACKEND \
@@ -47,6 +46,8 @@ COPY --from=build /app/packages/applet-format/dist /app/packages/applet-format/d
 COPY --from=build /app/packages/model/package.json /app/packages/model/
 COPY --from=build /app/packages/model/dist /app/packages/model/dist
 COPY --from=build /app/web /app/web
+COPY --from=build /app/apps/assistant-mcp/package.json /app/apps/assistant-mcp/
+COPY --from=build /app/apps/assistant-mcp/dist /app/apps/assistant-mcp/dist
 COPY --from=build /app/apps/api/package.json /app/apps/api/
 COPY --from=build /app/apps/api/dist /app/apps/api/dist
 COPY --from=build /app/apps/worker/package.json /app/apps/worker/

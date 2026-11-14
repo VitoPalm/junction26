@@ -226,14 +226,19 @@ An MCP server exposing authoring tools (`list_capabilities`, `create_applet`,
 author. Same validation and change review apply.
 
 Integration research and proposed tool/service boundaries:
-[assistant-integrations.md](assistant-integrations.md) (2026-11-14; proposal,
-not implemented or tested in assistant clients).
+[assistant-integrations.md](assistant-integrations.md). Status (2026-11-14): the
+shared MCP tool set (capabilities, list/get, validate, create/revise draft; no
+publish) is implemented in `apps/assistant-mcp` and served by the API at `/mcp`
+behind Clerk OAuth (`applets:read`, `applets:draft`). Verified locally with a real
+Clerk consent flow; not yet deployed over HTTPS or tested inside Claude/ChatGPT.
+See [assistant-mcp.md](assistant-mcp.md).
 
 ## Open decisions (owner input needed)
 
 1. Authentication provider **decided: Clerk**. Web sign-in and session verification
    are implemented and verified locally with the development instance; production
-   configuration, native sign-in and delegated MCP OAuth remain.
+   configuration and native sign-in remain. Delegated MCP OAuth is implemented
+   and verified locally ([assistant-mcp.md](assistant-mcp.md)).
    See [authentication-plan.md](authentication-plan.md).
 2. Aiven region and exact plans (Startup PG recommended); when to upgrade for HA.
 3. Whether to subsidize the first applet and with which credits.

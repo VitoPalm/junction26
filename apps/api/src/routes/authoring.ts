@@ -15,7 +15,7 @@ import {
 } from '@junction26/db';
 import { checkDefinition } from '@junction26/server-common';
 import type { AppEnv, Deps } from '../context.ts';
-import { authorId } from '../auth.ts';
+import { authorId, assistantAuthorId } from '../auth.ts';
 import { ApiError, badRequest, conflict, notFound } from '../errors.ts';
 import { idempotencyKey, jobView, messageView, param, readJson, requestFingerprint, revisionSummaryView, revisionView, uuid } from '../http.ts';
 
@@ -114,7 +114,7 @@ export function authoringRoutes(deps: Deps) {
   }
 
   app.get('/:projectId/revisions', async (c) => {
-    const userId = authorId(c);
+    const userId = assistantAuthorId(c, 'applets:read');
     const projectId = param(c, 'projectId');
     if (!(await getProject(deps.pool, userId, projectId))) throw notFound('Project');
     return c.json({ revisions: (await listRevisions(deps.pool, projectId)).map(revisionSummaryView) });
@@ -153,7 +153,7 @@ export function authoringRoutes(deps: Deps) {
   });
 
   app.get('/:projectId/revisions/:revisionId', async (c) => {
-    const userId = authorId(c);
+    const userId = assistantAuthorId(c, 'applets:read');
     const projectId = param(c, 'projectId');
     if (!(await getProject(deps.pool, userId, projectId))) throw notFound('Project');
     const revision = await getRevision(deps.pool, projectId, param(c, 'revisionId'));

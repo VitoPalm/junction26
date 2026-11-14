@@ -318,3 +318,15 @@ touch the file again.
 ## Worker source/fit prerequisites (2026-11-14)
 
 The worker image now installs Poppler (`poppler-utils`) and Chromium for source PDF rendering and generated-candidate fit checks. Local development requires `pdfinfo`, `pdftotext`, `pdftoppm` and Chrome/Chromium; set `CHROME_PATH` when it is outside the detected Linux paths. Build the renderer measurement bundle with `npm run build:fit -w @junction26/worker` before `dev:worker` (the regular worker build includes this step). Missing fit prerequisites fail generation before a paid model call. Source tool limits and the optional paid benchmark are in [model-pipeline.md](model-pipeline.md). The authoring app/worker can perform public web lookups during creation; downloaded glasses applets remain offline.
+
+### Optional external assistant OAuth
+
+The API can now serve the shared OAuth-protected MCP tools at `/mcp`. Configure
+`MCP_RESOURCE_URL` (the exact endpoint), `CLERK_PUBLISHABLE_KEY` and
+`CLERK_SECRET_KEY` alongside `AUTH_MODE=clerk` and the existing issuer settings.
+The Docker image includes the shared MCP tool package. The development Clerk
+instance is configured and real local consent/draft creation is verified; no
+public MCP deployment is implied. Register the public HTTPS resource in Clerk
+and preserve its Host header through the proxy before testing cloud clients.
+See [assistant-mcp.md](assistant-mcp.md) for scopes, bootstrap scripts and the
+remaining provider acceptance checks.

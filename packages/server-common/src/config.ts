@@ -36,6 +36,8 @@ const EnvSchema = z.object({
   CLERK_AUTHORIZED_PARTIES: z.string().optional(),
   CLERK_SECRET_KEY: z.string().optional(),
   CLERK_JWT_KEY: z.string().optional(),
+  CLERK_PUBLISHABLE_KEY: z.string().optional(),
+  MCP_RESOURCE_URL: z.string().url().optional(),
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
   PUBLIC_ORIGIN: z.string().url().default('http://127.0.0.1:8080'),
 
@@ -92,6 +94,7 @@ export interface Config {
   databasePoolMax: number;
   migrateOnStart: boolean;
   storage: StorageConfig;
+  mcp?: { resourceUrl: string; publishableKey: string };
   authMode: 'dev' | 'clerk';
   clerk?: { issuer: string; authorizedParties: string[]; secretKey?: string; jwtKey?: string };
   sessionSecret: string;
@@ -156,6 +159,17 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
   const e = parsed.data;
   const problems: string[] = [];
+  let mcp: Config['mcp'];
+  if (e.MCP_RESOURCE_URL) {
+    const url = new URL(e.MCP_RESOURCE_URL);
+    const local = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
+    if (e.AUTH_MODE !== 'clerk' || !e.CLERK_SECRET_KEY || !e.CLERK_PUBLISHABLE_KEY) problems.push('MCP_RESOURCE_URL requires Clerk auth, CLERK_SECRET_KEY and CLERK_PUBLISHABLE_KEY');
+    if (url.pathname !== '/mcp' || url.search || url.hash || url.username || url.password ||
+        (url.protocol !== 'https:' && !(e.NODE_ENV !== 'production' && local && url.protocol === 'http:'))) {
+      problems.push('MCP_RESOURCE_URL must be the exact HTTPS /mcp endpoint (loopback HTTP allowed outside production)');
+    }
+    mcp = { resourceUrl: e.MCP_RESOURCE_URL, publishableKey: e.CLERK_PUBLISHABLE_KEY ?? '' };
+  }
   let clerk: Config['clerk'];
   if (e.AUTH_MODE === 'clerk') {
     const parties = list(e.CLERK_AUTHORIZED_PARTIES);
@@ -225,6 +239,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     storage,
     authMode: e.AUTH_MODE,
     clerk,
+    mcp,
     sessionSecret: e.SESSION_SECRET,
     publicOrigin: e.PUBLIC_ORIGIN.replace(/\/$/, ''),
     limits: {

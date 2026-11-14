@@ -15,5 +15,20 @@
     "@modelcontextprotocol/sdk": "1.32.2",
     "zod": "4.6.7"
   },
-  "devDependencies": { "@types/node": "22.20.5", "typescript": "7.0.2" }
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2"
+  },
+  "exports": {
+    ".": {
+      "junction26-source": "./src/server.ts",
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./api": {
+      "junction26-source": "./src/api.ts",
+      "types": "./dist/api.d.ts",
+      "default": "./dist/api.js"
+    }
+  }
 }

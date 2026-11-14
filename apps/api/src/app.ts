@@ -4,6 +4,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import { cors } from 'hono/cors';
 import type { AppEnv, Deps } from './context.ts';
+import { mcpRoutes } from './mcp.ts';
 import { authenticate } from './auth.ts';
 import { ApiError, errorBody } from './errors.ts';
 import { assistantRoutes } from './routes/assistant.ts';
@@ -53,6 +54,7 @@ export function createApp(deps: Deps) {
   app.notFound((c) => c.json(errorBody('not_found', 'No such endpoint'), 404));
 
   app.route('/', healthRoutes(deps));
+  if (deps.config.mcp) app.route('/', mcpRoutes(deps));
 
   // Native app shells (Capacitor) and dev servers run on other origins. Bearer
   // tokens, not cookies, so credentials mode stays off.

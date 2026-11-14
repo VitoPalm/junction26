@@ -17,6 +17,9 @@ Band and by "Hey Meta" voice through WebMCP.
 8. Apps, applet format, models: [docs/apps.md](docs/apps.md).
 9. Backend work: [docs/backend-development.md](docs/backend-development.md), then
    [docs/api.md](docs/api.md), [docs/jobs.md](docs/jobs.md), [docs/database.md](docs/database.md).
+10. External assistants (Claude/ChatGPT MCP, Clerk OAuth):
+   [docs/assistant-integrations.md](docs/assistant-integrations.md), then
+   [docs/assistant-mcp.md](docs/assistant-mcp.md).
 
 ## Commands
 

@@ -4,8 +4,9 @@ Status: Clerk selected by the owner, 2026-11-14. Web sign-in and backend session
 verification implemented and tested locally with signed fixtures. A Clerk
 development application is configured in ignored local env files. Real Google
 sign-in, authenticated library retrieval and session persistence after reload
-were verified in Zen against the local API. Native account sign-in, production
-deployment and hosted MCP OAuth are not implemented.
+were verified in Zen against the local API. Native account sign-in and production deployment remain deferred. The API now
+implements scoped MCP OAuth, verified with real local consent and draft creation
+in Zen; cloud-provider connector tests and a public HTTPS endpoint remain.
 
 Hackathon priority (owner decision): keep the Clerk development instance for now
 and focus next on delegated MCP account linking. Native sign-in remains on the
@@ -46,11 +47,11 @@ Device credentials have independent, immediate server-side revocation.
 
 - Public authoring: the Clerk code path and local development instance are
   verified. Production instance/domain configuration and deployment remain.
-- Hosted, multi-user MCP: the current adapter injects one configured author's
-  token. Its HTTP transport is explicitly loopback-only. It has no OAuth
-  discovery, account consent or per-request user authentication.
-- Reliable account continuity between the authoring UI and an assistant-created
-  draft: both must resolve to the same internal `users.id`.
+- Cloud Claude/ChatGPT connections: the scoped `/mcp` endpoint is implemented,
+  but still needs a public HTTPS URL and actual provider-client tests. The old
+  `http-local` adapter remains a separate private, single-author transport.
+- Account continuity is now verified locally: a real OAuth-created draft appeared
+  in the same account's signed-in web library in Zen.
 
 Glasses already have one-use pairing codes, hashed device credentials and device
 revocation. They need an authenticated phone account to pair against, not an
@@ -153,3 +154,21 @@ permissions and MCP account linking. Native callback verification and public
 connector verification remain explicit work, not implied by a successful web
 login. Assistant-side publication remains separately blocked on measured fit and
 exact-revision review acceptance described in [assistant-mcp.md](assistant-mcp.md).
+
+## MCP account-linking implementation (2026-11-14)
+
+Steps 4 and 5 now have an implementation: a separate delegated principal,
+`applets:read` / `applets:draft` authorization, Clerk OAuth-only verification,
+canonical audience and issuer checks, protected-resource metadata/challenges,
+and a request-scoped MCP server. Tokens are never forwarded into `/v1`; the
+server dispatches only allowed operations through an in-process interface.
+Web and MCP identity share the existing Clerk issuer/user tuple.
+
+The real development instance is configured with both custom scopes, audience
+binding, PKCE S256, CIMD/DCR and scoped defaults. A live local OAuth proof in Zen
+completed consent, exchange, tool discovery, validation and draft creation. The
+same draft appeared in the web library. Negative signed-token tests cover issuer,
+audience, expiry, session/device refusal, scoped writes and cross-user IDs.
+See [assistant-mcp.md](assistant-mcp.md) for commands and verification limits.
+Actual Claude/ChatGPT cloud routing, refresh/revocation behavior, and native
+sign-in remain separate acceptance work.

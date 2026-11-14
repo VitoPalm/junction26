@@ -5,7 +5,11 @@ export class AuthoringApiError extends Error {
   constructor(status: number, body: unknown) { super('Junction26 request failed'); this.status = status; this.body = body; }
 }
 
-export class AuthoringApi {
+export interface AuthoringBackend {
+  request(path: string, options?: { body?: unknown; operationId?: string; signal?: AbortSignal }): Promise<Record<string, unknown>>;
+}
+
+export class AuthoringApi implements AuthoringBackend {
   private readonly origin: string;
   private readonly token: string;
   private readonly fetcher: typeof fetch;

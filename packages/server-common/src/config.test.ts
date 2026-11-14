@@ -82,3 +82,17 @@ test('checkDefinition accepts minimal definitions and reports every issue', () =
   assert.equal(checkDefinition([], 1000).ok, false);
   assert.equal(checkDefinition({ formatVersion: 1, title: 'x', pad: 'y'.repeat(100) }, 50).ok, false);
 });
+
+test('hosted MCP requires explicit Clerk settings and an exact canonical resource', () => {
+  const enabled = { ...base, ...clerk, CLERK_SECRET_KEY: 'sk_test_example', CLERK_PUBLISHABLE_KEY: `pk_test_${Buffer.from('auth.example.com$').toString('base64')}`, MCP_RESOURCE_URL: 'http://127.0.0.1:8080/mcp' };
+  assert.equal(loadConfig(enabled).mcp?.resourceUrl, enabled.MCP_RESOURCE_URL);
+  assert.equal(loadConfig({ ...base, ...clerk }).mcp, undefined);
+  for (const env of [
+    { AUTH_MODE: 'dev' }, { CLERK_SECRET_KEY: '' }, { CLERK_PUBLISHABLE_KEY: '' },
+    { MCP_RESOURCE_URL: 'http://external.example/mcp' },
+    { MCP_RESOURCE_URL: 'https://external.example/mcp/' },
+    { MCP_RESOURCE_URL: 'https://external.example/mcp?q=1' },
+    { MCP_RESOURCE_URL: 'https://user:pass@external.example/mcp' },
+    { NODE_ENV: 'production' },
+  ]) assert.throws(() => loadConfig({ ...enabled, ...env }), ConfigError);
+});

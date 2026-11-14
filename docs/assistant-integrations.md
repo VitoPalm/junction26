@@ -15,8 +15,10 @@ capabilities, owned applet reads, full definition validation, atomic create and
 revision submission with durable retry protection. See
 [local MCP setup and remaining work](assistant-mcp.md). They do not route through
 managed generation. Change findings are stored for publication enforcement;
-assistant-side publish, review acceptance, measured fit, OAuth and hosted provider
-tests remain unfinished. The design discussion below describes the target flow,
+Clerk OAuth account linking is now implemented and locally verified through real
+consent, draft creation and web-library continuity. Assistant-side publish, review
+acceptance, measured fit, public HTTPS hosting and provider-client tests remain
+unfinished. The design discussion below describes the target flow,
 not a claim that all proposed tools are available.
 
 ## Intended experience

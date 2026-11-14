@@ -296,3 +296,34 @@ Other errors: 422 `invalid_definition` with full validator issues (including
 base/published definition cannot be safely interpreted by the current validator.
 Malformed bodies/missing or invalid idempotency keys return 400. Pending findings
 cannot currently be accepted through an MCP tool or the existing client checkbox.
+
+## Clerk MCP OAuth transport
+
+Optional `MCP_RESOURCE_URL` enables `POST /mcp` and public protected-resource
+metadata at `/.well-known/oauth-protected-resource/mcp` (also the root metadata
+alias). Requires `AUTH_MODE=clerk`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY` and
+normal issuer settings. The resource must be the exact canonical HTTPS `/mcp`
+URL without query or trailing slash; local non-production loopback HTTP is allowed.
+Keep the same value in Clerk's resource registration and MCP clients.
+
+Only Clerk OAuth access tokens are accepted, with signature, issuer, expiry and
+resource audience checks. Cookies, first-party sessions, device credentials and
+dev tokens fail. OAuth tokens also fail on all ordinary `/v1` routes. Each MCP
+request resolves a distinct delegated principal and uses a scope-checked,
+in-process allowlist to call existing authoring operations, without forwarding
+the token or promoting it to a full web session.
+
+`applets:read` authorizes capabilities/library/revision reads and validation;
+`applets:draft` additionally authorizes draft saves. Initialization requires read.
+No scope grants publication, managed generation, upload ingestion, pairing/device
+administration or wearer-state access. A read-only client receives an
+`insufficient_scope` tool error with `mcp/www_authenticate` metadata on writes.
+
+401 responses include `WWW-Authenticate: Bearer resource_metadata="<metadata URL>"`;
+missing initial read scope returns 403 with `error="insufficient_scope"` and the
+required scope. Only POST/OPTIONS are supported (other methods: 405); no server
+sessions or persistent event streams are created. Host and optional browser
+Origin are checked against configuration. Proxy the canonical Host unchanged.
+Responses are not cached; JSON body limits apply. Local signed-token tests and a
+real Clerk consent/draft flow have passed; public Claude/ChatGPT clients remain
+unverified. Setup and revocation limits: [assistant-mcp.md](assistant-mcp.md).

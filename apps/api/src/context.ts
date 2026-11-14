@@ -14,7 +14,10 @@ export interface Deps {
  * sessions come from paired glasses and can only read the library, sync
  * releases and back up state (see docs/api.md, "Authentication").
  */
-export type Principal = { kind: 'user'; userId: string } | { kind: 'device'; userId: string; deviceId: string };
+export type Principal =
+  | { kind: 'user'; userId: string }
+  | { kind: 'assistant'; userId: string; clientId: string; resource: string; scopes: string[] }
+  | { kind: 'device'; userId: string; deviceId: string };
 
 export type AppEnv = {
   Variables: {
