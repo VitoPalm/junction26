@@ -57,7 +57,8 @@ confirmed instructions and the wearer's answers:
   tumble. A missing or unreadable drying instruction means "don't tumble; check
   the garment".
 - **Bleach** for a group is the most restrictive member's. Settings always say
-  "Suggested (match on your washer)".
+  "Suggested (match on your washer)". On the glasses the wash step shows only
+  the short program (so it fits) with the hint "Suggested; check your washer".
 - **Never done:** stain-treatment recipes (stained items are flagged for
   review), chemical mixing, overriding a label, or guarantees against
   shrinkage, dye transfer or damage.

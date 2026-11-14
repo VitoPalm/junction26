@@ -37,7 +37,7 @@ export function planSteps(plan: Plan, garments: Garment[]): Step[] {
   if (plan.review.length) steps.push({ id: 'aside_review', kind: 'set_aside', title: 'Check first', text: fit('Set aside to check first: ', garments, plan.review.map((r) => r.garmentId)), garmentIds: plan.review.map((r) => r.garmentId), groupId: null, confirm: 'Confirm sorted' });
   for (const g of plan.washGroups) {
     steps.push({ id: `sort_${g.id}`, kind: 'sort', title: `Group ${g.number} · Sort`, text: fit(`Group ${g.number}: add `, garments, g.garmentIds, g.alone ? ', on its own' : ''), garmentIds: g.garmentIds, groupId: g.id, confirm: 'Confirm sorted' });
-    steps.push({ id: `wash_${g.id}`, kind: 'wash', title: `Group ${g.number} · Wash`, text: g.settings.slice(0, 120), garmentIds: g.garmentIds, groupId: g.id, confirm: 'Wash done' });
+    steps.push({ id: `wash_${g.id}`, kind: 'wash', title: `Group ${g.number} · Wash`, text: g.program.slice(0, 120), garmentIds: g.garmentIds, groupId: g.id, confirm: 'Wash done' });
   }
   if (plan.hand.length) {
     const temps = plan.hand.map((id) => garments.find((g) => g.id === id)!).map((g) => `${g.name}: ${washText(g.label.wash.value!)}`).join('; ');

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 // Laundry task module in the real glasses app at 600×600 (docs/laundry.md),
@@ -131,4 +132,51 @@ test('voice commands are repeat-safe; a plan change after sorting needs confirma
   expect((await call(page, 'decline_change')).ok).toBe(true);
   expect((await call(page, 'decline_change')).error).toBe('no_proposal');
   expect((await call(page, 'show_label', { garment: 'bath mat' })).error).toBe('unknown_garment');
+});
+
+/** Like a session sent from the phone: every garment has a label photo thumbnail. */
+async function withThumbnails(page: Page) {
+  const png = readFileSync(new URL('../../../packages/laundry/src/fixtures/labels/navy-jeans.png', import.meta.url)).toString('base64');
+  await page.evaluate(async (data) => {
+    const { store } = await import('/glasses/src/store.ts' as string);
+    const a = (await store.applets()).find((x: { projectId: string }) => x.projectId === 'demo-laundryDemo');
+    const d = a.definition;
+    d.assets = [...d.assets, { id: 'thumb', mediaType: 'image/png', data }];
+    for (const g of d.task.data.garments) g.thumbnail = 'thumb';
+    await store.putApplet(a);
+  }, png);
+}
+
+test('every step and every label card fits the 600×600 display, with thumbnails', async ({ page }) => {
+  await open(page);
+  await withThumbnails(page);
+  await page.goto('/glasses/?webmcp');
+  await page.getByRole('button', { name: /Laundry: Sunday load/ }).click();
+  await expect(page.locator('.l-thumbs img').first()).toBeVisible();
+  const seen: string[] = [];
+  for (let i = 0; i < 30; i++) {
+    const heading = page.getByRole('heading').first();
+    const title = (await heading.textContent())!.trim();
+    const before = await page.evaluate(() => document.body.innerText);
+    seen.push(title);
+    await noScroll(page);
+    if (title === 'All done') break;
+    await call(page, 'confirm_step');
+    await expect.poll(() => page.evaluate(() => document.body.innerText)).not.toBe(before);
+  }
+  expect(seen).toContain('All done');
+  expect(seen.filter((t) => / · Wash$/.test(t)).length).toBeGreaterThan(3);
+  expect(seen.filter((t) => / · Sort$/.test(t)).length).toBeGreaterThan(3);
+
+  // Every garment's label, page by page.
+  for (const garment of ['Blue sweater', 'Silk blouse', 'White towels', 'Navy jeans', 'Gym leggings']) {
+    await call(page, 'show_label', { garment });
+    await expect(page.getByRole('heading', { name: `${garment} label` })).toBeVisible();
+    for (let i = 0; i < 5; i++) {
+      await noScroll(page);
+      if (await btn(page, 'OK').isVisible()) break;
+      await btn(page, 'More').click();
+    }
+    await btn(page, 'OK').click();
+  }
 });

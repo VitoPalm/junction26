@@ -67,3 +67,31 @@ export function labelLines(g: Garment): string[] {
   if (g.info.fibers?.length) out.push(`Fibres: ${g.info.fibers.map((f) => `${f.percent ?? '?'}% ${f.fiber}`).join(', ')}`);
   return out;
 }
+
+/**
+ * Pages for an explanation card on the glasses. Each line reads as its own
+ * sentence, and a page breaks between lines; only a line that is too long on
+ * its own is split, at a word boundary.
+ */
+export function cardPages(lines: string[], limit: number): string[] {
+  const len = (t: string) => Array.from(t).length;
+  const pages: string[] = [];
+  let cur = '';
+  const push = (t: string) => { if (t) pages.push(t); };
+  for (const raw of lines) {
+    const t = raw.trim();
+    if (!t) continue;
+    const line = /[.!?…”)]$/u.test(t) ? t : `${t}.`;
+    const joined = cur ? `${cur} ${line}` : line;
+    if (len(joined) <= limit) { cur = joined; continue; }
+    push(cur);
+    cur = '';
+    for (const word of line.split(/\s+/u)) {
+      const next = cur ? `${cur} ${word}` : word;
+      if (len(next) <= limit) cur = next;
+      else { push(cur); cur = word; }
+    }
+  }
+  push(cur);
+  return pages.length ? pages : [''];
+}

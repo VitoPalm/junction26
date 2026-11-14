@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@wearables-ui-toolkit/mrbd';
-import { ChoiceScreen, ContentScreen, TextBlock, paginateText, type GlassesAction } from '@junction26/glasses-ui';
+import { COPY_LIMITS, ChoiceScreen, ContentScreen, TextBlock, paginateText, type GlassesAction } from '@junction26/glasses-ui';
 import type { AppletSession, TaskModule, ToolDef } from '@junction26/applet-renderer';
 import type { AppletDefinition } from '@junction26/applet-format';
 import type { AppletState } from '@junction26/applet-runtime';
 import { parseLaundry, type LaundryData } from './care.ts';
-import type { Explanation } from './explain.ts';
+import { cardPages, type Explanation } from './explain.ts';
 import {
   accept, answer, confirmStep, decline, dismiss, findGarment, laundryOf, move, report, showCard, showLabel, together, undo, view, whyGroup, whySeparate,
   type LaundryState, type ReportKind,
@@ -55,7 +55,7 @@ export function updateLaundry(session: AppletSession, fn: (data: LaundryData, l:
 const opId = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`);
 
 function Card({ card, onDone }: { card: Explanation; onDone: () => void }) {
-  const pages = useMemo(() => paginateText(card.lines.join(' ')), [card]);
+  const pages = useMemo(() => cardPages(card.lines, COPY_LIMITS.body), [card]);
   const [page, setPage] = useState(0);
   useEffect(() => setPage(0), [card]);
   const last = page >= pages.length - 1;
@@ -164,7 +164,7 @@ export function LaundryScreen({ session }: { session: AppletSession }) {
       ? { id: 'laundry.next', label: 'Next', disabled: v.index === v.steps.length - 1, onActivate: () => up((d, s) => move(d, s, 1)) }
       : { id: 'laundry.confirm', label: v.step.confirm, onActivate: () => up((d, s) => confirmStep(d, s, undefined, v.step.id)) },
   ];
-  const hint = v.step.kind === 'wash' && v.step.groupId ? 'Check your washer’s own settings' : v.step.kind === 'set_aside' ? 'Show label or Explain for why' : undefined;
+  const hint = v.step.kind === 'wash' && v.step.groupId ? 'Suggested; check your washer' : v.step.kind === 'set_aside' ? 'Show label or Explain for why' : undefined;
   return (
     <ContentScreen key={v.step.id} title={v.step.title} actions={actions} footer={
       <div data-g-fit-content className="g-coach-footer">

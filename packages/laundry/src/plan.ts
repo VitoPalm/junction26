@@ -46,6 +46,8 @@ export interface WashGroup {
   color: ColorClass;
   bleach: Bleach;
   alone: boolean;
+  /** Program, temperature and bleach in short form (glasses step text). */
+  program: string;
   /** Clearly a suggestion: we don't know or control the washer. */
   settings: string;
 }
@@ -181,9 +183,10 @@ export function buildPlan(confirmed: Garment[], overrides: Override[] = []): Pla
     const cycleName = members.map((m) => flags.get(m.id)?.cycleName).find(Boolean);
     const id = `w_${key}`;
     const alone = members.length === 1 && key.endsWith(`_${members[0]!.id}`);
+    const program = `${cycleName ?? CYCLE_NAME[w.cycle ?? 'normal']}, ${w.maxTempC}°C or lower, ${bleach === 'any' ? 'bleach allowed' : bleachText(bleach).toLowerCase()}`;
     const group: WashGroup = {
       id, number: i + 1, garmentIds: members.map((m) => m.id), cycle: w.cycle ?? 'normal', maxTempC: w.maxTempC!, color: members[0]!.info.color, bleach, alone,
-      settings: `Suggested (match on your washer): ${cycleName ?? CYCLE_NAME[w.cycle ?? 'normal']}, ${w.maxTempC}°C or lower, ${bleach === 'any' ? 'bleach allowed' : bleachText(bleach).toLowerCase()}`,
+      program, settings: `Suggested (match on your washer): ${program}`,
     };
     plan.washGroups.push(group);
     for (const m of members) {

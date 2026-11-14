@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  accept, answer, buildPlan, canWashTogether, confirmAll, confirmStep, correctField, decline, DEMO_DATA, DEMO_GARMENTS, emptyLaundry,
-  explainSymbol, extractedFor, findGarment, LABEL_FIXTURES, move, normalizeExtraction, parseLaundry, planSteps, report, undo, unconfirmedFields, view,
+  accept, answer, buildPlan, canWashTogether, cardPages, confirmAll, confirmStep, correctField, decline, DEMO_DATA, DEMO_GARMENTS, emptyLaundry,
+  explainSymbol, extractedFor, findGarment, labelLines, LABEL_FIXTURES, move, normalizeExtraction, parseLaundry, planSteps, report, undo, unconfirmedFields, view,
   type Garment,
 } from './index.ts';
 
@@ -21,6 +21,7 @@ test('grouping is conservative: same cycle, same temperature, same colour', () =
   assert.equal(group('red_flannel')!.garmentIds.length, 1, 'new bright garment of unknown colourfastness washes alone');
   assert.ok(group('red_flannel')!.alone);
   assert.match(group('navy_jeans')!.settings, /^Suggested \(match on your washer\): Normal, 40°C or lower, do not bleach$/);
+  assert.equal(group('navy_jeans')!.program, 'Normal, 40°C or lower, do not bleach');
 });
 
 test('hand-wash, do-not-wash, professional and unreadable items stay out of machine groups', () => {
@@ -148,4 +149,23 @@ test('extraction output is normalized, unconfirmed and fails closed', () => {
 
 test('every step fits the display copy budget', () => {
   for (const s of planSteps(plan, DEMO_GARMENTS)) assert.ok(Array.from(s.text).length <= 120, s.id);
+});
+
+test('wash steps show the short program; the screen hint says it is a suggestion', () => {
+  for (const s of planSteps(plan, DEMO_GARMENTS).filter((x) => x.kind === 'wash' && x.groupId)) {
+    assert.doesNotMatch(s.text, /Suggested/, s.id);
+    assert.ok(Array.from(s.text).length <= 72, `${s.id}: ${s.text}`);
+  }
+});
+
+test('label cards read as sentences and break pages between lines', () => {
+  const sweater = DEMO_GARMENTS.find((g) => g.id === 'blue_sweater')!;
+  const lines = [...labelLines(sweater), 'From the maker’s care label as you confirmed it.'];
+  const pages = cardPages(lines, 120);
+  assert.ok(pages.length > 1);
+  for (const p of pages) assert.ok(Array.from(p).length <= 120, p);
+  const text = pages.join(' ');
+  assert.match(text, /30°C\. Bleach:/, 'each line ends with a full stop');
+  for (const line of labelLines(sweater)) assert.ok(pages.some((p) => p.includes(line)), `kept whole: ${line}`);
+  assert.deepEqual(cardPages(['a'.repeat(5) + ' ' + 'b'.repeat(5)], 6), ['aaaaa', 'bbbbb.']);
 });
