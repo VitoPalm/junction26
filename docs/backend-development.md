@@ -10,11 +10,11 @@ How to run, test and change the backend (`apps/api`, `apps/worker`,
 ```text
 apps/api/              HTTP API (Hono on Node). src/app.ts builds the app; src/main.ts listens
   src/routes/          projects, authoring (messages + revisions), releases, state, uploads, misc
-  src/auth.ts          sessions: dev user tokens, device tokens, pairing codes
+  src/auth.ts          Clerk sessions/OAuth, local dev tokens, device and recorder sessions
 apps/worker/           job runner (src/runner.ts) and job handlers (src/handlers.ts)
 packages/db/           migrations/*.sql, migrator, typed queries, test-database helper
 packages/storage/      ObjectStore adapter: S3 (Verda), local filesystem, memory
-packages/server-common config loader (env contract), JSON logger, shutdown, interim definition check
+packages/server-common config loader (env contract), JSON logger, shutdown, legacy structural-check utility
 scripts/dev-db.sh      local PostgreSQL 18 in podman/docker
 scripts/entrypoint.sh  container entrypoint (SERVICE_ROLE=api|worker|migrate)
 Dockerfile, compose.yaml   one image for both processes (Aiven Runtime)
@@ -33,7 +33,7 @@ npm run dev:db                              # starts PostgreSQL on 127.0.0.1:554
 cp .env.backend.example .env.backend.local  # then set SESSION_SECRET (command is in the file)
 chmod 600 .env.backend.local
 npm run dev:api                             # http://127.0.0.1:8080, migrates on start, restarts on change
-npm run dev:worker                          # second terminal
+AUTHORING_MODELS=fake:demo npm run dev:worker # second terminal; free demo model available
 ```
 
 Dev scripts load `.env.backend.local`, then `.env.verda.local` and
@@ -42,13 +42,18 @@ already set in the shell win. Locally, `STORAGE_DRIVER=fs` keeps objects in
 `.data/objects` (git-ignored) so the API and the worker share them. Set
 `STORAGE_DRIVER=s3` to use the real Verda bucket.
 
-Try it:
+Try the direct-definition flow below from the repository root (requires `jq`).
+The fixture is a complete valid definition; a title and format version alone
+are insufficient. This example assumes the local-only `AUTH_MODE=dev`.
 
 ```sh
 B=http://127.0.0.1:8080; A='authorization: Bearer dev:me'; J='content-type: application/json'
 curl -s $B/readyz
 P=$(curl -s -H "$A" -H "$J" -d '{"title":"Row counter"}' $B/v1/projects | jq -r .project.id)
-R=$(curl -s -H "$A" -H "$J" -d '{"definition":{"formatVersion":1,"title":"Row counter"}}' \
+node --conditions=junction26-source --input-type=module -e \
+  'import { FIXTURES } from "@junction26/applet-format"; process.stdout.write(JSON.stringify({definition: FIXTURES.rowCounter}));' \
+  > /tmp/j26-revision.json
+R=$(curl -s -H "$A" -H "$J" --data-binary @/tmp/j26-revision.json \
       $B/v1/projects/$P/revisions | jq -r .revision.id)
 curl -s -H "$A" -H "$J" -H "idempotency-key: $(uuidgen)" \
      -d "{\"revisionId\":\"$R\",\"expectedCurrentReleaseId\":null}" $B/v1/projects/$P/releases
@@ -66,20 +71,34 @@ Tests use Node's built-in runner on the TypeScript sources (type stripping, no
 build step). Database tests need `TEST_DATABASE_URL` (it's in
 `.env.backend.example`). Each test file gets a fresh, migrated database that's
 dropped afterwards. Without the variable, those suites show as **skipped** with
-the reason. CI must set it.
+the reason. CI must set it. If it is configured but PostgreSQL is stopped, tests
+fail with a connection error; start `npm run dev:db` before rerunning.
 
 Video/GIF prototype tests additionally require `ffmpeg` and `ffprobe` (with GIF
 and MPEG-4 encoders). Renderer motion tests require the built worker fit bundle
-and Chromium; see [video-tutorials.md](video-tutorials.md).
+and Chromium; build it with `npm run build:fit -w @junction26/worker`.
+Source preparation also needs Poppler; see [model-pipeline.md](model-pipeline.md)
+and [video-tutorials.md](video-tutorials.md).
 
 | Suite | Covers |
 | --- | --- |
 | `packages/server-common` | env parsing, production refusals, interim definition check |
 | `packages/storage` | memory and fs stores; aborted writes leave nothing |
 | `packages/db` | migrations (idempotent, checksum guard), revision numbering, job claim/lease/fencing/retry/cancel/shutdown, state backup outcomes |
-| `apps/api` `api.test.ts` | auth, ownership (404s), validation, idempotency, uploads (limits, sniffing), pairing, state, publish preconditions |
-| `apps/api` `e2e.test.ts` | author → publish → worker packages → sync → download (hash/ETag/304) → backup → restore; publish race; generation placeholder; upload preparation |
-| `apps/worker` | runner: success, retries + `onFailed`, cancel via signal, lease recovery, generation cap, shutdown requeue |
+| `apps/api` `api.test.ts` | auth, ownership (404s), validation, idempotency, uploads (limits, sniffing), pairing, state, publish preconditions, canonical revision validation and actual-byte state limits |
+| `apps/api` `e2e.test.ts` | author → publish → worker packages → sync → download (hash/ETag/304) → backup → restore; publish race; fake generation and missing-model errors; upload preparation |
+| `apps/worker` | runner: success, retries + `onFailed`, cancel via signal, lease recovery, generation cap, shutdown requeue; source parsing, fit and transcription |
+
+Additional local browser checks (not in `npm test`):
+
+```sh
+npm run test:browser -w @junction26/glasses
+(cd packages/glasses-ui && npx playwright test)
+```
+
+The glasses browser suite uses real IndexedDB with a WebMCP stub, and includes
+backup revision consistency plus local changes during an in-flight backup.
+It is not a hardware voice test.
 
 Manual checks (not in `npm test`):
 

@@ -461,3 +461,16 @@ being sent to OpenRouter. The model allowlist remains enforced on message sends.
 The authoring client groups providers, disables unavailable choices, falls back
 to an available choice, shows image-input limits, and blocks sends while metadata
 is loading or unavailable. Setup: [model-providers.md](model-providers.md).
+
+
+### Revision and backup validation
+
+Direct `POST /v1/projects/:id/revisions` submissions use the canonical
+`validateDefinition` schema, references and copy constraints, plus
+`MAX_DEFINITION_BYTES`. Invalid candidates return `422 invalid_definition`
+with issues and are not stored. This does not perform rendered fit validation
+or implement managed-generation change review.
+
+State PUT bodies are limited to `MAX_STATE_BYTES` (256 KiB by default), measured
+as actual UTF-8 bytes even when `Content-Length` is absent. Oversized requests
+return `413 payload_too_large`.

@@ -17,19 +17,19 @@ For an engineer or agent starting cold. Read in this order:
 | Authoring pipeline proof (PDF → Luna via OpenRouter → validated JSON → rendered guide) | **Proven** in `experiments/openrouter-ikea-v2` (local scripts, not a service) |
 | Verda bucket + credentials, OpenRouter key | **Provisioned** |
 | Aiven PostgreSQL + Runtime | **Provisioned** 2026-11-14: `j26-pg` + `api`/`worker` apps in Google europe-west4 ([infrastructure-setup.md](infrastructure-setup.md)) |
-| Backend: API, worker, DB schema, storage adapter (`apps/api`, `apps/worker`, `packages/db`, `packages/storage`, `packages/server-common`) | **Built**, tested against PostgreSQL 18 locally, container image builds. Not deployed. User auth is a dev placeholder; generation uses the model adapter ([apps.md](apps.md)) |
+| Backend: API, worker, DB schema, storage adapter (`apps/api`, `apps/worker`, `packages/db`, `packages/storage`, `packages/server-common`) | **Built**, tested against PostgreSQL 18 locally, container image builds. Deployment health remains to verify. Clerk web auth and scoped MCP OAuth are implemented; generation uses the model adapter ([apps.md](apps.md)) |
 | Applet format v1 + runtime + renderer (`packages/applet-format`, `applet-runtime`, `applet-renderer`) | **Built (MVP)**, unit-tested; see [apps.md](apps.md) |
-| Model adapter (`packages/model`) + real `generate_revision` | **Built**: OpenRouter / OpenAI-compatible / free `fake` provider, swappable by spec. Luna not yet run against the format |
-| Glasses app (`apps/glasses`): library, runtime host, IndexedDB, sync, pairing, WebMCP, SW | **Built (MVP)**, checked in headless Chrome at 600×600; not on hardware |
+| Model adapter (`packages/model`) + real `generate_revision` | **Built**: OpenRouter, compatible endpoints, Anthropic, Gemini and free `fake`, swappable by spec. Real Luna evidence in [model-pipeline-results.md](model-pipeline-results.md) |
+| Glasses app (`apps/glasses`): library, runtime host, IndexedDB, sync, pairing, WebMCP, SW | **Built (MVP)**, checked in headless Chrome at 600×600; partial hardware voice evidence, full flow open |
 | Authoring app (`apps/author`): web + Capacitor iOS/Android | **Built (MVP)**, checked in Chrome and the Android emulator; iOS project generated, not built |
 | Model-side source ingest, public links/image search, generated-image packaging, measured fit | Built and paid-tested locally; [pipeline and evidence](model-pipeline.md). Server-side change review and direct-publish fit validation remain open |
-| Hardware verification (WebMCP, storage, band, readability) | Not done |
+| Hardware verification (WebMCP, storage, band, readability) | Partial voice evidence: logged diagnostic read and owner-confirmed app success; remaining checks open ([audit](webmcp-audit.md)) |
 
 The experiments contain copies of the component library (`experiments/*/app/src/lib`)
 frozen at trial time. **`packages/glasses-ui` is canonical.** Keep the
 `openrouter-ikea-v2` copy in sync only while it serves as the live demo.
 
-## Target repository layout
+## Current repository layout
 
 Motion follow-up (2026-11-14): short looping GIFs now work in image/sequence
 components, with bounded GIF upload preparation and a local video-snippet CLI.
@@ -39,25 +39,26 @@ YouTube import and model-selected snippets remain to integrate; see
 
 ```text
 apps/
-  api/            [exists] Node HTTP server: /v1 API (+ will serve glasses/ and author/ static builds)
-  worker/         [exists] Node job runner (same image, different entry point)
-  glasses/        React + Vite web app for MRBD (library, runtime host, WebMCP adapter, SW)
-  author/         React + Vite PWA for phone/laptop (library, chat, uploads, preview, review)
+  api/            HTTP API, authenticated /mcp and static /glasses/ + /author/ hosting
+  worker/         durable job runner, source preparation, generation and fit checks
+  glasses/        offline library, runtime host, WebMCP, pairing and explicit sync
+  author/         web authoring + Capacitor Android/iOS shells and phone recorder
+  assistant-mcp/  shared authoring tools and private stdio adapter
 packages/
-  glasses-ui/     [exists] display components on @wearables-ui-toolkit/mrbd
-  applet-format/  types + JSON Schema + validators + fit/copy rules (shared by everyone)
-  runtime/        pure state machine: dispatch(action, args) → new state; used by glasses AND preview
-  diff/           revision comparison → change report (data-loss detection)
-  db/             [exists] SQL migrations + typed queries
-  storage/        [exists] S3 adapter (Verda today), fs + memory for dev/tests
-  server-common/  [exists] env config, logger, shutdown, interim definition check
-  model/          OpenRouter adapter (structured output, usage, errors)
-  ingest/         PDF/image preparation (render pages, extract text, crop, ink)
+  glasses-ui/     canonical fixed-page display components
+  applet-format/  schema, validation, change diff, prompt, capability catalog, fixtures
+  applet-runtime/ pure state machine and state migration
+  applet-renderer/ React rendering, session and WebMCP adapters
+  db/             append-only migrations and typed queries
+  storage/        S3, filesystem and memory object-store adapters
+  server-common/  env config, logging, shutdown, legacy structural-check utility
+  model/          provider-neutral generation, tools and transcription adapters
 experiments/      frozen trials and evidence; do not build product code here
 docs/
 ```
 
-Suggested libraries (latest stable versions on 2026-11-14): React 19.3,
+Dependency versions are pinned in workspace manifests and the lockfile. The
+original implementation choices were: React 19.3,
 react-router-dom 7.18, Vite 8.3 + @vitejs/plugin-react 6.3, TypeScript 7.0,
 Playwright 1.65, zod 4.6 or ajv 8.20 (for JSON Schema), pg 8.23, @aws-sdk/client-s3 3.x,
 Fastify 5.12 or Hono 4.13 for HTTP. Use plain SQL migrations and avoid a heavy ORM.
@@ -171,13 +172,13 @@ writes to IndexedDB. Verify "Hey Meta" invokes it, IndexedDB survives a close
 and a reboot, `navigator.storage.estimate()` reports a quota, band focus/select
 works, and a 1 MB download takes an acceptable time. **If WebMCP isn't
 available or Meta AI never invokes a registered tool, report the blocker**:
-the voice path is unverified. Until hardware is available, continue the
-runtime, manual controls and desktop checks; do not mark M0 complete or promise
-device voice behavior. See [WebMCP audit and verification plan](webmcp-audit.md).
+record the failed invocation separately from successful sessions. Continue
+manual controls and desktop checks while collecting the remaining device
+evidence; do not mark M0 complete based on the voice result alone. See [WebMCP audit and verification plan](webmcp-audit.md).
 
 ### M1. Applet format + runtime (no network)
 
-`packages/applet-format`, `packages/runtime`. Port the IKEA guide and write
+`packages/applet-format`, `packages/applet-runtime`. Port the IKEA guide and write
 two hand-made applets (D&D tracker without dice; crochet counter + pattern
 steps) as fixtures. Acceptance: unit tests for every op (clamping, list match,
 cursor bounds), validation rejects broken references, all fixtures render in the
@@ -195,33 +196,34 @@ a test stub of `document.modelContext`; Meta perf budgets met (first load
 
 ### M3. Backend skeleton + infrastructure
 
-**Status 2026-11-14:** code done; infrastructure not. Built: schema + migrator,
-storage adapter, every endpoint except change reviews and static hosting,
-device pairing, durable job runner with lease recovery, packaging/publish,
-state backup, Dockerfile + compose. Tests cover ownership checks, idempotency
-keys and lease recovery (simulated by an expired lease rather than literally
-killing a process). Remaining: provision Aiven, deploy, choose user auth (open
-decision 1), verify `/readyz` in deployment.
+**Status 2026-11-14:** backend and static hosting implemented; Aiven resources
+provisioned. Clerk web and MCP authentication are implemented. Tests cover
+ownership, idempotency and lease recovery (simulated expiry, not a killed
+process). Remaining: healthy deployment evidence, production configuration and
+complete server-side change-review acceptance. See [infrastructure](infrastructure-setup.md).
 
-Provision Aiven PG + Runtime per [infrastructure-setup.md](infrastructure-setup.md).
+Deploy and verify Aiven PG + Runtime per [infrastructure-setup.md](infrastructure-setup.md).
 `apps/api`, `apps/worker`, `packages/db` (tables from backend-architecture),
-`packages/storage`. Auth: pick the mechanism (see open decisions) and pairing
-codes for glasses. Endpoints: projects, uploads (streamed), jobs, releases,
+`packages/storage`. Auth: Clerk accounts/OAuth and pairing codes for glasses. Endpoints: projects, uploads (streamed), jobs, releases,
 package download, state backup. Acceptance: deploy from GitHub; `/readyz`
 green; integration tests for ownership checks, idempotency keys, job lease
 recovery after killing a worker mid-job.
 
 ### M4. Authoring pipeline as a service
 
-`packages/ingest` (port `experiments/openrouter-ikea-v2/run.py` + `bundle.py` +
-the in-browser `inkify` logic to Node; Poppler via the container or pdfjs) and
-`packages/model`. The worker runs prepare → generate → validate → (one bounded
-repair attempt) → candidate + change report. System prompt =
+**Status:** implemented in `apps/worker/src/sources.ts`, `authoring-tools.ts`,
+`generate.ts` and `fit.ts`, using `packages/model` and Poppler. The worker runs
+prepare → generate → validate and measure fit → up to two repairs → candidate.
+Server-side change-report generation for this path remains open. See
+[managed pipeline](model-pipeline.md) and [recorded evidence](model-pipeline-results.md). System prompt =
 `docs/authoring-instructions.md` + format contract + capability catalog.
 Acceptance: the TROTTEN manual produces a valid candidate end to end; usage and
 cost recorded per job; failures produce a useful message.
 
 ### M5. Authoring client
+
+**Status:** MVP implemented; client review exists, server-side acceptance is
+incomplete. Native sign-in has code but needs end-to-end verification.
 
 `apps/author`: library + plus button, first-run capability popup, chat with
 attachments, job progress, preview (same runtime, separate preview state),
@@ -230,6 +232,10 @@ explanations, accept all / explain what to keep), publish. Acceptance:
 create → edit → publish loop on a phone browser.
 
 ### M6. Publish → sync → backup
+
+**Status:** implemented and checked locally with the real API/worker and browser;
+the complete hardware acceptance flow below remains open. State migration runs
+on opening an installed revision, rather than during package installation.
 
 Packaging job (immutable package with unique assets, hash, manifest), publish
 pointer advanced transactionally, glasses explicit sync (manifest check → download
@@ -257,13 +263,15 @@ See [assistant-mcp.md](assistant-mcp.md).
 
 1. Authentication provider **decided: Clerk**. Web sign-in and session verification
    are implemented and verified locally with the development instance; production
-   configuration and native sign-in remain. Delegated MCP OAuth is implemented
+   configuration and native sign-in verification remain. Delegated MCP OAuth is implemented
    and verified locally ([assistant-mcp.md](assistant-mcp.md)).
    See [authentication-plan.md](authentication-plan.md).
-2. Aiven region and exact plans (Startup PG recommended); when to upgrade for HA.
+2. Aiven region/resources are recorded in [infrastructure](infrastructure-setup.md).
+   Backup/restore evidence, pooling configuration and when to upgrade for HA remain.
 3. Whether to subsidize the first applet and with which credits.
-4. Package size limit and whether to downscale or WebP-encode diagrams at
-   packaging time (likely yes: the glasses download at ~500 Kbps).
+4. Global package size limit and further image encoding/transfer optimization.
+   Source normalization and bounded GIF preparation are implemented; packages
+   embed resolved image bytes. The glasses download at ~500 Kbps.
 5. Safety-critical sources (machinery, electrical): require explicit
    source-fidelity review UI before publishing?
 

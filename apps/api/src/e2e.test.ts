@@ -1,3 +1,4 @@
+import { FIXTURES, validateDefinition } from '@junction26/applet-format';
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -43,7 +44,7 @@ describe('end to end', { skip: skipWithoutDatabase }, () => {
 
   test('author -> publish -> sync -> download -> backup -> restore', async () => {
     const projectId = (await h.call('POST', '/v1/projects', { token: T, body: { title: 'Crochet' } })).body.project.id;
-    const definition = { formatVersion: 1, title: 'Crochet', state: { rows: { type: 'number', default: 0 } } };
+    const definition = { ...FIXTURES.rowCounter, title: 'Crochet' };
     const revision = (await h.call('POST', `/v1/projects/${projectId}/revisions`, { token: T, body: { definition } })).body.revision;
 
     const pub = await h.call('POST', `/v1/projects/${projectId}/releases`, {
@@ -76,7 +77,9 @@ describe('end to end', { skip: skipWithoutDatabase }, () => {
     assert.equal(sha, manifest.body.release.packageSha256);
     assert.equal(res.headers.get('etag'), `"${sha}"`);
     const pkg = JSON.parse(bytes.toString());
-    assert.deepEqual(pkg.definition, definition);
+    const validated = validateDefinition(definition);
+    assert.ok(validated.ok);
+    assert.deepEqual(pkg.definition, validated.definition);
     assert.equal(pkg.revisionNumber, 1);
     const cached = await h.app.request(manifest.body.release.packageUrl, {
       headers: { authorization: `Bearer ${device}`, 'if-none-match': `"${sha}"` },
@@ -101,7 +104,7 @@ describe('end to end', { skip: skipWithoutDatabase }, () => {
   test('two publishes racing on the same base: one wins, the other is superseded', async () => {
     const projectId = (await h.call('POST', '/v1/projects', { token: T, body: { title: 'Race' } })).body.project.id;
     const mk = async (title: string) =>
-      (await h.call('POST', `/v1/projects/${projectId}/revisions`, { token: T, body: { definition: { formatVersion: 1, title } } })).body.revision.id;
+      (await h.call('POST', `/v1/projects/${projectId}/revisions`, { token: T, body: { definition: { ...FIXTURES.rowCounter, title } } })).body.revision.id;
     const [r1, r2] = [await mk('one'), await mk('two')];
     const publish = (revisionId: string, key: string) =>
       h.call('POST', `/v1/projects/${projectId}/releases`, {

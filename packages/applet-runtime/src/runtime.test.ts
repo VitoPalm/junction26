@@ -90,3 +90,35 @@ test('migration keeps data, defaults new fields, orphans removed ones', () => {
   assert.equal(back.values.slots, 3);
   assert.equal(back.orphaned.slots, undefined);
 });
+
+
+test('list edits reject oversized text and non-finite numbers without partial changes', () => {
+  const d = structuredClone(def('characterSheet'));
+  d.actions.push({ id: 'edit', label: 'Edit', description: 'Edit item', args: [
+    { name: 'value', type: 'string', description: 'Replacement value', required: true },
+  ], effects: [
+    { op: 'subtract', field: 'hp', by: 1 },
+    { op: 'listUpdate', field: 'inventory', match: { key: 'name', equals: 'Rope' }, set: { name: { arg: 'value' } } },
+  ] });
+  const state = initialState(d);
+  const before = structuredClone(state);
+  const text = dispatch(d, state, 'edit', { value: 'x'.repeat(121) });
+  assert.ok(!text.ok && text.code === 'invalid_argument');
+  assert.deepEqual(state, before);
+  d.actions.at(-1)!.effects = [{ op: 'listUpdate', field: 'inventory', match: { key: 'name', equals: 'Rope' }, set: { qty: { arg: 'value' } } }];
+  for (const value of ['not a number', 'Infinity']) {
+    const result = dispatch(d, state, 'edit', { value });
+    assert.ok(!result.ok && result.code === 'invalid_argument');
+    assert.deepEqual(state, before);
+  }
+  const valid = run(d, state, 'edit', { value: '7' });
+  assert.equal((valid.values.inventory as any[]).find(i => i.name === 'Rope').qty, 7);
+});
+
+test('text migration counts Unicode code points consistently with action validation', () => {
+  const d = structuredClone(def('rowCounter'));
+  d.state.push({ id: 'note', type: 'text', label: 'Note', default: '', maxLength: 2 });
+  const state = initialState(d);
+  state.values.note = '😀🎉x';
+  assert.equal(migrateState(d, state).values.note, '😀🎉');
+});

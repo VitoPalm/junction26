@@ -89,7 +89,7 @@ function coerceStored(f: StateField, v: Scalar | ListItem[]): Scalar | ListItem[
     case 'number':
       return typeof v === 'number' ? clamp(f, v) : undefined;
     case 'text':
-      return typeof v === 'string' ? v.slice(0, f.maxLength) : undefined;
+      return typeof v === 'string' ? Array.from(v).slice(0, f.maxLength).join('') : undefined;
     case 'boolean':
       return typeof v === 'boolean' ? v : undefined;
     case 'cursor':
@@ -180,6 +180,20 @@ function field<T extends StateField['type']>(def: AppletDefinition, id: string, 
   return f as Extract<StateField, { type: T }>;
 }
 
+/** Appends and edits must enforce the same item constraints. */
+function itemValue(k: Extract<StateField, { type: 'list' }>['item'][number], value: Scalar): Scalar {
+  if (k.type === 'number') {
+    const n = Number(value);
+    if (!Number.isFinite(n)) throw new Fail('invalid_argument', `${k.label} needs a number.`);
+    return n;
+  }
+  if (k.type === 'boolean') return value === true || value === 'true';
+  const text = String(value);
+  if (Array.from(text).length > (k.maxLength ?? 28))
+    throw new Fail('invalid_argument', `${k.label} can be at most ${k.maxLength ?? 28} characters.`);
+  return text;
+}
+
 function applyOp(def: AppletDefinition, s: AppletState, op: Op, args: Record<string, Scalar>, changed: Set<string>) {
   const num = (e: number | { arg: string }) => {
     const v = evalExpr(e, args);
@@ -242,13 +256,7 @@ function applyOp(def: AppletDefinition, s: AppletState, op: Op, args: Record<str
         const expr = op.item[k.key];
         let v = expr === undefined ? undefined : evalExpr(expr, args);
         if (v === undefined) v = k.default ?? emptyOf(k.type);
-        if (k.type === 'number') v = Number(v);
-        if (k.type === 'boolean') v = v === true || v === 'true';
-        if (k.type === 'string') {
-          v = String(v);
-          if (Array.from(v).length > (k.maxLength ?? 28)) throw new Fail('invalid_argument', `${k.label} can be at most ${k.maxLength ?? 28} characters.`);
-        }
-        if (typeof v === 'number' && !Number.isFinite(v)) throw new Fail('invalid_argument', `${k.label} needs a number.`);
+        v = itemValue(k, v);
         item[k.key] = v;
       }
       const n = (s.nextItem[f.id] ?? 0) + 1;
@@ -276,12 +284,12 @@ function applyOp(def: AppletDefinition, s: AppletState, op: Op, args: Record<str
           const def = f.item.find((x) => x.key === k)!;
           const v = evalExpr(e, args);
           if (v === undefined) continue;
-          item[k] = def.type === 'number' ? Number(v) : def.type === 'boolean' ? v === true || v === 'true' : String(v);
+          item[k] = itemValue(def, v);
         }
       } else if (op.op === 'listAdd') {
         const k = f.item.find((x) => x.key === op.key)!;
         const floor = typeof k.default === 'number' && k.default < 0 ? -Infinity : 0;
-        item[op.key] = Math.max(floor, (Number(item[op.key]) || 0) + num(op.by));
+        item[op.key] = itemValue(k, Math.max(floor, (Number(item[op.key]) || 0) + num(op.by)));
       } else {
         item[op.key] = !item[op.key];
       }

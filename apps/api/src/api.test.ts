@@ -1,4 +1,5 @@
 import { after, before, describe, test } from 'node:test';
+import { FIXTURES } from '@junction26/applet-format';
 import assert from 'node:assert/strict';
 import { skipWithoutDatabase } from '@junction26/db/testing';
 import { claimJob, getJobById } from '@junction26/db';
@@ -6,7 +7,7 @@ import { createHarness, type Harness } from './test-support/harness.ts';
 
 const ALICE = 'dev:alice';
 const BOB = 'dev:bob';
-const definition = { formatVersion: 1, title: 'Row counter', state: { rows: { type: 'number', default: 0 } } };
+const definition = FIXTURES.rowCounter;
 
 describe('api', { skip: skipWithoutDatabase }, () => {
   let h: Harness;
@@ -76,7 +77,12 @@ describe('api', { skip: skipWithoutDatabase }, () => {
     const id = await newProject();
     const bad = await h.call('POST', `/v1/projects/${id}/revisions`, { token: ALICE, body: { definition: { title: 'x' } } });
     assert.equal(bad.status, 422);
-    assert.equal(bad.body.error.details.issues[0].path, '$.formatVersion');
+    assert.ok(bad.body.error.details.issues.some((i: { path: string }) => i.path.includes('formatVersion')));
+    const broken = structuredClone(definition);
+    broken.views[0] = { id: 'broken', kind: 'value', field: 'missing_field' };
+    const rejected = await h.call('POST', `/v1/projects/${id}/revisions`, { token: ALICE, body: { definition: broken } });
+    assert.equal(rejected.status, 422);
+    assert.ok(rejected.body.error.details.issues.some((i: { code: string }) => i.code === 'reference'));
     const r1 = await h.call('POST', `/v1/projects/${id}/revisions`, { token: ALICE, body: { definition } });
     const r2 = await h.call('POST', `/v1/projects/${id}/revisions`, {
       token: ALICE,
@@ -191,6 +197,18 @@ describe('api', { skip: skipWithoutDatabase }, () => {
     await h.db.pool.query(`UPDATE pairing_codes SET expires_at = now() - interval '1 second'`);
     const r = await h.call('POST', '/v1/devices/pair', { body: { code: code.body.code } });
     assert.equal(r.status, 400);
+  });
+
+  test('state byte limit applies without Content-Length, including UTF-8 bytes', async () => {
+    const id = await newProject();
+    const device = await pairDevice();
+    const r = await h.call('PUT', `/v1/projects/${id}/state`, {
+      token: device.token,
+      body: { operationId: 'large', sequence: 1, revisionId: null, schemaVersion: 1,
+        expectedServerVersion: 0, snapshot: { text: '😀'.repeat(Math.ceil(256 * 1024 / 4)) } },
+    });
+    assert.equal(r.status, 413);
+    assert.equal(r.body.error.code, 'payload_too_large');
   });
 
   test('state backup: device-only writes, idempotent, conflicts keep both', async () => {
