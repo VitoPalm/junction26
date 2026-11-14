@@ -5,5 +5,6 @@
 export const objectKeys = {
   upload: (userId: string, uploadId: string) => `uploads/${userId}/${uploadId}/original`,
   asset: (sha256: string, ext: string) => `assets/${sha256}.${ext}`,
+  voiceNote: (userId: string, noteId: string) => `notes/${userId}/${noteId}/audio`,
   releasePackage: (projectId: string, releaseId: string) => `releases/${projectId}/${releaseId}/package.json`,
 };

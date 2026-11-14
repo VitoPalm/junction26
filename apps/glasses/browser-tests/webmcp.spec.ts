@@ -64,6 +64,7 @@ test('navigation keeps tools usable and switching applets removes old tools', as
   await page.getByRole('button', { name: /Pancakes/ }).click();
   await expect.poll(() => page.evaluate(() => window.webmcp.list().map(t => t.name))).toEqual([
     'j26_pancake_read_state', 'j26_pancake_next_step', 'j26_pancake_previous_step',
+    'j26_pancake_start_voice_note', 'j26_pancake_stop_voice_note',
   ]);
   await page.evaluate(() => window.webmcp.call('j26_pancake_next_step'));
   await expect(page.getByText(/Beat 2 eggs/)).toBeVisible();
@@ -71,4 +72,17 @@ test('navigation keeps tools usable and switching applets removes old tools', as
   await expect(page.getByText(/Whisk 200 g flour/)).toBeVisible();
   await page.reload();
   await expect(page.getByText(/Whisk 200 g flour/)).toBeVisible();
+});
+
+test('voice note tools refuse politely on bundled examples (they have no phone copy)', async ({ page }) => {
+  await page.goto('/glasses/?webmcp');
+  await page.getByRole('button', { name: /Pancakes/ }).click();
+  await expect.poll(() => page.evaluate(() => window.webmcp.list().length)).toBeGreaterThan(0);
+  await expect(page.getByRole('button', { name: 'Record note' })).toBeVisible();
+  await expect(page.getByText('Say “Hey Meta, record a note”')).toBeVisible();
+  const r = await page.evaluate(() => window.webmcp.call('j26_pancake_start_voice_note'));
+  expect(r.error).toBe('demo_applet');
+  await expect(page.getByText('Notes work on applets from your phone')).toBeVisible();
+  const stop = await page.evaluate(() => window.webmcp.call('j26_pancake_stop_voice_note'));
+  expect(stop.error).toBe('not_recording');
 });

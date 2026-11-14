@@ -25,7 +25,7 @@ export const UPLOAD_TYPES: Record<string, (head: Buffer) => boolean> = {
 
 const SNIFF_BYTES = 16;
 
-class UploadRejected extends Error {
+export class UploadRejected extends Error {
   readonly status: 413 | 415;
   readonly code: string;
   constructor(status: 413 | 415, code: string, message: string) {
@@ -36,7 +36,7 @@ class UploadRejected extends Error {
 }
 
 /** Counts, hashes and sniffs bytes on their way to storage; errors abort the write. */
-class Inspector extends Transform {
+export class Inspector extends Transform {
   bytes = 0;
   private readonly hash = createHash('sha256');
   private head: Buffer = Buffer.alloc(0);

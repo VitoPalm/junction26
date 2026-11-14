@@ -61,6 +61,11 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `AUTHORING_MODEL` | api, worker | Default model spec, `openai/gpt-6-luna` (bare name = OpenRouter; `provider:model` otherwise). See [apps.md](apps.md#models-swappable) |
 | `AUTHORING_MODELS` | api, worker | Extra specs users may pick, comma-separated (e.g. `fake:demo`) |
 | `VOICE_MODEL` | api | Voice-bridge resolver, default `google/gemini-3.5-flash-lite` (needs audio input + tools); `fake:voice` is free. See [voice-fallback.md](voice-fallback.md) |
+| `NOTES_TRANSCRIBE_MODEL` | worker | Final voice-note transcription, default `mistral:voxtral-mini-transcribe-3` (Mistral's transcription API, needs `MISTRAL_API_KEY`); a chat model with audio input such as `google/gemini-3.1-flash-lite` also works; `fake:notes` is free. See [voice-notes.md](voice-notes.md#model-choice) |
+| `NOTES_LIVE_MODEL` | api | Cloud fallback that only listens for "stop recording meta", default `google/gemini-3.1-flash-lite` (OpenRouter); `fake:live` is free |
+| `MISTRAL_API_KEY` | worker | Runtime secret for Voxtral transcription. Never in a frontend bundle |
+| `MISTRAL_BASE_URL` | worker | Default `https://api.mistral.ai/v1` |
+| `NOTES_MAX_SECONDS` | api, worker | Longest voice note, default 300. Also sets the audio upload limit (40 KB per second) |
 | `AUTHORING_REASONING_EFFORT` | worker | Optional `low`/`medium`/`high` |
 | `OPENAI_API_KEY` / `OPENAI_BASE_URL` | worker | For `openai:<model>` specs (any OpenAI-compatible endpoint) |
 | `CORS_ORIGINS` | api | Browser origins allowed to call `/v1` (native shells: `capacitor://localhost,https://localhost`). Dev default includes those and the Vite ports; production default is none |

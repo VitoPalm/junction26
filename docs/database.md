@@ -38,6 +38,7 @@ PostgreSQL 18.
 | `devices` | Paired glasses sessions (token HMAC only) | `token_hash` unique; `revoked_at` |
 | `state_backups` | Every backup attempt, including refused ones | `(project_id, device_id, operation_id)` unique (idempotency) |
 | `project_state` | Pointer to the current accepted backup + `server_version` | One row per project |
+| `voice_notes` | Voice notes on applet pages ([voice-notes.md](voice-notes.md)): anchor (`view_id`, `step_id`), page label, values at start, status, audio key/type/hash/size, transcript | Client-generated `id`; audio key ⇔ hash (CHECK); `uploaded`/`transcribing`/`transcribed`/`failed` need audio; only notes without audio can be `discarded`; edited transcripts are never overwritten (`transcript_edited`) |
 
 What's not here on purpose: chat transcripts and documents in packages; any
 "conversation" table (there's one thread per project until the UX needs more);

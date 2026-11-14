@@ -3,6 +3,7 @@ import type { Pool } from '@junction26/db';
 import type { ObjectStore } from '@junction26/storage';
 import type { ModelRegistry } from '@junction26/model';
 import type { VoiceHub } from './voice.ts';
+import type { NoteHub } from './notes.ts';
 
 export interface Deps {
   config: Config;
@@ -11,6 +12,8 @@ export interface Deps {
   logger: Logger;
   /** Voice bridge fan-out; one per process (created by createApp when omitted). */
   voice?: VoiceHub;
+  /** Voice-note signals between glasses and phone recorder (created by createApp when omitted). */
+  notes?: NoteHub;
   /** Models for voice resolution (built from config when omitted; tests inject fakes). */
   models?: ModelRegistry;
 }

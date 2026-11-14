@@ -109,3 +109,20 @@ textarea { resize: vertical; min-height: 48px; }
 .voice summary { cursor: pointer; font-weight: 600; }
 .voice .stack { margin-top: 10px; }
 .code { font: 700 2.2rem/1.2 ui-monospace, monospace; letter-spacing: 0.1em; text-align: center; margin: 8px 0; }
+
+/* Voice notes */
+.recorder-pill { position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 20; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 8px 14px; text-decoration: none; font-size: 0.9rem; }
+.recorder-pill.recording { border-color: var(--bad); color: #ffd0d0; }
+.recorder-pill.error { border-color: var(--warn); }
+.recorder-status { font-weight: 600; margin: 0; }
+.recorder-status.recording { color: #ffb4b4; }
+.recorder-status.error { color: var(--bad); }
+.notes { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.note-group { display: flex; flex-direction: column; gap: 8px; }
+.note-group h3 { margin: 4px 0 0; }
+.note { display: flex; flex-direction: column; gap: 8px; }
+.note .transcript { margin: 0; white-space: pre-wrap; }
+.note audio { width: 100%; }
+.badge.bad { color: var(--bad); }
+.badge.rec { color: #ffb4b4; }
+.link.danger { color: var(--bad); }

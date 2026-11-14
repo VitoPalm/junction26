@@ -2,6 +2,7 @@ import { toolName, type AppletDefinition } from '@junction26/applet-format';
 import { describeState } from '@junction26/applet-runtime';
 import type { AppletSession } from './session.ts';
 import { viewLabel } from './AppletScreen.tsx';
+import { noteAnchor, viewsWithNotes, type NoteAnchor } from './notes.ts';
 
 /**
  * WebMCP adapter ("Hey Meta, ..."). Registers one tool per applet action plus
@@ -34,7 +35,17 @@ export interface ToolHost {
   openView: (viewId: string) => void;
   /** Current view, for "next step" on a guide. */
   currentView: () => string | null;
+  /** Voice notes (docs/voice-notes.md). Absent where notes can't be recorded (authoring preview). */
+  notes?: {
+    start(anchor: NoteAnchor): Promise<NoteToolResult>;
+    stop(): Promise<NoteToolResult>;
+  };
 }
+
+export type NoteToolResult = { ok: true; message: string } | { ok: false; code: string; message: string };
+
+const noteResult = (r: NoteToolResult, say: string) =>
+  r.ok ? { ok: true, next_action: say } : { error: r.code, message: r.message, next_action: `Tell the user briefly: ${r.message}` };
 
 export function appletTools(def: AppletDefinition, host: ToolHost): ToolDef[] {
   const t = (n: string) => toolName(def.toolPrefix, n);
@@ -104,6 +115,32 @@ export function appletTools(def: AppletDefinition, host: ToolHost): ToolDef[] {
         },
       });
     }
+  }
+  const notePages = viewsWithNotes(def);
+  if (notePages.length) {
+    const names = notePages.map((v) => viewLabel(def, v)).join(', ');
+    tools.push({
+      name: t('start_voice_note'),
+      description: `Start recording a voice note about the page that is open now${about}. Use when the user asks to record, take, add or leave a note, memo or remark here. The user's phone records; they finish by saying "stop recording meta". Pages with notes: ${names}.`.slice(0, 1024),
+      inputSchema: { type: 'object', properties: {}, required: [] },
+      annotations: { readOnlyHint: false },
+      async execute() {
+        if (!host.notes) return noteResult({ ok: false, code: 'notes_unavailable', message: 'Voice notes work on the glasses with the phone app open.' }, '');
+        const anchor = noteAnchor(def, host.session().state, host.currentView());
+        if (!anchor) return noteResult({ ok: false, code: 'no_note_here', message: `This page has no voice notes. Pages with notes: ${names}.` }, '');
+        return noteResult(await host.notes.start(anchor), 'Say only: "Recording." Nothing else.');
+      },
+    });
+    tools.push({
+      name: t('stop_voice_note'),
+      description: `Stop the voice note that is recording now${about}. Use when the user says stop recording, stop the note, or that they are done.`,
+      inputSchema: { type: 'object', properties: {}, required: [] },
+      annotations: { readOnlyHint: false },
+      async execute() {
+        if (!host.notes) return noteResult({ ok: false, code: 'notes_unavailable', message: 'No note is recording.' }, '');
+        return noteResult(await host.notes.stop(), 'Say only: "Saved."');
+      },
+    });
   }
   return tools;
 }

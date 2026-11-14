@@ -20,7 +20,7 @@ const RESERVED_TOOL_NAMES = new Set([
   'getPageText',
 ]);
 /** Tools the glasses runtime adds to every applet. */
-export const BUILTIN_TOOLS = ['read_state', 'open_view', 'next_step', 'previous_step'] as const;
+export const BUILTIN_TOOLS = ['read_state', 'open_view', 'next_step', 'previous_step', 'start_voice_note', 'stop_voice_note'] as const;
 
 export function toolName(prefix: string, name: string): string {
   return `j26_${prefix}_${name}`;
@@ -73,6 +73,8 @@ export function validateDefinition(input: unknown): ValidationResult {
   const first = requested.findIndex((n, i) => n !== installed[i]);
   if (def.assets.some((a) => a.mediaType === 'image/gif') && requested[0] === 0 && requested[1]! < 2)
     add('minimumRuntimeVersion', 'runtime_version', 'Looping GIF assets require runtime 0.2.0 or newer.');
+  if (def.views.some((v) => v.voiceNote) && requested[0] === 0 && requested[1]! < 3)
+    add('minimumRuntimeVersion', 'runtime_version', 'Voice notes require runtime 0.3.0 or newer.');
   if (first >= 0 && requested[first]! > installed[first]!)
     add(
       'minimumRuntimeVersion',
@@ -314,6 +316,7 @@ function validateView(
   copy: Copy,
 ) {
   copy(`${p}.title`, v.title, LIMITS.label);
+  if (v.voiceNote) copy(`${p}.voiceNote.label`, v.voiceNote.label, LIMITS.label);
   if ((v.kind === 'sequence' || v.kind === 'list') && v.actions?.length)
     add(
       `${p}.actions`,

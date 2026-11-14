@@ -76,6 +76,7 @@ attempts and tokens rather than assume exactly-once inference.
 | `prepare_upload` | `POST /v1/uploads` | 3 | Implemented (verification only) |
 | `package_release` | `POST /v1/projects/:id/releases` | 5 | Implemented |
 | `generate_revision` | `POST /v1/projects/:id/messages` | 2 | Implemented (`apps/worker/src/generate.ts`) |
+| `transcribe_voice_note` | `PUT /v1/notes/:id/audio`, `POST /v1/notes/:id/transcribe` | 4 | Implemented (`apps/worker/src/transcribe.ts`) |
 
 ### `prepare_upload`
 
@@ -99,6 +100,27 @@ An incomplete package can never become live: the pointer moves only after the
 upload has succeeded. If the job fails permanently, the release is marked
 `failed`. Objects left by superseded or failed releases aren't cleaned up yet
 (a later sweep job).
+
+### `transcribe_voice_note`
+
+Input `{ noteId, sha256, force? }`; idempotency key `note:<id>:<sha256>`.
+1. Load the note. Deleted, or its audio hash isn't `sha256` any more (a newer
+   upload): finish as a no-op. Already transcribed for this hash and not
+   `force`: no-op.
+2. Mark it `transcribing`, read the audio from storage, and call
+   `NOTES_TRANSCRIBE_MODEL`. Default: Mistral's `/v1/audio/transcriptions`
+   (`voxtral-mini-transcribe-3`, `language=en`, `context_bias` = up to 100
+   words from the applet, as spelling hints), through
+   `packages/model/src/transcription.ts`. A chat-model spec instead gets the
+   audio as a message part with a verbatim-transcript prompt.
+   `cleanTranscript` strips a trailing "stop recording meta" either way.
+3. Save the transcript only if the audio hash still matches, and never over a
+   transcript the wearer edited. A permanent failure marks the note `failed`
+   (the audio stays; the phone offers "Transcribe again"). Transcripts are
+   never logged; usage and cost are recorded on the job.
+
+`fake:notes` is free: it returns the text a test clip carries after
+`TRANSCRIPT:` in its bytes, or a description of the clip.
 
 ### `generate_revision`
 

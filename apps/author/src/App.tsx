@@ -4,6 +4,7 @@ import { CAPABILITIES, LIMITATIONS } from '@junction26/applet-format';
 import { createApi, defaultServer, devToken, isNative, loadSession, saveSession, type Api, type Project, type Session } from './api.ts';
 import { ProjectScreen } from './ProjectScreen.tsx';
 import { GlassesScreen } from './GlassesScreen.tsx';
+import { RecorderPill, RecorderScreen } from './Notes.tsx';
 
 interface Ctx {
   session: Session;
@@ -43,10 +44,12 @@ export function App({ account }: { account?: Ctx } = {}) {
     <AppCtx.Provider value={ctx}>
       {/* Hash routing works the same on the web and inside the native shells. */}
       <HashRouter>
+        <RecorderPill />
         <Routes>
           <Route path="/" element={<Library />} />
           <Route path="/p/:projectId" element={<ProjectScreen />} />
           <Route path="/glasses" element={<GlassesScreen />} />
+          <Route path="/recorder" element={<RecorderScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>
@@ -133,6 +136,7 @@ function Library() {
         <h1>Your applets</h1>
         <div className="row">
           <Link className="ghost" to="/glasses">Glasses</Link>
+          <Link className="ghost" to="/recorder">Recorder</Link>
           <button className="ghost" onClick={() => setWelcome(true)} aria-label="What can I make?">?</button>
           <button className="ghost" onClick={signOut} title={`Signed in as ${session.name}`}>Sign out</button>
         </div>

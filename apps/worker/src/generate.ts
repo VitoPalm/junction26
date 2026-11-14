@@ -37,6 +37,7 @@ import { checkRenderedFit, fitPrerequisites } from './fit.ts';
 import { prepareUploadSource } from './sources.ts';
 import { AuthoringSources, SOURCE_TOOLS } from './authoring-tools.ts';
 import { JobError, type JobHandler } from './types.ts';
+import { fakeTranscribe, isTranscribeRequest } from './transcribe.ts';
 
 const MAX_HISTORY_MESSAGES = 12;
 export const DEFAULT_PROJECT_TITLE = 'New applet';
@@ -45,7 +46,7 @@ export function modelRegistryFromConfig(config: Config): ModelRegistry {
   return createModelRegistry({
     openRouter: { apiKey: config.model.apiKey, baseUrl: config.model.baseUrl },
     openAI: config.model.openAI,
-    fake: fakeAuthor,
+    fake: (req) => (isTranscribeRequest(req) ? fakeTranscribe(req) : fakeAuthor(req)),
   });
 }
 

@@ -13,9 +13,10 @@ import {
   type Revision,
 } from '@junction26/db';
 import { objectKeys } from '@junction26/storage';
-import type { ModelRegistry } from '@junction26/model';
+import type { ModelRegistry, TranscriptionRegistry } from '@junction26/model';
 import { prepareUploadSource } from './sources.ts';
 import { generateRevisionHandler } from './generate.ts';
+import { transcribeVoiceNoteHandler } from './transcribe.ts';
 import { JobError, type HandlerRegistry, type JobHandler } from './types.ts';
 
 // ---------------------------------------------------------------- prepare_upload
@@ -132,10 +133,11 @@ export const packageRelease: JobHandler = {
 // ---------------------------------------------------------------- registry
 
 /** All job handlers. Generation needs the model registry (see generate.ts). */
-export function createHandlers(models: ModelRegistry): HandlerRegistry {
+export function createHandlers(models: ModelRegistry, transcribers?: TranscriptionRegistry): HandlerRegistry {
   return {
     prepare_upload: prepareUpload,
     package_release: packageRelease,
     generate_revision: generateRevisionHandler(models),
+    transcribe_voice_note: transcribeVoiceNoteHandler(models, transcribers),
   };
 }

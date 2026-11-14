@@ -4,6 +4,7 @@ import { diffDefinitions, validateDefinition, type AppletDefinition, type Change
 import { ApiError, waitForJob, type Job, type Message, type ModelOption, type Project, type Release, type RevisionSummary, type Upload } from './api.ts';
 import { useApp } from './App.tsx';
 import { GlassesPreview } from './GlassesPreview.tsx';
+import { NotesPanel } from './Notes.tsx';
 
 const STAGES: Record<string, string> = { preparing: 'Reading your files…', generating: 'Designing your applet…', repairing: 'Fixing a few details…' };
 
@@ -16,7 +17,7 @@ export function ProjectScreen() {
   const [releases, setReleases] = useState<Release[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [definitions, setDefinitions] = useState<Record<string, unknown>>({});
-  const [tab, setTab] = useState<'chat' | 'preview'>('chat');
+  const [tab, setTab] = useState<'chat' | 'preview' | 'notes'>('chat');
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -59,6 +60,11 @@ export function ProjectScreen() {
     } else if (!selected) setSelected(revs[0]?.id ?? null);
   };
 
+  // Page order for the notes list: the live version's views.
+  const liveRevisionId = project?.currentRelease?.revisionId ?? releases.find((r) => r.id === project?.currentReleaseId)?.revisionId;
+  const liveDef = liveRevisionId ? (definitions[liveRevisionId] as { views?: { id: string }[] } | undefined) : undefined;
+  const viewOrder = useMemo(() => liveDef?.views?.map((v) => v.id) ?? [], [liveDef]);
+
   if (error) return <main className="page"><p className="error">{error}</p><Link to="/">Back</Link></main>;
   return (
     <main className="page project">
@@ -68,8 +74,10 @@ export function ProjectScreen() {
         <div className="tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'chat'} onClick={() => setTab('chat')}>Chat</button>
           <button role="tab" aria-selected={tab === 'preview'} onClick={() => setTab('preview')}>Preview</button>
+          <button role="tab" aria-selected={tab === 'notes'} onClick={() => setTab('notes')}>Notes</button>
         </div>
       </header>
+      {tab === 'notes' ? <NotesPanel projectId={projectId} viewOrder={viewOrder} /> : (
       <div className="split" data-tab={tab}>
         <Chat projectId={projectId} messages={messages} onSent={refresh} onDone={onGenerated} />
         <PreviewPanel
@@ -83,6 +91,7 @@ export function ProjectScreen() {
           onPublished={refresh}
         />
       </div>
+      )}
     </main>
   );
 }
