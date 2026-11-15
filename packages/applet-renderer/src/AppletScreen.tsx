@@ -5,6 +5,7 @@ import { anchorKey, noteAnchor, type NotesBinding } from './notes.ts';
 import type { AppletDefinition, Asset, ListItem, View } from '@junction26/applet-format';
 import { formatScalar, formatValue } from '@junction26/applet-runtime';
 import type { AppletSession } from './session.ts';
+import { CoachScreen } from './coach.tsx';
 
 /** What the host should show: the applet's view menu, or one view. */
 export type Screen = { kind: 'menu' } | { kind: 'view'; viewId: string };
@@ -128,6 +129,8 @@ function ViewScreen({ session, view, footer }: { session: AppletSession; view: V
       );
     }
     case 'sequence': {
+      if (def.guide?.sequence === view.id)
+        return <CoachScreen session={session} sequenceTitle={view.title} image={(id, alt) => { const a = def.assets.find((x) => x.id === id); return a?.data ? <AssetImage asset={a} alt={alt} /> : null; }} />;
       const index = Math.min((state.values[view.cursor] as number | undefined) ?? 0, view.steps.length - 1);
       const s = view.steps[index]!;
       const total = view.steps.length;

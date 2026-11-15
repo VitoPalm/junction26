@@ -6,7 +6,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:5174',
     viewport: { width: 600, height: 600 },
-    launchOptions: { executablePath: '/usr/bin/google-chrome-stable', args: ['--no-sandbox'] },
+    // NATIVE_WEBMCP=1: Chrome's own document.modelContext instead of the dev stub (webmcp-native.spec.ts).
+    launchOptions: { executablePath: process.env.CHROME_PATH ?? '/usr/bin/google-chrome-stable', args: ['--no-sandbox', ...(process.env.NATIVE_WEBMCP ? ['--enable-features=WebMCP'] : [])] },
   },
   webServer: {
     command: 'npm run dev -- --strictPort',

@@ -110,3 +110,5 @@ Expired rows are removed for the owner when issuing another session; DELETE
 revokes the current recorder token, or all of the owner's recorder tokens when
 called with a full user session. Every lookup includes expiry and every
 revocation filters by owner. User deletion cascades both tables.
+`0005_coach_requests.sql` allows the `coach_request` job kind (task coach); no new
+tables: requests are jobs, and coach progress is part of the backed-up state snapshot.

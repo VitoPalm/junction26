@@ -20,7 +20,11 @@ const RESERVED_TOOL_NAMES = new Set([
   'getPageText',
 ]);
 /** Tools the glasses runtime adds to every applet. */
-export const BUILTIN_TOOLS = ['read_state', 'open_view', 'next_step', 'previous_step', 'start_voice_note', 'stop_voice_note'] as const;
+export const BUILTIN_TOOLS = [
+  'read_state', 'open_view', 'next_step', 'previous_step', 'start_voice_note', 'stop_voice_note',
+  // Task coach (guides with a `guide` block); see packages/applet-renderer/src/webmcp.ts.
+  'coach_context', 'repeat_step', 'show_parts', 'complete_step', 'ask_question', 'report_problem', 'choose_option', 'confirm_fix', 'cancel_fix',
+] as const;
 
 export function toolName(prefix: string, name: string): string {
   return `j26_${prefix}_${name}`;
@@ -186,6 +190,9 @@ export function validateDefinition(input: unknown): ValidationResult {
     seen57.set(k, n);
   }
 
+  // ---- task coach
+  if (def.guide) validateGuide(def, add, copy);
+
   // ---- assets
   def.assets.forEach((a, i) => {
     if (!a.uploadId && !a.data) add(`assets[${i}]`, 'required', 'Give uploadId or data');
@@ -195,6 +202,40 @@ export function validateDefinition(input: unknown): ValidationResult {
 }
 
 type Add = (path: string, code: string, message: string) => void;
+
+/**
+ * Task coach rules: the guide names a sequence view, every part and excerpt
+ * reference resolves, and every step cites the source (instructions without a
+ * source reference can't be checked, so they're rejected rather than trusted).
+ */
+function validateGuide(def: AppletDefinition, add: Add, copy: Copy) {
+  const g = def.guide!;
+  const seqIndex = def.views.findIndex((v) => v.id === g.sequence);
+  const seq = def.views[seqIndex];
+  if (!seq || seq.kind !== 'sequence') {
+    add('guide.sequence', 'reference', `No sequence view "${g.sequence}"`);
+    return;
+  }
+  const parts = new Set<string>();
+  g.parts.forEach((part, i) => {
+    if (parts.has(part.id)) add(`guide.parts[${i}].id`, 'duplicate_id', `Duplicate part id "${part.id}"`);
+    parts.add(part.id);
+    copy(`guide.parts[${i}].label`, part.label, LIMITS.label, true);
+    copy(`guide.parts[${i}].detail`, part.detail, LIMITS.hint);
+  });
+  const steps = new Set(seq.steps.map((s) => s.id));
+  seq.steps.forEach((s, j) => {
+    const q = `views[${seqIndex}].steps[${j}]`;
+    if (!s.source || (s.source.page === undefined && !s.source.section)) add(`${q}.source`, 'required', 'Cite the source page or section for every guide step');
+    (s.parts ?? []).forEach((id, k) => { if (!parts.has(id)) add(`${q}.parts[${k}]`, 'reference', `No part "${id}" in guide.parts`); });
+  });
+  g.excerpts.forEach((e, i) => {
+    if (e.stepId && !steps.has(e.stepId)) add(`guide.excerpts[${i}].stepId`, 'reference', `No step "${e.stepId}" in "${g.sequence}"`);
+    copy(`guide.excerpts[${i}].text`, e.text, LIMITS.excerpt, true);
+    if (e.source.page === undefined && !e.source.section) add(`guide.excerpts[${i}].source`, 'required', 'Give a page or section');
+  });
+}
+
 type Copy = (path: string, text: string | undefined, limit: number, required?: boolean) => void;
 
 function validateAction(
@@ -400,6 +441,10 @@ function validateView(
         copy(`${q}.title`, s.title, LIMITS.title);
         copy(`${q}.text`, s.text, LIMITS.body);
         copy(`${q}.hint`, s.hint, LIMITS.hint);
+        copy(`${q}.warning`, s.warning, LIMITS.body);
+        copy(`${q}.flagNote`, s.flagNote, LIMITS.hint);
+        copy(`${q}.source.section`, s.source?.section, LIMITS.sourceSection);
+        if (s.flagNote && !s.flag) add(`${q}.flagNote`, 'reference', 'flagNote needs flag');
       });
       break;
     }

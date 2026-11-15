@@ -111,3 +111,21 @@ html, body, #root {
 }
 @keyframes g-rec-pulse { 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .g-rec-dot { animation: none; } }
+
+/* Task coach footer: the "More" button with an optional status, bright text
+   only (additive display), sitting between the content and the dock like the
+   voice note bar. */
+.g-coach-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--uit-spacing-medium, 12px);
+  padding: 0 var(--uit-spacing-large) var(--uit-spacing-xsmall, 4px);
+  min-inline-size: 0;
+}
+.g-coach-status {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  color: var(--g-ink);
+  font-weight: 650;
+}

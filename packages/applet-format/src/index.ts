@@ -10,4 +10,4 @@ export {
   AUTHORING_POLICY,
   FORMAT_GUIDE,
 } from './prompt.ts';
-export { FIXTURES } from './fixtures/index.ts';
+export { FIXTURES, bookcaseGuide, BOOKCASE_SOURCE_TITLE } from './fixtures/index.ts';

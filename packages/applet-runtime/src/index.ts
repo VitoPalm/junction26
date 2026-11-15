@@ -1,3 +1,4 @@
+import type { CoachState } from './coach.ts';
 import type { Action, AppletDefinition, ListItem, Op, Scalar, StateField, ValueExpr, View } from '@junction26/applet-format';
 
 /**
@@ -19,6 +20,8 @@ export interface AppletState {
   view: string;
   /** Per-list counters for item IDs (stable, deterministic). */
   nextItem: Record<string, number>;
+  /** Task coach progress, requests and recovery branch (guides made from a manual). See coach.ts. */
+  coach?: CoachState;
 }
 
 export type DispatchResult =
@@ -81,7 +84,8 @@ export function migrateState(def: AppletDefinition, prev: AppletState, revision:
     if (!f || coerceStored(f, v) === undefined) orphaned[k] = v;
   }
   const view = def.views.some((v) => v.id === prev.view) ? prev.view : entryView(def);
-  return { revision, values, orphaned, view, nextItem };
+  // Coach progress is never dropped: step IDs that a revision removed stay listed.
+  return { revision, values, orphaned, view, nextItem, ...(prev.coach ? { coach: prev.coach } : {}) };
 }
 
 function coerceStored(f: StateField, v: Scalar | ListItem[]): Scalar | ListItem[] | undefined {
@@ -371,3 +375,5 @@ export function stepSequence(def: AppletDefinition, state: AppletState, viewId: 
 export function withView(state: AppletState, viewId: string): AppletState {
   return state.view === viewId ? state : { ...state, view: viewId };
 }
+
+export * from './coach.ts';

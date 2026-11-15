@@ -107,3 +107,22 @@ test('voice note component: label budget, runtime version and reserved tool name
   clash.views[0].actions = ['start_voice_note', 'undo_row'];
   assert.ok(validateDefinition(clash).issues.some((i) => i.code === 'reserved'));
 });
+
+test('task coach guides cite sources and resolve parts and excerpts', async () => {
+  const { bookcaseGuide } = await import('./fixtures/bookcase.ts');
+  assert.ok(validateDefinition(bookcaseGuide).ok);
+  const broken = structuredClone(bookcaseGuide) as any;
+  delete broken.views[0].steps[2].source;
+  broken.views[0].steps[3].parts = ['zz'];
+  broken.guide.excerpts.push({ stepId: 'nope', text: 'x', source: { page: 1 } });
+  broken.views[0].steps[4].flagNote = 'unclear';
+  const r = validateDefinition(broken);
+  assert.equal(r.ok, false);
+  const codes = r.ok ? [] : r.issues.map((i) => `${i.path}:${i.code}`);
+  assert.ok(codes.includes('views[0].steps[2].source:required'), codes.join(' '));
+  assert.ok(codes.includes('views[0].steps[3].parts[0]:reference'));
+  assert.ok(codes.some((c) => c.startsWith('guide.excerpts[') && c.endsWith('stepId:reference')));
+  assert.ok(codes.includes('views[0].steps[4].flagNote:reference'));
+  const wrongView = { ...structuredClone(bookcaseGuide), guide: { ...bookcaseGuide.guide!, sequence: 'missing' } };
+  assert.equal(validateDefinition(wrongView).ok, false);
+});

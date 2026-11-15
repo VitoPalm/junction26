@@ -321,6 +321,16 @@ service and iOS's continuous audio session own capture, recognition, event
 transport and disk uploads independently of the web view. Build and device
 verification details: [native-voice-notes.md](native-voice-notes.md).
 
+## Task coach (2026-11-14)
+
+Guides made from a manual (`guide` block, runtime 0.4.0) render as a coach: one
+step with parts, caution and page; More menu for repeat, parts, ask, report and
+complete; grounded answers and confirmed recovery branches through the
+`coach_request` job. Spec, evidence and hardware checklist:
+[task-coach.md](task-coach.md). Native desktop WebMCP check:
+`NATIVE_WEBMCP=1 npx playwright test browser-tests/webmcp-native.spec.ts`
+in `apps/glasses` (Chrome with `--enable-features=WebMCP`).
+
 ## Known gaps (next)
 
 - Real sign-in (open decision 1); `POST /v1/projects/:id/reviews` so data-loss

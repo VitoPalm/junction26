@@ -77,6 +77,7 @@ attempts and tokens rather than assume exactly-once inference.
 | `package_release` | `POST /v1/projects/:id/releases` | 5 | Implemented |
 | `generate_revision` | `POST /v1/projects/:id/messages` | 2 | Implemented (`apps/worker/src/generate.ts`) |
 | `transcribe_voice_note` | `PUT /v1/notes/:id/audio`, `POST /v1/notes/:id/transcribe` | 4 | Implemented (`apps/worker/src/transcribe.ts`) |
+| `coach_request` | `POST /v1/coach/requests` | 2 | Implemented (`apps/worker/src/coach.ts`) |
 
 ### `prepare_upload`
 
@@ -100,6 +101,27 @@ An incomplete package can never become live: the pointer moves only after the
 upload has succeeded. If the job fails permanently, the release is marked
 `failed`. Objects left by superseded or failed releases aren't cleaned up yet
 (a later sweep job).
+
+### `coach_request`
+
+Task coach question or problem report from the glasses ([task-coach.md](task-coach.md)).
+Input `{ projectId, revisionId, stepId, kind: question|problem, text, clarifications[] }`;
+idempotency key `coach:<deviceId>:<operationId>`. The revision is pinned at enqueue.
+
+1. Load and validate the revision; it must have a `guide` and the step must exist
+   (`not_a_guide`, `unknown_step`, not retryable).
+2. Problem reports about damage, injury, electrics or stability return
+   `unsupported` ("stop and contact the retailer") **without a model call**.
+3. Retrieve passages (step text and verbatim excerpts, current step always
+   included; for problems also the two steps before it) and call `COACH_MODEL`
+   (default free `fake:coach`) with a JSON schema.
+4. Check the output against the given passages (`checkAnswer` /
+   `checkRecovery` in `applet-runtime`): missing or invented citations, a return
+   step after the current one, or oversized copy fail closed to "the manual
+   doesn't say". Result `{ kind, answer }` or `{ kind, recovery }`; usage recorded.
+
+No side effects besides the job result, so a repeat is harmless. Model errors
+map to `model_<code>` like generation.
 
 ### `transcribe_voice_note`
 

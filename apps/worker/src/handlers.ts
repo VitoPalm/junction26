@@ -17,6 +17,7 @@ import type { ModelRegistry, TranscriptionRegistry } from '@junction26/model';
 import { prepareUploadSource } from './sources.ts';
 import { generateRevisionHandler } from './generate.ts';
 import { transcribeVoiceNoteHandler } from './transcribe.ts';
+import { coachRequestHandler } from './coach.ts';
 import { JobError, type HandlerRegistry, type JobHandler } from './types.ts';
 
 // ---------------------------------------------------------------- prepare_upload
@@ -139,5 +140,6 @@ export function createHandlers(models: ModelRegistry, transcribers?: Transcripti
     package_release: packageRelease,
     generate_revision: generateRevisionHandler(models),
     transcribe_voice_note: transcribeVoiceNoteHandler(models, transcribers),
+    coach_request: coachRequestHandler(models),
   };
 }
