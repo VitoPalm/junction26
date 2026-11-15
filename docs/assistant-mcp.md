@@ -3,8 +3,11 @@
 Implemented 2026-11-14. This is the text-only implementation of
 [the assistant integration exploration](assistant-integrations.md). It shares one
 tool contract across Claude and OpenAI MCP clients. Clerk OAuth, consent, PKCE, MCP calls and web-account continuity have been
-verified locally with a real development account in Zen. It is **not yet a
-deployed Claude/ChatGPT connector** or tested inside either provider's UI.
+verified locally with a real development account in Zen. Since 2026-11-15 the
+endpoint is also served publicly at
+`https://humorous-active-ladybird.eur-1.aiven.app/mcp` (see
+[Hosted endpoint](#hosted-endpoint-2026-11-15)), but it has **not yet been added
+or tested inside Claude's or ChatGPT's UI**.
 
 ## What works
 
@@ -199,12 +202,28 @@ local Streamable HTTP transports, validation, API ownership, device refusal, con
 write retries, stale edits, publication review blocks and no generation jobs or
 wearer-state writes. These checks are local, not provider or glasses hardware tests.
 
-Before connecting a cloud-hosted Claude or ChatGPT client:
+### Hosted endpoint (2026-11-15)
 
-1. Choose a reachable HTTPS endpoint, register that exact `/mcp` URL in Clerk,
-   set `MCP_RESOURCE_URL` to match, and deploy the API with real Clerk auth.
-   This does not require switching away from the development instance for the
-   hackathon. Do not expose `AUTH_MODE=dev` or the single-user `http-local` adapter.
+The Aiven `api` app (Clerk development instance, `AUTH_MODE=clerk`) sets
+`MCP_RESOURCE_URL=https://humorous-active-ladybird.eur-1.aiven.app/mcp`. Checked
+with curl after the deploy of `5d7c362`:
+
+- `/.well-known/oauth-protected-resource/mcp` returns that exact resource, the
+  Clerk issuer and the `applets:read` / `applets:draft` scopes;
+- an unauthenticated `POST /mcp` returns 401 with a `WWW-Authenticate`
+  `resource_metadata` challenge;
+- Clerk's authorization-server metadata advertises dynamic registration, CIMD
+  and PKCE S256.
+
+Not yet checked: whether Clerk needs the public resource registered in its
+dashboard, as the local one was (the settings API doesn't expose it). A consent
+failure that mentions the audience or resource points there. To connect: Claude
+→ Settings → Connectors → Add custom connector with that URL; ChatGPT → custom
+connector in developer mode (write tools may need a Business/Enterprise plan).
+
+Remaining before treating it as a working connector:
+
+1. Do not expose `AUTH_MODE=dev` or the single-user `http-local` adapter.
 2. Test the intended provider account: discovery, consent, requested scopes,
    tool confirmations, reconnect/refresh and revocation. No provider-client
    eligibility is implied by our local SDK proof.

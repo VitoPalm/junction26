@@ -94,7 +94,7 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `STORAGE_DRIVER` | api, worker | `s3` (default, required in production), `fs` or `memory` for development |
 | `AUTH_MODE` | api, worker config | `clerk` for real web accounts; `dev` is local-only and refused in production |
 | `CLERK_ISSUER` | api, worker config | Required in Clerk mode: exact HTTPS issuer of the configured instance |
-| `CLERK_AUTHORIZED_PARTIES` | api, worker config | Required in Clerk mode: comma-separated frontend origins; HTTPS in production, loopback HTTP also allowed in development. Separate from CORS |
+| `CLERK_AUTHORIZED_PARTIES` | api, worker config | Required in Clerk mode: comma-separated frontend origins; HTTPS in production, loopback HTTP also allowed in development. Native shells add `https://localhost` (Android) and `capacitor://localhost` (iOS, the only non-HTTPS origin accepted). Separate from CORS |
 | `CLERK_SECRET_KEY` | api, worker config | Backend-only Clerk key for signing-key retrieval; required unless `CLERK_JWT_KEY` is set |
 | `CLERK_JWT_KEY` | api, worker config | Optional PEM RSA public key for networkless verification, instead of a secret key; literal `\n` separators supported. Takes precedence; rotate manually |
 | `CLERK_ALLOW_DEVELOPMENT_INSTANCE` | api, worker config | Hackathon opt-in (default `false`): lets production accept a Clerk development instance (`sk_test_…`, `*.clerk.accounts.dev`). Dev auth, HTTP origins and non-S3 storage stay refused. Remove once a production Clerk instance exists |
@@ -223,8 +223,9 @@ labelled "New", with no GA/beta statement):
 - Connect GitHub by installing the "Aiven Platform" GitHub app (Runtime →
   Deploy application → Connect GitHub account; needs org admin role).
 - **Pushing to GitHub doesn't redeploy.** Redeploy from Console → Application →
-  Overview → Actions → "Deploy latest commit" (no documented CLI/API for this).
-  Saving env vars or ports also redeploys the last deployed commit.
+  Overview → Actions → "Deploy latest commit", or from the CLI by setting
+  `user_config.application.source.commit_sha` (see below). Saving env vars or
+  ports also redeploys the last deployed commit.
 - **Public endpoint is always HTTPS :443**, with TLS terminated by Aiven and
   forwarded as plain HTTP to the container port. HTTP/1 only (no gRPC, HTTP/2 or
   raw TCP). WebSockets aren't documented.
@@ -275,7 +276,28 @@ for setup and the remaining native/connector work.
 5. Ports: `api` → `[{"name":"http","port":8080,"protocol":"HTTP"}]`.
 6. Note the public HTTPS URL (Connection information). That URL is what the
    glasses load (`<url>/glasses/`).
-7. Every later release: push → Console "Deploy latest commit" for each app.
+7. Every later release: push, then redeploy `api` first (it runs migrations on
+   start), then `worker`, either with the Console's "Deploy latest commit" or with
+   the CLI below.
+
+### Redeploying and editing variables from the CLI (2026-11-15)
+
+`avn` works without installing it: `uvx --from aiven-client avn user login`, then
+`avn service get api --project vitopalm1982-7b23 --json`. Facts from using it:
+
+- The app config is `user_config.application`: `environment_variables` (a list of
+  `{key, kind, value}`, `kind` is `variable` or `secret`), `ports` and `source`.
+- `source.commit_sha` (full 40-character SHA) selects the commit to deploy. Once
+  set, the app stays pinned to it even after later pushes; set a new SHA to
+  redeploy. Both apps were pinned this way on 2026-11-15.
+- A normal `service get` returns **every** env value as `<redacted>`, plain
+  variables included, and the list can only be replaced as a whole. Never send
+  that output back. Read with `include_secrets=true` (the Python `AivenClient`
+  from `aiven-client` supports it), change only the entry you mean to change and
+  send the complete list. Don't print the values.
+- Status: `metadata.application_build_status` / `application_deployment_status`
+  / `application_deployment_commit_sha`. A build takes about 2 minutes. The old
+  container keeps answering for up to a minute after the status reads `COMPLETED`.
 
 Health: `GET /healthz` (process up) and `GET /readyz` (DB reachable). Log
 JSON with request/job/revision IDs. Graceful shutdown on SIGTERM; workers
@@ -389,8 +411,9 @@ The API can now serve the shared OAuth-protected MCP tools at `/mcp`. Configure
 `MCP_RESOURCE_URL` (the exact endpoint), `CLERK_PUBLISHABLE_KEY` and
 `CLERK_SECRET_KEY` alongside `AUTH_MODE=clerk` and the existing issuer settings.
 The Docker image includes the shared MCP tool package. The development Clerk
-instance is configured and real local consent/draft creation is verified; no
-public MCP deployment is implied. Register the public HTTPS resource in Clerk
-and preserve its Host header through the proxy before testing cloud clients.
+instance is configured and real local consent/draft creation is verified.
+Since 2026-11-15 the Aiven `api` app sets
+`MCP_RESOURCE_URL=https://humorous-active-ladybird.eur-1.aiven.app/mcp` and serves
+the endpoint publicly; no Claude/ChatGPT client has used it yet.
 See [assistant-mcp.md](assistant-mcp.md) for scopes, bootstrap scripts and the
 remaining provider acceptance checks.
