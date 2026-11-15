@@ -42,10 +42,12 @@ const ResolveBody = z.object({
   audio: z.object({ format: z.literal('wav'), data: z.string().min(1).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) }).optional(),
 }).refine((body) => (body.text !== undefined) !== (body.audio !== undefined));
 
-/** Model call seam for a future per-user budget. */
-async function resolvePreview(models: ModelRegistry, spec: string, context: z.infer<typeof ContextBody>, utt: Utterance) {
-  // budget: check before, record after
-  return resolveUtterance(models, spec, context, utt, AbortSignal.timeout(MODEL_DEADLINE_MS));
+/** One preview resolution, inside the caller's demo budget (docs/api.md, "Demo budget"). */
+async function resolvePreview(deps: Deps, userId: string, models: ModelRegistry, spec: string, context: z.infer<typeof ContextBody>, utt: Utterance) {
+  await assertBudget(deps, userId, spec);
+  const result = await resolveUtterance(models, spec, context, utt, AbortSignal.timeout(MODEL_DEADLINE_MS));
+  await recordSpend(deps, userId, 'voice_preview', result.model, result.costUsd);
+  return result;
 }
 
 /** Routes under /v1/voice. Contract: docs/api.md, "Voice bridge". */
@@ -64,8 +66,9 @@ export function voiceRoutes(deps: Deps, hub: VoiceHub, models: ModelRegistry, no
     const started = performance.now();
     let result;
     try {
-      result = await resolvePreview(models, deps.config.voice.model, body.context, utt);
+      result = await resolvePreview(deps, c.get('principal').userId, models, deps.config.voice.model, body.context, utt);
     } catch (err) {
+      if (err instanceof ApiError) throw err; // 402 budget_exhausted
       if (err instanceof ModelError && err.code === 'bad_request') throw new ApiError(422, 'voice_unsupported_input', err.message);
       throw new ApiError(503, 'voice_model_unavailable', 'The voice model could not answer in time. Try again.');
     }

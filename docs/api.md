@@ -85,7 +85,7 @@ model spend. `GET /v1/usage` returns
 every endpoint that starts paid model work answers `402 budget_exhausted`
 before doing anything: `POST /projects/:id/messages`, `POST /coach/requests`,
 `POST /laundry/labels`, `PUT /notes/:id/audio`, `POST /notes/:id/live`,
-`POST /notes/:id/transcribe`, `POST /voice/utterances`. Requests on a `fake:`
+`POST /notes/:id/transcribe`, `POST /voice/utterances`, `POST /voice/resolve`. Requests on a `fake:`
 model are never blocked or counted. Idempotent replays of existing jobs are
 answered as before.
 
@@ -524,4 +524,4 @@ return `413 payload_too_large`.
 
 ### Browser preview voice resolution
 
-`POST /v1/voice/resolve` requires a user session. Send JSON `{ context, text }` or `{ context, audio: { format: "wav", data: "<base64>" } }`, with exactly one utterance. `context` has the same `projectId`, `title`, `view`, `tools`, and `state` fields as the voice bridge context. Audio is limited to 512 KiB decoded. The response is `{ outcome: "command", tool, args, heard }` or `{ outcome: "ignored", reason, heard }`. The caller executes the returned command; this endpoint does not deliver to glasses. Invalid input returns 400, oversized audio 413, unsupported model input 422, and an unavailable model 503. Audio and transcripts are not logged or stored.
+`POST /v1/voice/resolve` requires a user session. Send JSON `{ context, text }` or `{ context, audio: { format: "wav", data: "<base64>" } }`, with exactly one utterance. `context` has the same `projectId`, `title`, `view`, `tools`, and `state` fields as the voice bridge context. Audio is limited to 512 KiB decoded. The response is `{ outcome: "command", tool, args, heard }` or `{ outcome: "ignored", reason, heard }`. The caller executes the returned command; this endpoint does not deliver to glasses. Invalid input returns 400, an exhausted [demo budget](#demo-budget) 402, oversized audio 413, unsupported model input 422, and an unavailable model 503. Audio and transcripts are not logged or stored.

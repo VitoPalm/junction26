@@ -64,6 +64,16 @@ describe('demo budget', { skip: skipWithoutDatabase }, () => {
     assert.equal(usage.body.usage.remainingUsd, 0);
   });
 
+  test('browser voice preview is refused before any model call once the cap is reached', async () => {
+    // 'dev:budget-ledger' hit the cap in the previous test; VOICE_MODEL is a paid default with no key.
+    const res = await h.call('POST', '/v1/voice/resolve', {
+      token: 'dev:budget-ledger',
+      body: { context: { projectId: 'p1', title: 'Counter', view: null, tools: [{ name: 'add', description: 'Add', parameters: { type: 'object', properties: {} } }], state: '{}' }, text: 'add one' },
+    });
+    assert.equal(res.status, 402, JSON.stringify(res.body));
+    assert.equal(res.body.error.code, 'budget_exhausted');
+  });
+
   test('exempt users have no cap', async () => {
     const p = await project(VIP);
     for (let i = 0; i < 3; i++) assert.equal((await generate(VIP, p)).status, 202);
