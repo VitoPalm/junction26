@@ -73,7 +73,7 @@ attempts and tokens rather than assume exactly-once inference.
 
 | Kind | Enqueued by | `max_attempts` | Status |
 | --- | --- | --- | --- |
-| `prepare_upload` | `POST /v1/uploads` | 3 | Implemented (verification only) |
+| `prepare_upload` | `POST /v1/uploads` | 3 | Implemented (source preparation) |
 | `package_release` | `POST /v1/projects/:id/releases` | 5 | Implemented |
 | `generate_revision` | `POST /v1/projects/:id/messages` | 2 | Implemented (`apps/worker/src/generate.ts`) |
 | `transcribe_voice_note` | `PUT /v1/notes/:id/audio`, `POST /v1/notes/:id/transcribe` | 4 | Implemented (`apps/worker/src/transcribe.ts`) |
@@ -81,10 +81,11 @@ attempts and tokens rather than assume exactly-once inference.
 
 ### `prepare_upload`
 
-Checks that the stored object exists with the recorded size, then marks the
-upload `ready`. If it fails permanently, the upload becomes `failed`. Milestone
-M4 adds the real preparation here (render PDF pages, extract text, crop
-diagrams), ported from `experiments/openrouter-ikea-v2`.
+Verifies stored size, prepares source text and normalized image/page manifests,
+then marks the upload `ready`. A permanent failure marks it `failed`. Source
+preparation is repeatable and preserves the original upload. See
+[the source-preparation contract below](#source-preparation-and-generation-checks-2026-11-14)
+and [pipeline limits](model-pipeline.md).
 
 ### `package_release`
 
@@ -153,12 +154,13 @@ Input: `{ projectId, messageId, baseRevisionId, attachmentIds, model }`.
 3. Resolve `model` (must be in `AUTHORING_MODELS`/`AUTHORING_MODEL`) through
    the model registry (`packages/model`). Progress stages: `preparing`,
    `generating`, `repairing`.
-4. Messages: last 12 thread messages, then the current request with the base
-   definition and attachments (text inline ≤ 200 KiB; images/PDFs ≤ 12 MiB as
-   parts if the model supports them, else skipped and mentioned).
-5. Call the model with the JSON schema response format; parse
-   `{ reply, definition|null }`; validate with `validateDefinition`. If invalid,
-   one repair call with the exact issues.
+4. Prepare owner-filtered conversation attachments and explicit URLs, and give
+   the model extracted text, supported images and bounded source tools. Text-only
+   models cannot inspect diagrams; limits are in [model-pipeline.md](model-pipeline.md).
+5. Parse `{ reply, definition|null }`; validate the canonical schema, references,
+   copy and source refs, hydrate images, and measure fit at 600×600. Up to two
+   repairs retain tool context and receive exact issues. A clarification can
+   succeed without producing a revision.
 6. In one transaction: revision (`source: model`, `job_id`), assistant message,
    and the project title if it was still the placeholder "New solution" (or the
    older "New applet"). Result
@@ -188,9 +190,10 @@ One JSON object per release, immutable once `ready`:
 }
 ```
 
-`assets` will map content hashes to applet-specific images once M4 produces
-them. Shared fonts, icons and components ship with the glasses app, not with
-packages. Size limits and image re-encoding are open decision #4.
+The reserved top-level `assets` object stays empty. Offline image bytes and
+provenance live in `definition.assets[].data`; packaging does no live fetch.
+Shared fonts, icons and components ship with the app. Source/definition/motion
+limits exist; a global package-size budget remains open.
 
 ## Adding a job kind
 

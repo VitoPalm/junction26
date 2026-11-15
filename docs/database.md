@@ -2,7 +2,8 @@
 
 Status: **implemented** in `packages/db` (2026-11-14): schema in
 `packages/db/migrations/`, typed queries in `packages/db/src/queries/`. Target:
-Aiven PostgreSQL (Startup plan, not provisioned yet); developed and tested on
+Aiven PostgreSQL (provisioned; current resource details in
+[infrastructure-setup.md](infrastructure-setup.md)); developed and tested on
 PostgreSQL 18.
 
 ## Principles
@@ -30,8 +31,8 @@ PostgreSQL 18.
 | `uploads` | Authoring files: object key, type, size, SHA-256, status | Status ∈ receiving, stored, ready, rejected, failed |
 | `messages` | Authoring thread (one per project for now) | Linked to the generation job |
 | `revisions` | Immutable candidate definitions, numbered per project | `(project_id, number)` unique; numbers assigned under the project lock |
-| `change_reviews` | Program-detected data-loss findings for a candidate | One per candidate; publish blocked while impacts are unaccepted |
-| `assets` | Applet-specific content-addressed images | `(project_id, sha256)` unique (unused until M4) |
+| `change_reviews` | Program-detected data-loss findings for a candidate | One per candidate; publish blocks recorded unaccepted impacts. Assistant drafts create records; managed/direct revision coverage remains incomplete |
+| `assets` | Reserved content-addressed image records | `(project_id, sha256)` unique; current pipeline embeds resolved bytes in revision definitions instead |
 | `releases` | Publication attempts | A `ready` release has key + hash + size (CHECK); revision must belong to the same project (composite FK) |
 | `jobs` | Durable queue; see [jobs.md](jobs.md) | `(owner_id, idempotency_key)` unique; `running` ⇔ lease set |
 | `pairing_codes` | One-use device pairing codes (HMAC only) | Expiry + `used_at` checked atomically |
@@ -39,7 +40,6 @@ PostgreSQL 18.
 | `state_backups` | Every backup attempt, including refused ones | `(project_id, device_id, operation_id)` unique (idempotency) |
 | `project_state` | Pointer to the current accepted backup + `server_version` | One row per project |
 | `voice_notes` | Voice notes on applet pages ([voice-notes.md](voice-notes.md)): anchor (`view_id`, `step_id`), page label, values at start, status, audio key/type/hash/size, transcript | Client-generated `id`; audio key ⇔ hash (CHECK); `uploaded`/`transcribing`/`transcribed`/`failed` need audio; only notes without audio can be `discarded`; edited transcripts are never overwritten (`transcript_edited`) |
-
 | `note_recorder_sessions` | Native background recorder credentials (`0004_note_recorder_sessions.sql`) | Token HMAC only; owner FK; 12-hour expiry; owner-scoped revocation; API permits only recorder events, confirmation, discard, live check and upload |
 
 What's not here on purpose: chat transcripts and documents in packages; any

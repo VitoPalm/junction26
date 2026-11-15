@@ -221,7 +221,7 @@ applet-specific assets ship in the applet package.
 | Meta | Glasses, toolkit, WebMCP, mentors | Core platform |
 | OpenRouter | (own funds) | **In use** for authoring, $17 key cap |
 | Verda | €200 credits, code `JUNCTION-2026` (needs a payment method on file to redeem) | **Redeemed** in project `Junction26`; bucket provisioned |
-| Aiven | $50 signup credits, 30-day trial, no card | **Selected** for Runtime + PostgreSQL; nothing provisioned yet |
+| Aiven | $50 signup credits, 30-day trial, no card | **Provisioned** Runtime + PostgreSQL; deployment checks in [infrastructure-setup.md](infrastructure-setup.md) |
 | OpenAI | $100 "Codex credits" (2,500 credit units seen) | Codex only, not API |
 | Google Gemini | API credits (amount unspecified) | Applied, pending |
 | Anthropic | $20 API credits per participant | Applied, pending |

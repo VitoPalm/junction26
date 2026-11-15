@@ -4,12 +4,14 @@ Status: Clerk selected by the owner, 2026-11-14. Web sign-in and backend session
 verification implemented and tested locally with signed fixtures. A Clerk
 development application is configured in ignored local env files. Real Google
 sign-in, authenticated library retrieval and session persistence after reload
-were verified in Zen against the local API. Native account sign-in and production deployment remain deferred. The API now
+were verified in Zen against the local API. Native account sign-in code exists (email in the WebView and system-browser
+social OAuth with a callback), but end-to-end native verification and production
+deployment remain pending. See [native app setup](apps.md#android-emulator). The API now
 implements scoped MCP OAuth, verified with real local consent and draft creation
 in Zen; cloud-provider connector tests and a public HTTPS endpoint remain.
 
 Hackathon priority (owner decision): keep the Clerk development instance for now
-and focus next on delegated MCP account linking. Native sign-in remains on the
+and focus next on delegated MCP account linking. Native sign-in verification remains on the
 backlog; phone users can use web authoring. Production provisioning is deferred,
 and the production configuration safeguards remain in place.
 
@@ -37,10 +39,14 @@ to a production instance (own domain) and remove both opt-ins for a real release
    with a second account and verify the libraries remain separate. Pair glasses
    from the signed-in account using the existing pairing flow.
 5. For deployment, set HTTPS allowed origins and build with a `pk_live_…` key.
-   Production config refuses dev auth and Clerk development issuers/secret keys.
+   Production config refuses dev auth and, without the explicit hackathon
+   opt-in described above, Clerk development issuers/secret keys.
    Native shells run Clerk's web sign-in inside the WebView (`apps/author/.env.native`,
-   plus `https://localhost` in `CLERK_AUTHORIZED_PARTIES`). Email/code works; Google
-   OAuth needs the system-browser/callback flow, which is not implemented.
+   plus `https://localhost` in `CLERK_AUTHORIZED_PARTIES`). Email/code uses the embedded UI; social
+   OAuth uses `src/native-oauth.ts` to open the system browser and handle
+   `com.junction26.applets://oauth-callback`. That code is implemented but not
+   verified end to end. Native setup and origin limitations are in
+   [apps.md](apps.md#android-emulator).
 
 No first-party session credentials are saved by our app in localStorage; Clerk
 owns its session lifecycle. API requests call the SDK token getter every time.

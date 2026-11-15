@@ -27,7 +27,9 @@ export function stateRoutes(deps: Deps) {
     const principal = c.get('principal');
     requireDevice(principal);
     const projectId = param(c, 'projectId');
-    const length = Number(c.req.header('content-length') ?? '0');
+    // The header is optional (for example with chunked requests). The global
+    // body limit bounds buffering; enforce the smaller state limit on actual bytes.
+    const length = Buffer.byteLength(await c.req.text());
     if (length > deps.config.limits.maxStateBytes) {
       throw new ApiError(413, 'payload_too_large', `State snapshots are limited to ${deps.config.limits.maxStateBytes} bytes`);
     }

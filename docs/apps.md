@@ -3,9 +3,11 @@
 Status (2026-11-14): **MVP built**. The full loop runs locally: describe →
 generate → preview → publish → pair glasses → sync → use offline → back up
 state. Checked in headless Chrome (phone viewport and 600×600 glasses) and in
-the Android emulator (Pixel 6 Pro, Android 17). **Not checked on real glasses
-or on iOS** (iOS needs a Mac). WebMCP was exercised only through the
-development stub, not Meta AI.
+the Android emulator (Pixel 6 Pro, Android 17). The full flow is not verified on
+real glasses or iOS (iOS needs a Mac).
+WebMCP has a logged hardware read callback and owner-reported success in the
+actual app; repeatable write/readback, storage and offline device checks remain.
+See [hardware evidence](webmcp-audit.md).
 
 ## Pieces
 
@@ -34,9 +36,12 @@ action args are an array. Views: `text`, `value`, `list` (checklist with
 `move`, `goto`. Fixtures in `src/fixtures/` (row counter, D&D sheet, packing
 list, pancake guide) double as glasses demo content and the fake model's output.
 
-State migration on a new release keeps values with the same ID and type,
-defaults new fields, and moves dropped/retyped values to `orphaned` instead of
-deleting them (a later revision that brings the field back restores them).
+State migration on opening a new revision keeps values with the same ID and
+type, defaults new fields, and moves dropped/retyped values to `orphaned`
+(a later revision can restore them). Numeric bounds and text limits can clamp
+carried values; these are not a complete approved-migration or rollback system.
+Text limits count Unicode code points consistently in actions and migration.
+List appends and updates both enforce text limits and finite numeric values.
 
 ## Models (swappable)
 
@@ -68,8 +73,9 @@ The prompt and local validation are provider-neutral.
 
 Generation (`apps/worker/src/generate.ts`): thread + attachments (text inline,
 images and PDFs as parts when the model supports them) + the current
-definition → model (JSON schema response format) → validate → one repair call
-with the exact issues → save revision + assistant reply. Usage and cost are
+definition → model (JSON schema response format and bounded source tools) →
+validate structure and measured fit → up to two repair calls with exact issues
+→ save revision + assistant reply. See [pipeline](model-pipeline.md). Usage and cost are
 recorded on the job. Failures post a plain-language reply in the thread.
 
 ## Glasses app (`apps/glasses`)
@@ -78,7 +84,8 @@ recorded on the job. Failures post a plain-language reply in the thread.
   the bundled examples.
 - Opening resumes the last view; Back goes to the applet's view menu, then home.
 - State in IndexedDB, written before an action is acknowledged. **No network
-  during normal use.** Network only on Pair and Sync: library manifest →
+  during local rendering, navigation and ordinary actions.** Pair and Sync use the network;
+  opt-in phone voice and note recording also have explicit network flows. Sync: library manifest →
   download changed packages (SHA-256 verified, validated, then activated) →
   restore server state for new installs → batched state backup → last-opened.
 - WebMCP: one tool per action (`j26_<prefix>_<action>`) plus `read_state`,
@@ -123,12 +130,12 @@ API and worker, memory object storage, dev authentication and only `fake:demo`:
   reload still showed three, with no fit-guard alert.
 - Both releases were ready; the server backup contained `values.rows = 3`.
 
-Follow-up found by inspecting that backup: during update sync, its envelope
-`revisionId` named revision 2 while `snapshot.revision` still named revision 1.
-`sync()` installs the new package before backing up old saved state; migration
-is currently deferred to `loadState()`. Local progress survived this test, but
-backup revision consistency and recovery after a schema-changing update need a
-dedicated regression test/fix. This run did not establish those behaviors.
+The original run exposed a backup revision mismatch after installing an update.
+The sync code now labels a backup with `snapshot.revision`, rather than the
+newly installed package revision. A browser regression also covers a local edit
+while a backup is in flight: the edit stays dirty and retains the accepted
+server version for its next upload. Migration remains deferred to `loadState()`;
+this does not establish recovery after every schema-changing update.
 
 No paid model, Clerk login, Aiven deployment, Meta agent, hardware or offline
 cold start was tested. The temporary API/worker and author dev server were
@@ -141,7 +148,8 @@ One React codebase: web build served at `/author/`, and Capacitor 8.5 shells
 
 - Sign-in: Clerk accounts on the web, with a fresh session token per API request.
   The Vite dev server retains optional name-based `dev:<name>` login. Native
-  Clerk sign-in remains pending; Clerk-mode native builds point to the web app.
+  shells contain email sign-in plus system-browser social OAuth/callback code;
+  end-to-end native verification remains pending.
   Setup: [authentication-plan.md](authentication-plan.md). Library home: a
   "What do you need?" composer (text + files) that creates the project and
   starts generation in one step (in-memory hand-off, `src/ui.ts`), a
@@ -213,7 +221,7 @@ cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8095     # prints http
 AUTHORING_MODELS=fake:demo WEB_ROOT=/tmp/j26web PUBLIC_ORIGIN=https://<random>.trycloudflare.com npm run dev:api
 ```
 
-Install on the glasses with `fb-viewapp://web_app_deep_link?appName=Applets&appUrl=<url>/glasses/`
+Install on the glasses with `fb-viewapp://web_app_deep_link?appName=Solutions&appUrl=<url>/glasses/`
 (as a QR code or a tapped link on the phone), or add the URL manually in the
 Meta AI app. Get a pairing code from the authoring app's Glasses screen. Quick
 tunnels are temporary: the URL changes every time cloudflared restarts.
@@ -230,81 +238,25 @@ npm run dev -w @junction26/glasses                # terminal 4 → :5174/glasses
 
 Pick "Demo (canned examples, free)" in the chat's model picker to avoid
 spending OpenRouter credit. The real default (Luna) needs `OPENROUTER_API_KEY`
-in `.env.openrouter.local`; it has **not** been run against the applet format yet.
+in `.env.openrouter.local`; paid applet-format runs are recorded in
+[model-pipeline-results.md](model-pipeline-results.md).
 
-## Planned: images in applets (not built)
+## Sources, images and public links
 
-**Today:** the format (`image` views, `image` steps, `assets[]` with `uploadId`
-or `data`) and the renderer (`Diagram`, re-inked for the additive display)
-support images. Photos attached in the app reach the model as context only, so
-it can read a photographed recipe but can't put the picture on the glasses.
-Nothing fetches images from the internet. An asset with only an `uploadId`
-renders "This picture isn't downloaded yet." on the glasses.
+These are implemented in managed generation. Uploads pass through the API;
+preparation caches extracted text and normalized images/PDF pages. Public URLs
+in the message and bounded source tools supply further context. Referenced image
+bytes and attribution are resolved on the server into the definition, so preview
+and offline packages use the same bytes. There is no browser-to-Verda traffic.
 
-**Build order** (each step reuses the one before):
-
-1. **Upload → applet asset.**
-   - *Prompt:* list the request's image attachments with stable asset IDs
-     (e.g. `img_1` = upload `<id>`, "photo of the finished joint"), and allow
-     `assets[{ id, uploadId, mediaType }]`.
-   - *Validation:* the worker accepts only upload IDs owned by the project
-     owner, and never an inline `data` field from the model.
-   - *Packaging:* `package_release` resolves every `uploadId` to bytes,
-     downscales to fit 600×600 and re-encodes (WebP or PNG; open decision 4),
-     dedupes by SHA-256 (`assets` table, `objectKeys.asset`), and inlines the
-     result as `data` in the immutable package.
-   - *Limits:* enforce a package size budget. The glasses download at about
-     500 Kbps, so roughly 1 MB ≈ 16 s.
-   - *Preview:* the authoring preview needs the same bytes. Either an
-     authenticated asset endpoint the preview fetches, or a preview package
-     built on demand.
-2. **PDF ingest.** In `prepare_upload` (or a new `ingest` job), render pages
-   and extract text (Poppler in the container, or pdf.js). Crop diagram
-   regions and store them as derived uploads/assets. Give the model page
-   images plus text, as in `experiments/openrouter-ikea-v2` (`run.py` +
-   `bundle.py`). Keep source page/region references for fidelity review.
-3. **Images from links.** The link import (next section) downloads the main
-   images through the same SSRF-safe fetcher, stores them as uploads, and
-   from there follows step 1.
-
-## Planned: applets from web links (not built)
-
-**Trial (2026-11-14, ~$0.02 total, `openai/gpt-6-luna` via OpenRouter).** Test
-pages: Capacitor release notes published after the model's training (8.6.2,
-8.6.0), checked against GitHub's API.
-
-- Plain chat completion: the model can't fetch URLs. It said so instead of
-  guessing ($0.00004).
-- OpenRouter web plugin (`plugins: [{ id: 'web', max_results: 3 }]`): correct
-  both times, including all 8 changes on 8.6.0, with a `url_citation`
-  annotation. About $0.01 extra per request, 2–3 s. It works from search
-  results, so long pages (manuals, recipes), JavaScript-rendered pages and
-  pages behind a login are untested and probably come back as excerpts only.
-
-**Design:**
-
-1. **"Make an applet from this link"**: fetch it ourselves; don't rely on the
-   model. The worker fetches the page in a preparation step (like
-   `prepare_upload`), extracts readable text and the main images, stores them
-   as uploads, and passes them to the model as ordinary attachments (images
-   then become applet assets as in "Planned: images in applets", step 1). Reasons:
-   it works with every provider, there's no per-search fee, the result is
-   deterministic, and the exact source stays available for fidelity review.
-   - The API accepts `urls` on a message (or `POST /v1/uploads` with a URL).
-     Add a new job kind with a new migration for the CHECK constraint; see
-     [jobs.md](jobs.md#adding-a-job-kind).
-   - **SSRF:** the server fetches URLs that users supply, so allow only
-     http(s), resolve DNS and refuse private, loopback, link-local and metadata
-     addresses (re-check after redirects), cap redirects, size and time, and
-     sniff the content type. PDFs go down the existing PDF path.
-   - JavaScript-heavy pages may need a headless renderer or an extraction
-     service (Exa / Context.dev sponsor credits) behind the same interface.
-2. **Open-ended lookups ("find me a recipe for X")** use provider search.
-   Add an optional `webSearch` capability and request field to
-   `packages/model`. The OpenRouter provider maps it to the web plugin; other
-   providers report it unsupported. Turn it on per model, record the search
-   cost in job usage, and keep the citations so the authoring app can show
-   sources.
+Use [model-pipeline.md](model-pipeline.md) for the supported source matrix,
+network boundaries, source/size limits and fit workflow, and
+[model-pipeline-results.md](model-pipeline-results.md) for recorded paid evidence.
+Image search uses Commons; web search depends on provider capability. Neither
+path establishes source fidelity automatically. Authenticated and
+JavaScript-rendered pages, spreadsheets and automatic video import remain
+unsupported; [video-tutorials.md](video-tutorials.md) describes the separate
+local snippet prototype.
 
 ## Voice notes (2026-11-14)
 
@@ -333,14 +285,23 @@ in `apps/glasses` (Chrome with `--enable-features=WebMCP`).
 
 ## Known gaps (next)
 
-- Real sign-in (open decision 1); `POST /v1/projects/:id/reviews` so data-loss
-  acceptance is enforced server-side.
-- Images in applets and PDF ingest: see "Planned: images in applets".
-- The API's `POST …/revisions` still uses the interim definition check; switch
-  it to `validateDefinition` (tests post minimal definitions today).
-- Measured fit at publish time (headless render at 600/480); today the fit guard
-  catches overflow on the device/preview only.
-- Hardware verification: WebMCP via Meta AI, IndexedDB persistence, band focus.
+- Managed generation and direct revision submissions do not create/enforce a
+  complete server-side change review. The authoring UI's acceptance checkbox is
+  client-side; assistant draft revisions have a separate server-side review gate.
+  There is no general reviews acceptance endpoint yet.
+- Direct revision submissions now use canonical structural/reference/copy
+  validation, but publication does not rerun measured fit for every source of
+  revision. Managed generation does measure fit at 600×600; preview/device fit
+  guards remain the final runtime protection. The intended 480×480 acceptance
+  coverage is not the same as the managed check.
+- Migration recovery for schema-changing updates, explicit approval of narrowed
+  bounds and full snapshot rollback need further work.
+- Global package-size and per-user spend limits remain open; source, definition
+  and motion budgets already exist.
+- Native sign-in verification, production auth/deployment checks, and repeatable
+  hardware voice, persistent storage, offline launch, band and readability checks
+  remain. See [authentication](authentication-plan.md),
+  [infrastructure](infrastructure-setup.md) and [WebMCP audit](webmcp-audit.md).
 
 ## Real-model source pipeline (2026-11-14)
 

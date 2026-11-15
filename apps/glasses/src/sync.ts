@@ -191,7 +191,7 @@ export async function sync(): Promise<SyncReport> {
         body: JSON.stringify({
           operationId: `${p.deviceId}:${s.projectId}:${s.sequence}`,
           sequence: s.sequence,
-          revisionId: a.revisionId,
+          revisionId: s.state.revision,
           schemaVersion: 1,
           expectedServerVersion: s.serverVersion,
           snapshot: s.state,
@@ -199,7 +199,7 @@ export async function sync(): Promise<SyncReport> {
       });
       // Only clear `dirty` if nothing changed while the request was in flight.
       const latest = await store.state(s.projectId);
-      if (latest && latest.sequence === s.sequence) await store.putState({ ...latest, dirty: false, serverVersion: out.serverVersion, conflict: false });
+      if (latest) await store.putState({ ...latest, dirty: latest.sequence !== s.sequence, serverVersion: out.serverVersion, conflict: false });
       report.backedUp++;
     } catch (e) {
       if (e instanceof HttpError && (e.code === 'state_conflict' || e.code === 'state_stale')) {

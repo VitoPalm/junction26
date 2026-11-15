@@ -13,7 +13,7 @@ import {
   withTransaction,
   type Job,
 } from '@junction26/db';
-import { checkDefinition } from '@junction26/server-common';
+import { validateDefinition } from '@junction26/applet-format';
 import type { AppEnv, Deps } from '../context.ts';
 import { authorId, assistantAuthorId } from '../auth.ts';
 import { ApiError, badRequest, conflict, notFound } from '../errors.ts';
@@ -129,7 +129,11 @@ export function authoringRoutes(deps: Deps) {
     const userId = authorId(c);
     const projectId = param(c, 'projectId');
     const body = await readJson(c, RevisionBody);
-    const check = checkDefinition(body.definition, deps.config.limits.maxDefinitionBytes);
+    if (Buffer.byteLength(JSON.stringify(body.definition) ?? 'null') > deps.config.limits.maxDefinitionBytes)
+      throw new ApiError(422, 'invalid_definition', 'The applet definition is invalid', {
+        issues: [{ path: '$', code: 'too_large', message: `Definition exceeds ${deps.config.limits.maxDefinitionBytes} bytes` }],
+      });
+    const check = validateDefinition(body.definition);
     if (!check.ok) throw new ApiError(422, 'invalid_definition', 'The applet definition is invalid', { issues: check.issues });
 
     const revision = await withTransaction(deps.pool, async (tx) => {
@@ -140,9 +144,9 @@ export function authoringRoutes(deps: Deps) {
       return createRevision(tx, {
         projectId,
         baseRevisionId: body.baseRevisionId,
-        definition: body.definition,
-        formatVersion: check.formatVersion,
-        minimumRuntimeVersion: check.minimumRuntimeVersion,
+        definition: check.definition,
+        formatVersion: check.definition.formatVersion,
+        minimumRuntimeVersion: check.definition.minimumRuntimeVersion,
         validationStatus: 'valid',
         validationIssues: [],
         source: 'client',

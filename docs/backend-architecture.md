@@ -1,8 +1,9 @@
 # Backend architecture
 
 Status: agreed design, 2026-11-14; provider facts re-verified the same day. This
-records the agreed direction and the reasons behind it. **The backend skeleton
-(milestone M3) is implemented and tested locally, not deployed.** The
+records the agreed direction and the reasons behind it. **The backend, managed source pipeline and MVP clients are implemented and
+tested locally. Aiven resources are provisioned; deployment health remains a
+separate verification step.** The
 implemented contracts are in [api.md](api.md), [jobs.md](jobs.md) and
 [database.md](database.md). Where this page and those disagree, those describe
 the code. Product intent lives in [product-spec.md](product-spec.md),
@@ -40,7 +41,7 @@ We do not build or deploy a separate executable application for every applet.
 | HTTP framework | Hono 4.13 on `@hono/node-server` (small, streaming request bodies, in-process test requests) |
 | Database access | `pg` 8.23 with plain SQL migrations and typed query functions; no ORM |
 | Request validation | zod 4.6 |
-| User authentication | **Clerk** for web accounts (`AUTH_MODE=clerk`); local-only dev mode retained. Device pairing implemented; native Clerk and delegated MCP OAuth remain pending |
+| User authentication | **Clerk** for web accounts (`AUTH_MODE=clerk`); local-only dev mode retained. Device pairing implemented; scoped MCP OAuth and native social callback code are implemented; native verification remains pending |
 
 Start with modest capacity. Managed plan upgrades provide a growth path; automatic
 horizontal scaling is not an initial requirement. Do not provision GPUs, Redis,
@@ -57,12 +58,13 @@ balances are live operational data, not a guarantee of future availability.
 
 Backend-only local configuration is saved in `.env.openrouter.local` with mode
 `0600` and is Git-ignored. `.env.openrouter.example` contains no secret. Supply the
-key through Aiven runtime secrets when deploying; no hosted backend is configured
-yet. Set token ceilings and bounded retries per job, record reported usage, and
+key through Aiven runtime secrets when deploying; resource provisioning and
+healthy deployment are distinct checks. Set token ceilings and bounded retries per job, record reported usage, and
 handle insufficient-credit, key-limit, rate-limit, and expiry errors explicitly.
 Route structured-output requests only to endpoints that support the required
-parameters and validate all results locally. Luna's schema adherence and output
-quality have not yet been tested with the applet contract.
+parameters and validate all results locally. Real Luna applet-contract runs are recorded in
+[model-pipeline-results.md](model-pipeline-results.md), with source fidelity and
+other limitations kept explicit.
 
 The Junction OpenAI grant is Codex usage credit, not API credit. A read-only
 account check on 2026-11-14 confirmed ChatGPT-authenticated Codex access and an
@@ -137,10 +139,11 @@ A versioned definition contains:
   and effects expressed through supported operations.
 - References to applet-specific assets and optional source references.
 
-The exact component and operation catalogs remain to be specified. The first
-catalog should cover text, cards, lists, counters, checklists, step navigation,
-and basic forms. Generated actions can compose validated operations such as
-incrementing a numeric field or adding an item to a typed collection.
+The implemented catalog is in `packages/applet-format` and summarized in
+[apps.md](apps.md#applet-format-v1): text, values, lists/checklists, sequences
+and images, plus constrained state operations. Generated actions can compose
+validated operations such as incrementing a numeric field or adding a typed
+list item. This is not an arbitrary form or UI-code generator.
 
 WebMCP is an adapter over this registry. Only scalar parameters reach Meta AI
 (`string`/`number`/`integer`/`boolean`); `enum`, ranges and nested schemas are dropped,
@@ -152,11 +155,16 @@ the active applet's tools and unregister them when leaving it.
 
 ## Design and data have separate lifecycles
 
+This section states the target protection contract. The client computes change
+findings, and assistant draft submissions create server-side review records.
+Managed generation and direct revision submissions do not yet enforce the whole
+contract; see [current gaps](apps.md#known-gaps-next).
+
 A component displays a field; it does not own the field's stored value. Removing
 an inventory card must not delete the inventory. Moving the same data to another
 view is a layout change, not a data migration.
 
-Every authoring run produces a complete candidate revision. Only after that run
+Every authoring run produces a complete candidate revision. The design requires that only after that run
 finishes do we compare it with its base revision for:
 
 - Removed or changed state fields, collection types, or action capabilities.
@@ -174,7 +182,7 @@ State migrations use validated operations; the model cannot issue SQL or mutate
 live user state directly. Keep a pre-migration state snapshot. Restoring an old
 layout does not implicitly roll back newer user data.
 
-## Proposed persistence model
+## Persistence model
 
 All user-owned records carry an owner reference. User content and mutable data
 are private by default.
@@ -210,7 +218,7 @@ glasses package unless required for the applet itself.
 6. The client retrieves progress while the authoring screen is active. Closing
    that screen does not cancel the durable job.
 
-Proposed job states: `queued`, `running`, `succeeded`, `failed`, `cancelled`.
+Implemented job states: `queued`, `running`, `succeeded`, `failed`, `cancelled`.
 An expired lease makes unfinished work eligible for recovery. Use unique job-step
 identifiers and object keys so retries do not duplicate published results.
 External model calls may still repeat after an ambiguous failure; cap attempts
@@ -321,7 +329,7 @@ concurrency limits, and token budgets per user. Keep API keys out of packages,
 logs, and frontend bundles.
 
 Deploy container builds from GitHub to Aiven Runtime (`compose.yaml` + Dockerfile;
-see [infrastructure-setup.md](infrastructure-setup.md#4-hosting-aiven-runtime-todo)).
+see [infrastructure-setup.md](infrastructure-setup.md#4-hosting-aiven-runtime-done)).
 Pushing doesn't redeploy: trigger "Deploy latest commit" per app. The `api` app
 serves the glasses web app (`/glasses/`), the authoring web app (`/author/`) and the
 API (`/v1/`) from one HTTPS origin; the `worker` app runs the same image with a
@@ -338,27 +346,26 @@ transcripts. Configure backup retention and perform a restore check before
 claiming production readiness. Do not infer high availability from the provider
 name: select and document the actual plans.
 
-## Open decisions and next implementation work
+## Remaining implementation and verification
 
-1. Define the component/action DSL and strict applet schema.
-2. Choose authoring authentication (pairing and device sessions are done).
-3. Verify glasses persistent storage, offline launch, and WebMCP behavior on hardware.
-4. Select Aiven database/runtime plans and region; verify backup and pooling settings.
-5. Specify state migration operations and review rules with concrete examples.
-6. Define package format, size limits, and cache/version compatibility rules.
-7. Implement the smallest full flow: author -> preview -> publish -> download ->
-   local action -> state backup -> restore. **Backend half done:** the
-   author (definition submitted directly) -> publish -> package -> download ->
-   backup -> restore path passes as an integration test
-   (`apps/api/src/e2e.test.ts`). Generation, preview and the glasses side are
-   still to build.
+The component schema, model adapter, Clerk web/MCP authentication, package
+format and local author → preview → publish → sync → action → backup flow exist.
+Use [apps.md](apps.md#known-gaps-next) as the current gap list; the milestones
+in [implementation-plan.md](implementation-plan.md) retain acceptance criteria.
+
+The main remaining work is server-side review/acceptance for managed and direct
+revision paths, measured fit for every publication path, explicit migration
+approval/recovery, global package/spending budgets, native sign-in verification,
+healthy deployment checks and complete hardware acceptance. The logged WebMCP
+read and owner-reported app success are described in [webmcp-audit.md](webmcp-audit.md);
+they do not establish offline storage or repeatable voice reliability.
 
 ## Current infrastructure and references
 
 Verda project, bucket, and storage credentials are configured and verified; see
 [Verda setup](verda.md). OpenRouter is funded and keyed. The API and worker are
 implemented ([backend-development.md](backend-development.md)); Aiven
-database/runtime are not yet provisioned, so nothing is deployed. Provisioning steps:
+database/runtime resources are provisioned. Deployment status and checks:
 [infrastructure-setup.md](infrastructure-setup.md).
 
 - [Aiven deployment](https://aiven.io/docs/products/runtime/deploy-apps)
