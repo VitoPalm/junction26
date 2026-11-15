@@ -50,6 +50,14 @@ export type NoteToolResult = { ok: true; message: string } | { ok: false; code: 
 const noteResult = (r: NoteToolResult, say: string) =>
   r.ok ? { ok: true, next_action: say } : { error: r.code, message: r.message, next_action: `Tell the user briefly: ${r.message}` };
 
+/** Snapshot the tools and current values sent to the voice resolver. */
+export function voiceContext(projectId: string, def: AppletDefinition, host: ToolHost) {
+  const tools = appletTools(def, host).map((t) => ({ name: t.name, description: t.description, parameters: t.inputSchema }));
+  const values = describeState(def, host.session().state);
+  const state = Object.entries(values).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`).join('\n').slice(0, 8000);
+  return { projectId, title: def.title, view: host.currentView(), tools, state };
+}
+
 export function appletTools(def: AppletDefinition, host: ToolHost): ToolDef[] {
   const t = (n: string) => toolName(def.toolPrefix, n);
   const about = def.summary ? ` (${def.title}: ${def.summary})` : ` (${def.title})`;

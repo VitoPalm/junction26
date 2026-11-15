@@ -79,6 +79,18 @@ describe('voice api', { skip: skipWithoutDatabase }, () => {
     return paired.body.token as string;
   }
 
+  test('preview resolves text and rejects invalid inputs and devices', async () => {
+    const call = (body: unknown, token = 'dev:alice') => h.call('POST', '/v1/voice/resolve', { token, body });
+    const command = await call({ context, text: 'add two rows' });
+    assert.equal(command.status, 200);
+    assert.deepEqual(command.body, { outcome: 'command', tool: 'j26rc_add_rows', args: { amount: 2 }, heard: 'add two rows' });
+    assert.equal((await call({ context, text: 'did you see the game last night' })).body.outcome, 'ignored');
+    assert.equal((await call({ context })).status, 400);
+    assert.equal((await call({ context, text: 'hello', audio: { format: 'wav', data: 'AA==' } })).status, 400);
+    assert.equal((await call({ context, audio: { format: 'wav', data: Buffer.alloc(512 * 1024 + 1).toString('base64') } })).status, 413);
+    assert.equal((await call({ context, text: 'add rows' }, await pairDevice('dev:alice'))).status, 403);
+  });
+
   test('bridge utterance → command event on the owner’s glasses', async () => {
     const glasses = await pairDevice('dev:alice');
     assert.equal((await h.call('PUT', '/v1/voice/context', { token: 'dev:alice', body: context })).status, 403, 'context is device-only');
