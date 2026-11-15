@@ -5,6 +5,7 @@ import { diffDefinitions, validateDefinition, type AppletDefinition, type Change
 import { ApiError, waitForJob, type Job, type Message, type ModelOption, type Project, type Release, type RevisionSummary, type Upload } from './api.ts';
 import { useApp, useAutosize } from './App.tsx';
 import { GlassesPreview } from './GlassesPreview.tsx';
+import { GlassesDemo } from './GlassesDemo.tsx';
 import { NotesPanel } from './Notes.tsx';
 import { BrandMark, IconArrowRight, IconArrowUp, IconBack, IconCheck, IconClip, IconClose, IconFile, IconGlasses, IconWarn } from './icons.tsx';
 import { FILE_ACCEPT, SUGGESTIONS, takeStartRequest } from './ui.ts';
@@ -398,6 +399,7 @@ function PreviewPanel(props: {
 }) {
   const { api } = useApp();
   const { project, revisions, releases, selected, definitions } = props;
+  const [demoOpen, setDemoOpen] = useState(false);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(false);
@@ -480,7 +482,11 @@ function PreviewPanel(props: {
           </div>
         </div>
       )}
-      {def && <GlassesPreview definition={def} resetKey={selected ?? ''} />}
+      {def && <>
+        <GlassesPreview definition={def} resetKey={selected ?? ''} />
+        <button className="secondary wide" onClick={() => setDemoOpen(true)}><IconGlasses size={20} /> See it on glasses</button>
+        {demoOpen && <GlassesDemo definition={def} resetKey={selected ?? ''} onClose={() => setDemoOpen(false)} />}
+      </>}
       {findings.length > 0 && (
         <div className={losses.length ? 'notice warn' : 'notice'}>
           {losses.length ? <IconWarn size={20} /> : <IconCheck size={20} />}
