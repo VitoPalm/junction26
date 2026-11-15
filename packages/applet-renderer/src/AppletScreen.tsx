@@ -1,6 +1,6 @@
 import { Component, useEffect, useState, type ReactNode } from 'react';
 import { Button } from '@wearables-ui-toolkit/mrbd';
-import { ChecklistScreen, ChoiceScreen, ContentScreen, Diagram, GifScreen, TextBlock, ValueReadout, VoiceNoteBar, type GlassesAction } from '@junction26/glasses-ui';
+import { ChecklistScreen, ChoiceScreen, ColorImage, ContentScreen, Diagram, GifScreen, TextBlock, ValueReadout, VoiceNoteBar, type GlassesAction } from '@junction26/glasses-ui';
 import { anchorKey, noteAnchor, type NotesBinding } from './notes.ts';
 import type { AppletDefinition, Asset, ListItem, View } from '@junction26/applet-format';
 import { formatScalar, formatValue } from '@junction26/applet-runtime';
@@ -173,7 +173,7 @@ function ViewScreen({ session, view, footer }: { session: AppletSession; view: V
 
 function AssetImage({ asset, alt }: { asset: Asset; alt: string }) {
   const src = assetUrl(asset.mediaType, asset.data!);
-  return <Diagram src={src} alt={alt} />;
+  return asset.keepColor ? <ColorImage src={src} alt={alt} /> : <Diagram src={src} alt={alt} />;
 }
 
 const assetUrl = (type: string, data: string) => (data.startsWith('data:') ? data : `data:${type};base64,${data}`);

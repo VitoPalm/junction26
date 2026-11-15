@@ -290,6 +290,14 @@ module registered with `registerTaskModule` renders it and adds its voice tools,
 and keeps progress in `AppletState.task`. Laundry is the first module
 (`packages/laundry`, phone screen `#/laundry/:projectId`). See [laundry.md](laundry.md).
 
+## Color images (2026-11-15)
+
+Assets may set `keepColor: true` (runtime 0.6.0). Static images are then shown
+in source colours (`ColorImage` in `packages/glasses-ui`) instead of the default
+`Diagram` ink conversion. The authoring model sets it for colour-rich photos and
+illustrations that look bad in black-and-white, and leaves line art on ink. How
+readable colour images are on the device is unverified.
+
 ## Known gaps (next)
 
 - Managed generation and direct revision submissions do not create/enforce a

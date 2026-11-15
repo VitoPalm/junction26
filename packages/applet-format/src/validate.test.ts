@@ -108,6 +108,15 @@ test('voice note component: label budget, runtime version and reserved tool name
   assert.ok(validateDefinition(clash).issues.some((i) => i.code === 'reserved'));
 });
 
+test('keepColor assets require runtime 0.6.0', () => {
+  const def = structuredClone(FIXTURES.rowCounter) as any;
+  def.assets = [{ id: 'photo', mediaType: 'image/jpeg', data: 'AA==', keepColor: true }];
+  def.views.push({ id: 'photo_view', kind: 'image', asset: 'photo', alt: 'Painted fox' });
+  assert.equal(validateDefinition(def).ok, true, JSON.stringify(validateDefinition(def).issues));
+  def.minimumRuntimeVersion = '0.5.0';
+  assert.ok(validateDefinition(def).issues.some((i) => i.code === 'runtime_version'));
+});
+
 test('task coach guides cite sources and resolve parts and excerpts', async () => {
   const { bookcaseGuide } = await import('./fixtures/bookcase.ts');
   assert.ok(validateDefinition(bookcaseGuide).ok);

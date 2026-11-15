@@ -79,6 +79,13 @@ Do not manufacture base64 or refer to arbitrary uploads. Prefer complete source
 diagrams; add close-ups when needed and preserve their context. Word import is
 text-only; request a PDF when its drawings matter.
 
+Static images render by default as white line-art "ink" (polarity normalized,
+strokes thickened, colour dropped), which keeps diagrams readable on the
+additive display. Colour-rich photos and illustrations, maps and charts whose
+meaning is in colour or shading look bad as black-and-white. For those, set
+`keepColor: true` on the asset (runtime 0.6.0) to show the source colours
+unchanged. Otherwise keep the usual ink flow. GIFs always keep colour.
+
 Use the installed runtime version (`0.2.0`). Every state field needs an explicit
 default, every list a maxItems/item schema, and every text field a maxLength.
 List and sequence views use built-in controls and must not dock custom actions;
