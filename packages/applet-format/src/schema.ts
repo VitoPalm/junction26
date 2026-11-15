@@ -17,7 +17,7 @@ import { z } from 'zod';
 
 export const FORMAT_VERSION = 1;
 /** Bump when the runtime learns new kinds/ops; definitions declare the minimum they need. */
-export const RUNTIME_VERSION = '0.5.0';
+export const RUNTIME_VERSION = '0.6.0';
 
 /** Copy budgets (code points). Mirrors COPY_LIMITS in packages/glasses-ui. */
 export const LIMITS = {
@@ -257,6 +257,12 @@ export const Asset = z
     /** Original source/page for authoring inspection, not task-view copy. */
     source: z.string().max(2000).optional(),
     attribution: z.string().max(2000).optional(),
+    /**
+     * Runtime 0.6.0: show the static image in its source colors instead of the
+     * default white line-art ink conversion. For colour-rich photos and
+     * illustrations whose meaning is in colour or shading; line drawings omit it.
+     */
+    keepColor: z.boolean().optional(),
     data: z.string().optional(),
   })
   .strict();

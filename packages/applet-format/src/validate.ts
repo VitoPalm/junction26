@@ -79,6 +79,8 @@ export function validateDefinition(input: unknown): ValidationResult {
     add('minimumRuntimeVersion', 'runtime_version', 'Looping GIF assets require runtime 0.2.0 or newer.');
   if (def.views.some((v) => v.voiceNote) && requested[0] === 0 && requested[1]! < 3)
     add('minimumRuntimeVersion', 'runtime_version', 'Voice notes require runtime 0.3.0 or newer.');
+  if (def.assets.some((a) => a.keepColor) && requested[0] === 0 && requested[1]! < 6)
+    add('minimumRuntimeVersion', 'runtime_version', 'Color images (keepColor) require runtime 0.6.0 or newer.');
   if (first >= 0 && requested[first]! > installed[first]!)
     add(
       'minimumRuntimeVersion',

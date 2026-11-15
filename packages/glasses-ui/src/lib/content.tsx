@@ -121,6 +121,17 @@ export function Diagram({ src, alt, stroke }: { src: string; alt: string; /** Di
   </div>;
 }
 
+/**
+ * A static image kept in its source colors (asset `keepColor`). Ink conversion
+ * flattens colour-rich photos and illustrations into noise, so these are fitted
+ * as-is. Black still reads as transparent on the additive display.
+ */
+export function ColorImage({ src, alt }: { src: string; alt: string }) {
+  return <div className="g-diagram-box" data-g-color>
+    <img data-g-fit-content className="g-diagram" src={src} alt={alt} />
+  </div>;
+}
+
 /** One short thought. Never silently truncate generated instructions. */
 export function TextBlock({ label, text, hint }: { label?: string; text: string; hint?: string }) {
   assertContent([
