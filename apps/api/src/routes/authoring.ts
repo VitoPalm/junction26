@@ -15,6 +15,7 @@ import {
 } from '@junction26/db';
 import { validateDefinition } from '@junction26/applet-format';
 import type { AppEnv, Deps } from '../context.ts';
+import { assertBudget } from '../budget.ts';
 import { authorId, assistantAuthorId } from '../auth.ts';
 import { ApiError, badRequest, conflict, notFound } from '../errors.ts';
 import { idempotencyKey, jobView, messageView, param, readJson, requestFingerprint, revisionSummaryView, revisionView, uuid } from '../http.ts';
@@ -59,6 +60,7 @@ export function authoringRoutes(deps: Deps) {
 
     const replay = key ? await findJobByIdempotencyKey(deps.pool, userId, key) : null;
     if (replay) return c.json(await messageReplay(replay, fingerprint, userId, projectId), 200);
+    await assertBudget(deps, userId, body.model ?? deps.config.model.model);
 
     const result = await withTransaction(deps.pool, async (tx) => {
       const project = await getProject(tx, userId, projectId, { forUpdate: true });

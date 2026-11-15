@@ -83,6 +83,7 @@ Templates: [`.env.openrouter.example`](../.env.openrouter.example),
 | `PORT` | api | `8080` (matches Dockerfile `EXPOSE`) |
 | `SESSION_SECRET` | api | Random 32+ bytes. Signs device/session tokens |
 | `PUBLIC_ORIGIN` | api | The Aiven HTTPS URL; used in QR/deep links |
+| `USER_BUDGET_USD`, `BUDGET_EXEMPT_USERS` | api | Per-user lifetime paid-model cap for the public demo (unset = no cap) and the user ids it skips. See [api.md](api.md#demo-budget) |
 | `MAX_UPLOAD_BYTES`, `GENERATION_CONCURRENCY`, `MAX_OUTPUT_TOKENS` | api, worker | Abuse and budget limits (defaults 50 MiB, 2, 16000) |
 | `MAX_DEFINITION_BYTES`, `MAX_STATE_BYTES` | api | JSON size limits (defaults 512 KiB, 256 KiB) |
 | `NODE_ENV` | api, worker | `production` in the image. **Refuses `AUTH_MODE=dev` and non-S3 storage** |

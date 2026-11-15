@@ -4,6 +4,7 @@ import { enqueueJob, getJobForOwner, getProject, getReleaseById, getRevision, re
 import { validateDefinition } from '@junction26/applet-format';
 import { stepIndex } from '@junction26/applet-runtime';
 import type { AppEnv, Deps } from '../context.ts';
+import { assertBudget } from '../budget.ts';
 import { requireDevice } from '../auth.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { param, readJson, uuid } from '../http.ts';
@@ -52,6 +53,7 @@ export function coachRoutes(deps: Deps) {
     if (!revision || !parsed?.ok || !parsed.definition.guide) throw new ApiError(409, 'not_a_guide', 'This solution has no manual to answer from');
     if (stepIndex(parsed.definition, body.stepId) < 0) throw new ApiError(422, 'unknown_step', 'That step is not in the published guide');
 
+    await assertBudget(deps, principal.userId, deps.config.coach.model);
     const { job, created } = await enqueueJob(deps.pool, {
       ownerId: principal.userId,
       projectId: project.id,
