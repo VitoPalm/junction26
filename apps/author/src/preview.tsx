@@ -16,7 +16,7 @@ import { ReactRouterNavigationProvider } from '@wearables-ui-toolkit/mrbd/react-
 import { ContentScreen, GlassesRoot, TextBlock } from '@junction26/glasses-ui';
 import { validateDefinition, type AppletDefinition } from '@junction26/applet-format';
 import { initialState } from '@junction26/applet-runtime';
-import { AppletScreen, appletTools, hasMenu, registerTaskModule, useAppletSession, type AppletSession, type Screen } from '@junction26/applet-renderer';
+import { AppletScreen, appletTools, voiceContext, hasMenu, registerTaskModule, useAppletSession, type AppletSession, type Screen } from '@junction26/applet-renderer';
 import { laundryModule } from '@junction26/laundry/ui';
 import '@junction26/glasses-ui/styles.css';
 
@@ -51,13 +51,15 @@ function Host({ def }: { def: AppletDefinition }) {
   screenRef.current = screen;
 
   useEffect(() => {
-    const tools = appletTools(def, {
+    const host = {
       session: () => ref.current,
-      openView: (viewId) => setScreen({ kind: 'view', viewId }),
+      openView: (viewId: string) => setScreen({ kind: 'view', viewId }),
       currentView: () => (screenRef.current.kind === 'view' ? screenRef.current.viewId : null),
-    });
+    };
+    const tools = appletTools(def, host);
     const onMessage = async (e: MessageEvent) => {
-      if (e.origin !== location.origin) return;
+      if (e.origin !== location.origin || e.source !== parent) return;
+      if (e.data?.type === 'j26.preview.context') parent.postMessage({ type: 'j26.preview.context.result', id: e.data.id, context: voiceContext('preview', def, host) }, location.origin);
       if (e.data?.type === 'j26.preview.menu' && hasMenu(def)) setScreen({ kind: 'menu' });
       if (e.data?.type === 'j26.preview.tool') {
         const tool = tools.find((t) => t.name === e.data.name);

@@ -84,6 +84,7 @@ export function createApi(session: Session, getToken: () => Promise<string | nul
   }
   const key = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return {
+    resolveVoice: (body: { context: VoiceContext; text?: string; audio?: { format: 'wav'; data: string } }) => req<VoiceResolution>('POST', '/v1/voice/resolve', { body }),
     me: () => req<{ principal: { userId: string } }>('GET', '/v1/me'),
     projects: () => req<{ projects: Project[] }>('GET', '/v1/projects'),
     createProject: (title: string) => req<{ project: Project }>('POST', '/v1/projects', { body: { title } }),
@@ -241,3 +242,9 @@ export async function waitForJob(api: Api, id: string, onUpdate: (j: Job) => voi
     if (signal?.aborted) return job;
   }
 }
+
+export interface VoiceContext {
+  projectId: string; title: string; view: string | null; state: string;
+  tools: { name: string; description: string; parameters: { type: 'object'; properties: Record<string, { type: string; description?: string }>; required?: string[] } }[];
+}
+export type VoiceResolution = { outcome: 'command'; tool: string; args: Record<string, unknown>; heard: string } | { outcome: 'ignored'; reason: string; heard: string };

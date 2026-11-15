@@ -499,3 +499,7 @@ or implement managed-generation change review.
 State PUT bodies are limited to `MAX_STATE_BYTES` (256 KiB by default), measured
 as actual UTF-8 bytes even when `Content-Length` is absent. Oversized requests
 return `413 payload_too_large`.
+
+### Browser preview voice resolution
+
+`POST /v1/voice/resolve` requires a user session. Send JSON `{ context, text }` or `{ context, audio: { format: "wav", data: "<base64>" } }`, with exactly one utterance. `context` has the same `projectId`, `title`, `view`, `tools`, and `state` fields as the voice bridge context. Audio is limited to 512 KiB decoded. The response is `{ outcome: "command", tool, args, heard }` or `{ outcome: "ignored", reason, heard }`. The caller executes the returned command; this endpoint does not deliver to glasses. Invalid input returns 400, oversized audio 413, unsupported model input 422, and an unavailable model 503. Audio and transcripts are not logged or stored.

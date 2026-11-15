@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AppletDefinition } from '@junction26/applet-format';
-import { describeState } from '@junction26/applet-runtime';
-import { appletTools, type ToolHost } from '@junction26/applet-renderer';
+import { appletTools, voiceContext, type ToolHost } from '@junction26/applet-renderer';
 import { pairing } from './sync.ts';
 
 /**
@@ -97,12 +96,7 @@ export function startVoiceBridge(projectId: string, def: AppletDefinition, host:
 
   const headers = () => ({ authorization: `Bearer ${token}`, 'content-type': 'application/json' });
 
-  const contextBody = () => {
-    const tools = appletTools(def, host).map((t) => ({ name: t.name, description: t.description, parameters: t.inputSchema }));
-    const values = describeState(def, host.session().state);
-    const state = Object.entries(values).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`).join('\n').slice(0, 8000);
-    return JSON.stringify({ projectId, title: def.title, view: host.currentView(), tools, state });
-  };
+  const contextBody = () => JSON.stringify(voiceContext(projectId, def, host));
 
   /** Cheap local check; network only when the applet's tools/values/view changed. */
   const syncContext = async () => {

@@ -12,7 +12,7 @@ import type { NoteHub } from '../notes.ts';
 
 /** About 8 s of 16 kHz mono PCM16 WAV is 256 KB; leave headroom for 8 kHz stereo oddities. */
 export const MAX_UTTERANCE_BYTES = 512 * 1024;
-const MODEL_DEADLINE_MS = 10_000;
+export const MODEL_DEADLINE_MS = 10_000;
 const HEARTBEAT_MS = 25_000;
 
 const ToolDecl = z.object({
@@ -35,9 +35,43 @@ const ContextBody = z.object({
 
 const TextUtterance = z.object({ id: z.string().regex(/^[\w-]{8,64}$/).optional(), text: z.string().trim().min(1).max(500) });
 
+const ResolveBody = z.object({
+  context: ContextBody,
+  text: z.string().trim().min(1).max(500).optional(),
+  audio: z.object({ format: z.literal('wav'), data: z.string().min(1).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) }).optional(),
+}).refine((body) => (body.text !== undefined) !== (body.audio !== undefined));
+
+/** Model call seam for a future per-user budget. */
+async function resolvePreview(models: ModelRegistry, spec: string, context: z.infer<typeof ContextBody>, utt: Utterance) {
+  // budget: check before, record after
+  return resolveUtterance(models, spec, context, utt, AbortSignal.timeout(MODEL_DEADLINE_MS));
+}
+
 /** Routes under /v1/voice. Contract: docs/api.md, "Voice bridge". */
 export function voiceRoutes(deps: Deps, hub: VoiceHub, models: ModelRegistry, notes?: NoteHub) {
   const app = new Hono<AppEnv>();
+
+  app.post('/resolve', async (c) => {
+    if (c.get('principal').kind !== 'user') throw forbidden('Voice preview needs a user session');
+    const body = await readJson(c, ResolveBody);
+    let utt: Utterance;
+    if (body.audio) {
+      const bytes = Buffer.from(body.audio.data, 'base64');
+      if (bytes.length > MAX_UTTERANCE_BYTES) throw new ApiError(413, 'payload_too_large', `Utterances are limited to ${MAX_UTTERANCE_BYTES} bytes`);
+      utt = { kind: 'audio', format: 'wav', data: body.audio.data };
+    } else utt = { kind: 'text', text: body.text! };
+    const started = performance.now();
+    let result;
+    try {
+      result = await resolvePreview(models, deps.config.voice.model, body.context, utt);
+    } catch (err) {
+      if (err instanceof ModelError && err.code === 'bad_request') throw new ApiError(422, 'voice_unsupported_input', err.message);
+      throw new ApiError(503, 'voice_model_unavailable', 'The voice model could not answer in time. Try again.');
+    }
+    const r = result.resolution;
+    c.get('log').info('voice preview', { outcome: r.outcome, tool: r.outcome === 'command' ? r.tool : undefined, model: result.model, costUsd: result.costUsd, ms: Math.round(performance.now() - started) });
+    return c.json(r);
+  });
 
   /** Glasses: what is open now. Replaces the previous context; DELETE when the applet closes. */
   app.put('/context', async (c) => {

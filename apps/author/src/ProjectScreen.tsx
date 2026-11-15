@@ -480,7 +480,7 @@ function PreviewPanel(props: {
           </div>
         </div>
       )}
-      {def && <GlassesPreview definition={def} resetKey={selected ?? ''} />}
+      {def && <GlassesPreview definition={def} resetKey={selected ?? ''} projectId={props.projectId} api={api} />}
       {findings.length > 0 && (
         <div className={losses.length ? 'notice warn' : 'notice'}>
           {losses.length ? <IconWarn size={20} /> : <IconCheck size={20} />}
