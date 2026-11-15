@@ -2,11 +2,15 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ReactRouterNavigationProvider } from '@wearables-ui-toolkit/mrbd/react-router';
 import { GlassesRoot } from '@junction26/glasses-ui';
-import { installWebMcpStub } from '@junction26/applet-renderer';
+import { installWebMcpStub, registerTaskModule } from '@junction26/applet-renderer';
+import { laundryModule } from '@junction26/laundry/ui';
 import '@junction26/glasses-ui/styles.css';
 import './glasses.css';
 import { GlassesApp, pairCodeFromHash } from './App.tsx';
 import { requestPersistence } from './store.ts';
+
+// Task modules (task-specific screens and voice tools on the shared engine).
+registerTaskModule(laundryModule);
 
 // Dev only: a stand-in for Meta AI's document.modelContext (window.webmcp.call(...)).
 if (import.meta.env.DEV && new URLSearchParams(location.search).has('webmcp')) installWebMcpStub();

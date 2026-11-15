@@ -16,6 +16,7 @@
     "@junction26/applet-renderer": "*",
     "@junction26/applet-runtime": "*",
     "@junction26/glasses-ui": "*",
+    "@junction26/laundry": "*",
     "@wearables-ui-toolkit/androidx-shapes": "130.33.0",
     "@wearables-ui-toolkit/icons": "130.33.0",
     "@wearables-ui-toolkit/mrbd": "130.33.0",

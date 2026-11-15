@@ -6,6 +6,7 @@ import type { AppletDefinition, Asset, ListItem, View } from '@junction26/applet
 import { formatScalar, formatValue } from '@junction26/applet-runtime';
 import type { AppletSession } from './session.ts';
 import { CoachScreen } from './coach.tsx';
+import { taskModule } from './tasks.ts';
 
 /** What the host should show: the applet's view menu, or one view. */
 export type Screen = { kind: 'menu' } | { kind: 'view'; viewId: string };
@@ -27,6 +28,11 @@ export function hasMenu(def: AppletDefinition): boolean {
  */
 export function AppletScreen({ session, screen, onOpen, notes }: { session: AppletSession; screen: Screen; onOpen: (s: Screen) => void; notes?: NotesBinding }) {
   const def = session.definition;
+  if (def.task) {
+    const m = taskModule(def);
+    if (!m) return <ContentScreen title={def.title}><TextBlock text="Update the glasses app to open this solution." /></ContentScreen>;
+    return <Guard key={`task-${def.task.kind}`}><m.Screen session={session} /></Guard>;
+  }
   if (screen.kind === 'menu') {
     return (
       <Guard key="menu">

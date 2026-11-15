@@ -13,8 +13,15 @@ problem with a confirmed recovery branch, and keeps progress offline.
 
 - **One step per page**: instruction, page reference (`Step 5 of 9 · p. 3`), and
   one line for what's unclear in the manual, its caution, the step's tip or the
-  parts it uses. Image steps show their diagram.
-- **Dock**: Previous / Next (Complete on the last step). **More** opens Repeat,
+  parts it uses.
+- **Image-first diagram steps**: a step with a diagram shows the diagram large
+  plus one caption line (step and page, then ⚠ caution, ? unclear, tip or
+  parts, clipped at a word boundary). It carries no body text: its instruction
+  is the step's `alt`, which More → **Read step** shows in full (with caution
+  and page) and voice reads. The format already requires diagram and text on
+  separate steps.
+- **Dock**: Previous / Next (Complete on the last step). **More** opens Repeat
+  (Read step on diagram steps),
   Show parts, Ask a question, Report a problem, Complete step (or Stop this fix).
   Menus page three choices at a time; nothing scrolls.
 - **Ask**: presets ("Which parts do I need?", "Anything to be careful of?",
@@ -54,7 +61,9 @@ question/problem ─► coach state "pending" ─► apps/glasses/src/coach.ts
   resolves every part/excerpt reference. The authoring prompt tells models to
   fill these and flag unclear content instead of guessing.
 - **Fixture**: `packages/applet-format/src/fixtures/manuals/two-shelf-bookcase.md`
-  (original, Apache-2.0) and its coach definition `fixtures/bookcase.ts`,
+  (original, Apache-2.0) and its coach definition `fixtures/bookcase.ts`, with
+  an original line diagram per step (`fixtures/bookcase-diagrams.ts`, made by
+  `scripts/coach/make-bookcase-diagrams.ts`; about 55 KB in all),
   including one unreadable and one ambiguous step. It's a bundled glasses
   example and what `fake:demo` returns for a bookcase/assembly manual.
 - **Coach state** lives in `AppletState.coach` (completed steps, requests,

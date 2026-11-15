@@ -1,6 +1,7 @@
 import { toolName, type AppletDefinition } from '@junction26/applet-format';
 import { cancelBranch, coachContext, coachOf, coachStep, completeCurrent, confirmBranch, describeState, hasGuide, setPanel } from '@junction26/applet-runtime';
 import { askCoach, repeatStep } from './coach.tsx';
+import { taskModule } from './tasks.ts';
 import type { AppletSession } from './session.ts';
 import { viewLabel } from './AppletScreen.tsx';
 import { noteAnchor, viewsWithNotes, type NoteAnchor } from './notes.ts';
@@ -12,7 +13,7 @@ import { noteAnchor, viewsWithNotes, type NoteAnchor } from './notes.ts';
  * the runtime validates every argument. Contract: docs/glasses-platform.md.
  */
 
-interface ToolDef {
+export interface ToolDef {
   name: string;
   description: string;
   inputSchema: { type: 'object'; properties: Record<string, { type: string; description: string }>; required: string[] };
@@ -121,6 +122,8 @@ export function appletTools(def: AppletDefinition, host: ToolHost): ToolDef[] {
     }
   }
   if (hasGuide(def)) tools.push(...coachTools(def, host, t, about));
+  const task = taskModule(def);
+  if (task?.tools) tools.push(...task.tools(def, host, t, about));
   const notePages = viewsWithNotes(def);
   if (notePages.length) {
     const names = notePages.map((v) => viewLabel(def, v)).join(', ');

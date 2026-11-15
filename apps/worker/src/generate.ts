@@ -39,6 +39,7 @@ import { AuthoringSources, SOURCE_TOOLS } from './authoring-tools.ts';
 import { JobError, type JobHandler } from './types.ts';
 import { fakeTranscribe, isTranscribeRequest } from './transcribe.ts';
 import { fakeCoach, isCoachRequest } from './coach.ts';
+import { fakeLabels, isLabelRequest } from './laundry.ts';
 
 const MAX_HISTORY_MESSAGES = 12;
 export const DEFAULT_PROJECT_TITLE = 'New solution';
@@ -46,7 +47,7 @@ export const DEFAULT_PROJECT_TITLE = 'New solution';
 const PLACEHOLDER_TITLES = new Set([DEFAULT_PROJECT_TITLE, 'New applet']);
 
 export function modelRegistryFromConfig(config: Config): ModelRegistry {
-  return registryFromSettings(config.model, (req) => isTranscribeRequest(req) ? fakeTranscribe(req) : isCoachRequest(req) ? fakeCoach(req) : fakeAuthor(req));
+  return registryFromSettings(config.model, (req) => isTranscribeRequest(req) ? fakeTranscribe(req) : isCoachRequest(req) ? fakeCoach(req) : isLabelRequest(req) ? fakeLabels(req) : fakeAuthor(req));
 }
 
 /**

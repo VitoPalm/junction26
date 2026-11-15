@@ -283,6 +283,13 @@ complete; grounded answers and confirmed recovery branches through the
 `NATIVE_WEBMCP=1 npx playwright test browser-tests/webmcp-native.spec.ts`
 in `apps/glasses` (Chrome with `--enable-features=WebMCP`).
 
+## Task modules and laundry (2026-11-15)
+
+Definitions may carry `task: { kind, version, data }` (runtime 0.5.0); a task
+module registered with `registerTaskModule` renders it and adds its voice tools,
+and keeps progress in `AppletState.task`. Laundry is the first module
+(`packages/laundry`, phone screen `#/laundry/:projectId`). See [laundry.md](laundry.md).
+
 ## Known gaps (next)
 
 - Managed generation and direct revision submissions do not create/enforce a

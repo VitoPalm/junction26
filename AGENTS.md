@@ -26,6 +26,8 @@ Band and by "Hey Meta" voice through WebMCP.
    [docs/voice-notes.md](docs/voice-notes.md).
 13. Task coach for assembly manuals (grounded Q&A, recovery branches):
    [docs/task-coach.md](docs/task-coach.md).
+14. Laundry coach (care labels → rule-based plan) and the task-module extension point:
+   [docs/laundry.md](docs/laundry.md).
 
 ## Commands
 

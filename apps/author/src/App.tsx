@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { LaundryScreen } from './Laundry.tsx';
 import { HashRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { CAPABILITIES, LIMITATIONS } from '@junction26/applet-format';
 import { createApi, defaultServer, devToken, isNative, loadSession, saveSession, type Api, type Device, type Project, type Session } from './api.ts';
@@ -51,6 +52,7 @@ export function App({ account }: { account?: Ctx } = {}) {
         <Routes>
           <Route path="/" element={<Library />} />
           <Route path="/p/:projectId" element={<ProjectScreen />} />
+          <Route path="/laundry/:projectId" element={<LaundryScreen />} />
           <Route path="/glasses" element={<GlassesScreen />} />
           <Route path="/recorder" element={<RecorderScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -129,6 +131,19 @@ function greeting(name: string): string {
   return first && first !== 'My' ? `${part}, ${first[0]!.toUpperCase()}${first.slice(1)}` : part;
 }
 
+/** Starts a laundry session: garments from care-label photos (docs/laundry.md). */
+function StartLaundry() {
+  const { api } = useApp();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button className="pill-btn" disabled={busy} onClick={() => {
+      setBusy(true);
+      api.createProject('Laundry').then((r) => navigate(`/laundry/${r.project.id}`), () => setBusy(false));
+    }}>Laundry from care labels</button>
+  );
+}
+
 function Library() {
   const { api, session } = useApp();
   const [projects, setProjects] = useState<Project[] | null>(null);
@@ -172,6 +187,7 @@ function Library() {
         <p className="eyebrow">{greeting(session.name)}</p>
         <h1 className="display">What do you need on your glasses?</h1>
         <HomeComposer />
+        <StartLaundry />
       </section>
 
       {devices && paired.length === 0 && (

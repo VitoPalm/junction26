@@ -27,7 +27,8 @@ async function openDemo(page: Page) {
   await page.evaluate(() => new Promise<void>((res) => { const r = indexedDB.deleteDatabase('junction26-glasses'); r.onsuccess = r.onerror = r.onblocked = () => res(); }));
   await page.goto('/glasses/?webmcp');
   await page.getByRole('button', { name: /Two-shelf bookcase/ }).click();
-  await expect(page.getByText('Lay out every part and count it against the parts list.')).toBeVisible();
+  // Image-first: the step is its diagram (alt = the instruction) plus one caption line.
+  await expect(page.getByRole('img', { name: 'Lay out every part and count it against the parts list.' })).toBeVisible();
 }
 
 test('one step at a time; D-pad, More menu, parts, repeat, complete and local answers work offline and persist', async ({ page }) => {
@@ -43,19 +44,20 @@ test('one step at a time; D-pad, More menu, parts, repeat, complete and local an
   expect(await page.evaluate(() => document.activeElement?.textContent?.trim())).toBe('Next');
   await page.keyboard.press('Enter');
   await expect(page.getByText(/Step 2 of 9/i)).toBeVisible();
-  await expect(page.getByText('Caution: Do not overtighten.')).toBeVisible();
+  await expect(page.getByText('⚠ Do not overtighten.')).toBeVisible();
+  await expect(page.getByText('Screw the 4 cam bolts', { exact: false })).toHaveCount(0); // full text only under Read step
 
   // More → Show parts (paged list, no scrolling) → back.
   await page.getByRole('button', { name: 'More', exact: true }).click();
-  for (const item of ['Repeat', 'Show parts', 'Ask a question']) await expect(page.getByRole('button', { name: item, exact: true })).toBeVisible();
+  for (const item of ['Read step', 'Show parts', 'Ask a question']) await expect(page.getByRole('button', { name: item, exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Show parts', exact: true }).click();
   await expect(page.getByRole('button', { name: /Cam bolt \(A\)/ })).toBeVisible();
   await noScroll(page);
   await page.getByRole('button', { name: 'Back to step', exact: true }).click();
 
-  // Repeat shows the instruction with its caution and page.
+  // Read step shows the instruction with its caution and page.
   await page.getByRole('button', { name: 'More', exact: true }).click();
-  await page.getByRole('button', { name: 'Repeat', exact: true }).click();
+  await page.getByRole('button', { name: 'Read step', exact: true }).click();
   await expect(page.getByText(/Step 2: Screw the 4 cam bolts/)).toBeVisible();
   await expect(page.getByText(/Manual p\. 2, Step 2/)).toBeVisible();
   await page.getByRole('button', { name: 'OK', exact: true }).click();
@@ -191,7 +193,7 @@ test('problem report: offline retry with the same operation, resume after reload
   await page.getByRole('button', { name: 'Next', exact: true }).click();
   await page.getByRole('button', { name: 'Back to guide', exact: true }).click();
   await expect(page.getByText(/Step 4 of 9/i)).toBeVisible();
-  await expect(page.getByText('Fit the left side panel onto both shelves so the cam bolts enter the large holes.')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Fit the left side panel onto both shelves so the cam bolts enter the large holes.' })).toBeVisible();
 });
 
 test('declining a fix and cancelling a question leave the guide untouched', async ({ page }) => {
@@ -216,4 +218,18 @@ test('declining a fix and cancelling a question leave the guide untouched', asyn
   await expect.poll(() => cancels.length).toBeGreaterThan(0);
   const ctx = (await call(page, 'j26_shelf_coach_context')).context as { progress: { completed: number }; recovery: unknown };
   expect(ctx).toMatchObject({ progress: { completed: 4 }, recovery: null });
+});
+
+test('image-first: every step shows its diagram with one caption line and fits', async ({ page }) => {
+  await openDemo(page);
+  for (let i = 0; i < 9; i++) {
+    await expect(page.getByText(new RegExp(`^Step ${i + 1} of 9`, 'i'))).toBeVisible();
+    await expect(page.locator('.g-diagram')).toHaveCount(1);
+    const box = await page.locator('.g-diagram').boundingBox();
+    expect(box!.height).toBeGreaterThan(150); // the picture gets the room, not text
+    const hint = page.locator('.g-caption .g-hint');
+    if (await hint.count()) expect((await hint.boundingBox())!.height).toBeLessThan(45); // one line
+    await noScroll(page);
+    if (i < 8) await call(page, 'j26_shelf_next_step');
+  }
 });

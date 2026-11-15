@@ -113,6 +113,7 @@ and kept forever (they live on the job row).
 | `GET /v1/voice/events` | device | 200 | Server-sent `command` events |
 | `POST /v1/voice/utterances` | user, device | 200 | One utterance (`audio/wav`, `audio/mpeg` or JSON `{ text }`) → outcome |
 | `GET /v1/notes/recorder/events` | user | 200 | Phone recorder: server-sent `start` / `stop`; see [voice notes](#voice-notes) |
+| `POST /v1/laundry/labels` | user | 202 / 200 | `{ uploadId, region? }` → `extract_care_label` job (one per photo); poll `GET /v1/jobs/:id`. See [laundry.md](laundry.md) |
 | `POST /v1/coach/requests` | device | 202 / 200 | Task coach question/problem → `coach_request` job; idempotent per operation; see [task coach](#task-coach) |
 | `GET /v1/coach/requests/:id` | device | 200 | `{ request: { id, status, result, error } }` |
 | `POST /v1/coach/requests/:id/cancel` | device | 202 | Best-effort cancel |

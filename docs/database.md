@@ -112,3 +112,5 @@ called with a full user session. Every lookup includes expiry and every
 revocation filters by owner. User deletion cascades both tables.
 `0005_coach_requests.sql` allows the `coach_request` job kind (task coach); no new
 tables: requests are jobs, and coach progress is part of the backed-up state snapshot.
+`0006_care_labels.sql` allows `extract_care_label` (laundry). Garments live in revision
+definitions (`task.data`); laundry progress lives in the backed-up state snapshot (`task.laundry`).

@@ -1,0 +1,53 @@
+{
+  "name": "@junction26/laundry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Laundry task: care-label model, symbol reference, rule-based sorting plan, guidance steps and adaptations. Pure core (used by the worker, API, phone and glasses) plus the glasses task module in ./ui.",
+  "exports": {
+    ".": {
+      "junction26-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui": {
+      "junction26-source": "./src/ui.tsx",
+      "default": "./src/ui.tsx"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.ui.json",
+    "test": "node --conditions=junction26-source --test 'src/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@junction26/applet-format": "*",
+    "@junction26/applet-runtime": "*",
+    "zod": "4.6.7"
+  },
+  "peerDependencies": {
+    "@junction26/applet-renderer": "*",
+    "@junction26/glasses-ui": "*",
+    "@wearables-ui-toolkit/mrbd": "130.33.0",
+    "react": "19.3.1"
+  },
+  "peerDependenciesMeta": {
+    "@junction26/applet-renderer": {
+      "optional": true
+    },
+    "@junction26/glasses-ui": {
+      "optional": true
+    },
+    "@wearables-ui-toolkit/mrbd": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "typescript": "7.0.2"
+  }
+}

@@ -1,5 +1,6 @@
 import { FIXTURES, RUNTIME_VERSION, validateDefinition, type AppletDefinition } from '@junction26/applet-format';
 import { initialState, migrateState, type AppletState } from '@junction26/applet-runtime';
+import { laundryDemo } from '@junction26/laundry';
 import { store, type InstalledApplet, type Pairing, type SavedState } from './store.ts';
 
 /**
@@ -56,7 +57,7 @@ export async function unpair(): Promise<void> {
 /** Bundled examples so the app is useful before pairing (and in the simulator). */
 export async function installDemos(): Promise<void> {
   const existing = new Set((await store.applets()).map((a) => a.projectId));
-  for (const [key, raw] of Object.entries(FIXTURES)) {
+  for (const [key, raw] of Object.entries({ ...FIXTURES, laundryDemo })) {
     const id = `demo-${key}`;
     if (existing.has(id)) continue;
     const r = validateDefinition(raw);

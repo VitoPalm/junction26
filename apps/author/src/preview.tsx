@@ -16,8 +16,11 @@ import { ReactRouterNavigationProvider } from '@wearables-ui-toolkit/mrbd/react-
 import { ContentScreen, GlassesRoot, TextBlock } from '@junction26/glasses-ui';
 import { validateDefinition, type AppletDefinition } from '@junction26/applet-format';
 import { initialState } from '@junction26/applet-runtime';
-import { AppletScreen, appletTools, hasMenu, useAppletSession, type AppletSession, type Screen } from '@junction26/applet-renderer';
+import { AppletScreen, appletTools, hasMenu, registerTaskModule, useAppletSession, type AppletSession, type Screen } from '@junction26/applet-renderer';
+import { laundryModule } from '@junction26/laundry/ui';
 import '@junction26/glasses-ui/styles.css';
+
+registerTaskModule(laundryModule);
 
 type Loaded = { def: AppletDefinition; key: string } | { error: string } | null;
 

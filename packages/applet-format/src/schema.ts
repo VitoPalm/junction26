@@ -17,7 +17,7 @@ import { z } from 'zod';
 
 export const FORMAT_VERSION = 1;
 /** Bump when the runtime learns new kinds/ops; definitions declare the minimum they need. */
-export const RUNTIME_VERSION = '0.4.0';
+export const RUNTIME_VERSION = '0.5.0';
 
 /** Copy budgets (code points). Mirrors COPY_LIMITS in packages/glasses-ui. */
 export const LIMITS = {
@@ -324,6 +324,15 @@ export const AppletDefinition = z
     assets: z.array(Asset).max(60).default([]),
     /** Task coach metadata; see Guide. */
     guide: Guide.optional(),
+    /**
+     * Task-specific content (runtime 0.5.0): a registered task module (e.g.
+     * "laundry") renders and validates `data`; the shared engine only carries it.
+     * See packages/applet-renderer/src/tasks.ts.
+     */
+    task: z
+      .object({ kind: id, version: z.number().int().min(1), data: z.record(z.string(), z.unknown()) })
+      .strict()
+      .optional(),
   })
   .strict();
 

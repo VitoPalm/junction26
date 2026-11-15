@@ -135,6 +135,18 @@ export function TextBlock({ label, text, hint }: { label?: string; text: string;
   </section>;
 }
 
+/** One line under a diagram: a short label and, optionally, one hint (caution, parts). The picture carries the instruction. */
+export function Caption({ label, line }: { label: string; line?: string }) {
+  assertContent([
+    ...checkCopy('label', label, COPY_LIMITS.label),
+    ...(line === undefined ? [] : checkCopy('line', line, COPY_LIMITS.hint)),
+  ]);
+  return <section data-g-fit-content className="g-stack g-copy g-caption">
+    <TextView as="h2" className="g-eyebrow" textStyle={TextStyle.LABEL_EMPHASIZED} textColor={TextColor.ACCENT}>{label.toLocaleUpperCase()}</TextView>
+    {line && <TextView as="p" className="g-hint" textStyle={TextStyle.BODY2}>{line}</TextView>}
+  </section>;
+}
+
 export function ValueReadout({ label, value, hint }: { label: string; value: string; hint?: string }) {
   assertContent([
     ...checkCopy('label', label, COPY_LIMITS.label),

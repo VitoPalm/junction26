@@ -9,15 +9,25 @@ declare global {
   }
 }
 
-/** Opens an example; returns true when it was reached through Older (one more Back to get home). */
-async function open(page: Page, name = 'Brakka the Bold'): Promise<boolean> {
-  await page.goto('/glasses/?webmcp');
-  // Home shows the latest three; the rest are under Older.
+/** Taps an example on home; home shows the latest three, the rest are under Older. Returns true if it went through Older. */
+async function tapExample(page: Page, name: string): Promise<boolean> {
   const tile = page.getByRole('button', { name: new RegExp(name) });
   await expect(page.getByRole('button', { name: /Example/ }).first()).toBeVisible();
   const viaOlder = !(await tile.isVisible());
-  if (viaOlder) await page.getByRole('button', { name: 'Older', exact: true }).click();
-  await page.getByRole('button', { name: new RegExp(name) }).click();
+  if (viaOlder) {
+    await page.getByRole('button', { name: 'Older', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Older solutions' })).toBeVisible();
+    await expect(page.getByRole('button').first()).toBeVisible();
+    for (let i = 0; i < 4 && !(await tile.isVisible({ timeout: 1000 }).catch(() => false)); i++) await page.getByRole('button', { name: 'Next page', exact: true }).click();
+  }
+  await tile.click();
+  return viaOlder;
+}
+
+/** Opens an example; returns true when it was reached through Older (one more Back to get home). */
+async function open(page: Page, name = 'Brakka the Bold'): Promise<boolean> {
+  await page.goto('/glasses/?webmcp');
+  const viaOlder = await tapExample(page, name);
   await expect.poll(() => page.evaluate(() => window.webmcp.list().length)).toBeGreaterThan(0);
   return viaOlder;
 }
@@ -69,7 +79,7 @@ test('navigation keeps tools usable and switching applets removes old tools', as
   if (viaOlder) await page.goBack();
   await expect(page.getByRole('heading', { name: 'Your solutions', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.webmcp.list().length)).toBe(0);
-  await page.getByRole('button', { name: /Pancakes/ }).click();
+  await tapExample(page, 'Pancakes');
   await expect.poll(() => page.evaluate(() => window.webmcp.list().map(t => t.name))).toEqual([
     'j26_pancake_read_state', 'j26_pancake_next_step', 'j26_pancake_previous_step',
     'j26_pancake_start_voice_note', 'j26_pancake_stop_voice_note',
@@ -84,7 +94,7 @@ test('navigation keeps tools usable and switching applets removes old tools', as
 
 test('voice note tools refuse politely on bundled examples (they have no phone copy)', async ({ page }) => {
   await page.goto('/glasses/?webmcp');
-  await page.getByRole('button', { name: /Pancakes/ }).click();
+  await tapExample(page, 'Pancakes');
   await expect.poll(() => page.evaluate(() => window.webmcp.list().length)).toBeGreaterThan(0);
   await expect(page.getByRole('button', { name: 'Record note' })).toBeVisible();
   await expect(page.getByText('Say “Hey Meta, record a note”')).toBeVisible();
