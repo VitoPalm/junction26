@@ -62,9 +62,19 @@ test('Clerk configuration fails closed for missing verification settings or unsa
     { ...clerk, CLERK_AUTHORIZED_PARTIES: 'http://example.com' },
     { ...clerk, NODE_ENV: 'production', CLERK_AUTHORIZED_PARTIES: 'http://localhost:5173' },
     { ...clerk, NODE_ENV: 'production', CLERK_ISSUER: 'https://example.clerk.accounts.dev' },
+    { ...clerk, CLERK_AUTHORIZED_PARTIES: 'capacitor://example' },
+    { ...clerk, CLERK_AUTHORIZED_PARTIES: 'capacitor://localhost/' },
+    { ...clerk, CLERK_AUTHORIZED_PARTIES: 'custom://localhost' },
   ]) assert.throws(() => loadConfig({ ...base, ...env }), ConfigError);
   assert.equal(loadConfig({ ...base, ...clerk, CLERK_AUTHORIZED_PARTIES: 'http://localhost:5173' }).authMode, 'clerk');
   assert.equal(loadConfig({ ...base, ...clerk, CLERK_JWT_KEY: '', CLERK_SECRET_KEY: 'sk_test_example' }).authMode, 'clerk');
+});
+
+test('production Clerk accepts the native shell WebView origins (iOS capacitor://localhost, Android https://localhost)', () => {
+  const parties = 'https://example.com,https://localhost,capacitor://localhost';
+  const c = loadConfig({ ...base, ...clerk, NODE_ENV: 'production', CLERK_AUTHORIZED_PARTIES: parties, STORAGE_DRIVER: 's3',
+    AWS_ACCESS_KEY_ID: 'test', AWS_SECRET_ACCESS_KEY: 'test', AWS_ENDPOINT_URL: 'https://s3.example.com', AWS_REGION: 'test', VERDA_S3_BUCKET: 'test' });
+  assert.deepEqual(c.clerk?.authorizedParties, ['https://example.com', 'https://localhost', 'capacitor://localhost']);
 });
 
 test('production accepts a Clerk development instance only with the explicit opt-in', () => {

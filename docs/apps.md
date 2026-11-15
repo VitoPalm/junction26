@@ -190,7 +190,7 @@ sign-in (Clerk's own social buttons are hidden on native: Google refuses
 WebViews). Production Clerk instances must allowlist that redirect under Native
 applications. Not yet verified end to end on the emulator. The API must list
 the WebView origin in `CLERK_AUTHORIZED_PARTIES`: `https://localhost` (Android),
-`capacitor://localhost` (iOS, not yet accepted by config validation). On this machine the
+`capacitor://localhost` (iOS). Both are set on the Aiven deployment. On this machine the
 emulator only boots with `-gpu host`; `-gpu auto`/software rendering segfaults
 in the Vulkan/ANGLE renderer.
 

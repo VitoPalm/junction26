@@ -191,9 +191,12 @@ export interface Config {
 
 const list = (v: string | undefined) => (v ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 
+/** The iOS Capacitor shell's WebView origin (Android uses https://localhost). */
+const CAPACITOR_IOS_ORIGIN = 'capacitor://localhost';
+
 /** Capacitor shells (iOS: capacitor://localhost, Android: https://localhost) and Vite dev servers. */
 const DEV_CORS_ORIGINS = [
-  'capacitor://localhost',
+  CAPACITOR_IOS_ORIGIN,
   'https://localhost',
   'http://localhost',
   'http://localhost:5173',
@@ -247,12 +250,14 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       problems.push('AUTH_MODE=clerk requires CLERK_ISSUER (the exact HTTPS issuer of your Clerk instance)');
     }
     if (!parties.length || parties.some((party) => {
+      // The iOS Capacitor WebView's exact origin. Node reports custom schemes' origin as "null".
+      if (party === CAPACITOR_IOS_ORIGIN) return false;
       try {
         const url = new URL(party);
         return url.origin !== party || !(url.protocol === 'https:' ||
           (e.NODE_ENV !== 'production' && url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)));
       } catch { return true; }
-    })) problems.push('CLERK_AUTHORIZED_PARTIES requires exact HTTPS frontend origins (loopback HTTP is allowed outside production)');
+    })) problems.push('CLERK_AUTHORIZED_PARTIES requires exact HTTPS frontend origins (capacitor://localhost for iOS; loopback HTTP is allowed outside production)');
     if (!e.CLERK_SECRET_KEY && !e.CLERK_JWT_KEY) problems.push('AUTH_MODE=clerk requires CLERK_SECRET_KEY or CLERK_JWT_KEY');
     const jwtKey = e.CLERK_JWT_KEY?.replace(/\\n/g, '\n');
     if (jwtKey) {
