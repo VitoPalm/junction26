@@ -6,3 +6,4 @@ export * from './queries/jobs.ts';
 export * from './queries/devices.ts';
 export * from './queries/state.ts';
 export * from './queries/notes.ts';
+export * from './queries/usage.ts';

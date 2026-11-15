@@ -86,6 +86,8 @@ export function createApi(session: Session, getToken: () => Promise<string | nul
   return {
     resolveVoice: (body: { context: VoiceContext; text?: string; audio?: { format: 'wav'; data: string } }) => req<VoiceResolution>('POST', '/v1/voice/resolve', { body }),
     me: () => req<{ principal: { userId: string } }>('GET', '/v1/me'),
+    /** Demo budget: null budget = no cap (docs/api.md, "Demo budget"). */
+    usage: () => req<{ usage: Usage }>('GET', '/v1/usage'),
     projects: () => req<{ projects: Project[] }>('GET', '/v1/projects'),
     createProject: (title: string) => req<{ project: Project }>('POST', '/v1/projects', { body: { title } }),
     project: (id: string) => req<{ project: Project }>('GET', `/v1/projects/${id}`),
@@ -143,6 +145,13 @@ export type Api = ReturnType<typeof createApi>;
 function guessType(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase();
   return ext === 'csv' ? 'text/csv' : ext === 'json' ? 'application/json' : ext === 'html' || ext === 'htm' ? 'text/html' : ext === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : ext === 'pdf' ? 'application/pdf' : ext === 'md' ? 'text/markdown' : ext === 'txt' ? 'text/plain' : ext === 'gif' ? 'image/gif' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'application/octet-stream';
+}
+
+export interface Usage {
+  budgetUsd: number | null;
+  spentUsd: number;
+  remainingUsd: number | null;
+  exempt: boolean;
 }
 
 export interface Project {

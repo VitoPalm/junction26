@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { enqueueJob, getUpload } from '@junction26/db';
 import type { AppEnv, Deps } from '../context.ts';
+import { assertBudget } from '../budget.ts';
 import { authorId } from '../auth.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { jobView, readJson, uuid } from '../http.ts';
@@ -22,6 +23,7 @@ export function laundryRoutes(deps: Deps) {
     if (!upload) throw notFound('Upload');
     if (!upload.mediaType.startsWith('image/')) throw new ApiError(422, 'not_an_image', 'Upload a photo of the care label');
     if (upload.status !== 'ready' && upload.status !== 'stored') throw new ApiError(409, 'upload_not_ready', `The photo is ${upload.status}`);
+    await assertBudget(deps, userId, deps.config.laundry.labelModel);
     const { job, created } = await enqueueJob(deps.pool, {
       ownerId: userId,
       projectId: upload.projectId,
