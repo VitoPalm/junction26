@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 // Real IndexedDB and sync code, mocked transport; no backend or Meta AI needed.
 test('backup keeps snapshot revision and advances server version across concurrent local edits', async ({ page }) => {
   await page.goto('/glasses/');
-  await expect(page.getByRole('button', { name: /Brakka the Bold/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your solutions' })).toBeVisible();
   const result = await page.evaluate(async () => {
     const syncPath = '/glasses/src/sync.ts';
     const storePath = '/glasses/src/store.ts';
