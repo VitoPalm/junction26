@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button } from '@wearables-ui-toolkit/mrbd';
-import { ChoiceScreen, ContentScreen, TextBlock, paginateText, type GlassesAction } from '@junction26/glasses-ui';
+import { Caption, ChoiceScreen, ContentScreen, TextBlock, paginateText, type GlassesAction } from '@junction26/glasses-ui';
 import {
   answerLocally, cancelBranch, cancelRequest, coachOf, coachStep, completeCurrent, confirmBranch, currentStep, dismissAnswer,
   formatSource, partLabel, pendingRequest, repeatText, setPanel, setRequestError, showLocalAnswer, startRequest, stepIndex,
@@ -92,6 +92,16 @@ function PagedCard({ title, label, text, hint, done, doneLabel = 'OK', extra }: 
   );
 }
 
+/** Shortens one line at a word boundary with an ellipsis (the full text is under Read step). */
+export function clipLine(text: string | undefined, max = 48): string | undefined {
+  if (!text) return undefined;
+  const chars = Array.from(text.trim());
+  if (chars.length <= max) return chars.join('');
+  const cut = chars.slice(0, max - 1).join('');
+  const at = cut.lastIndexOf(' ');
+  return `${(at > max / 2 ? cut.slice(0, at) : cut).replace(/[\s,;:.–-]+$/u, '')}…`;
+}
+
 function stepLabel(def: AppletDefinition, s: AppletState) {
   const cur = currentStep(def, s)!;
   const src = formatSource(cur.step.source);
@@ -176,7 +186,7 @@ export function CoachScreen({ session, sequenceTitle, image }: { session: Applet
   if (panel === 'menu') {
     const last = cur.index === cur.total - 1;
     const items = [
-      { id: 'repeat', label: 'Repeat' },
+      { id: 'repeat', label: cur.step.image ? 'Read step' : 'Repeat' },
       { id: 'parts', label: 'Show parts' },
       { id: 'ask', label: 'Ask a question' },
       { id: 'report', label: 'Report a problem' },
@@ -241,6 +251,7 @@ export function CoachScreen({ session, sequenceTitle, image }: { session: Applet
   const done = coach.completed.includes(step.id);
   const last = cur.index === cur.total - 1;
   // One line: what's unclear, then cautions, then the step's own tip, then the parts it uses.
+  const pic = step.image && image ? image(step.image, step.alt ?? `Step ${cur.index + 1}`) : null;
   const hint = step.flag ? `Unclear in manual: ${step.flagNote ?? step.flag}` : step.warning ? `Caution: ${step.warning}` : step.hint ?? (cur.parts.length ? `Uses ${cur.parts.map((p) => p.label.replace(/^.*\(([A-Z0-9]+)\)$/, '$1')).join(', ')}` : undefined);
   return (
     <ContentScreen key={step.id} title={(step.title ?? sequenceTitle)?.slice(0, 32)} footer={footer} actions={[
@@ -249,10 +260,10 @@ export function CoachScreen({ session, sequenceTitle, image }: { session: Applet
         ? { id: 'coach.complete', label: coach.finished ? 'Done' : 'Complete', disabled: coach.finished, onActivate: () => update((x) => completeCurrent(def, x)) }
         : { id: 'coach.next', label: 'Next', onActivate: () => update((x) => coachStep(def, x, 1)) },
     ]}>
-      {step.image && image ? image(step.image, step.alt ?? `Step ${cur.index + 1}`) : null}
-      {step.text || !step.image || !image
-        ? <TextBlock label={`${stepLabel(def, s)}${done ? ' ✓' : ''}`.slice(0, 28)} text={step.text ?? step.alt ?? 'See the diagram in the manual.'} hint={hint?.slice(0, 48)} />
-        : null}
+      {/* A diagram step is image-first: the picture plus one line. The full text is under More → Read step (and voice). */}
+      {pic
+        ? <>{pic}<Caption label={`${stepLabel(def, s)}${done ? ' ✓' : ''}`.slice(0, 28)} line={clipLine(hint?.replace(/^Caution: /, '⚠ ').replace(/^Unclear in manual: /, '? '), 34)} /></>
+        : <TextBlock label={`${stepLabel(def, s)}${done ? ' ✓' : ''}`.slice(0, 28)} text={step.text ?? step.alt ?? 'See the diagram in the manual.'} hint={clipLine(hint)} />}
     </ContentScreen>
   );
 }

@@ -175,7 +175,7 @@ export function coachContext(def: AppletDefinition, state: AppletState) {
       number: cur.index + 1,
       total: cur.total,
       title: cur.step.title ?? null,
-      instruction: cur.step.text ?? null,
+      instruction: cur.step.text ?? cur.step.alt ?? null,
       warning: cur.step.warning ?? null,
       flag: cur.step.flag ? { kind: cur.step.flag, note: cur.step.flagNote ?? null } : null,
       source: cur.step.source ?? null,
