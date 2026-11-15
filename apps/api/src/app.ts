@@ -15,7 +15,7 @@ import { stateRoutes } from './routes/state.ts';
 import { coachRoutes } from './routes/coach.ts';
 import { laundryRoutes } from './routes/laundry.ts';
 import { uploadRoutes } from './routes/uploads.ts';
-import { deviceRoutes, healthRoutes, jobRoutes, pairRoute } from './routes/misc.ts';
+import { deviceRoutes, healthRoutes, jobRoutes, pairRoute, usageRoutes } from './routes/misc.ts';
 import { authoringMetaRoutes, webRoutes } from './routes/web.ts';
 import { voiceRoutes } from './routes/voice.ts';
 import { fakeVoice, VoiceHub } from './voice.ts';
@@ -106,6 +106,7 @@ export function createApp(deps: Deps) {
   v1.route('/releases', releaseRoutes(deps));
   v1.route('/uploads', uploadRoutes(deps));
   v1.route('/jobs', jobRoutes(deps));
+  v1.route('/usage', usageRoutes(deps));
   v1.route('/devices', deviceRoutes(deps));
   v1.route('/coach', coachRoutes(deps));
   v1.route('/laundry', laundryRoutes(deps));

@@ -4,6 +4,7 @@ import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { ModelError, type ModelRegistry } from '@junction26/model';
 import type { AppEnv, Deps } from '../context.ts';
+import { assertBudget, recordSpend } from '../budget.ts';
 import { requireDevice } from '../auth.ts';
 import { ApiError, forbidden } from '../errors.ts';
 import { readJson } from '../http.ts';
@@ -137,6 +138,7 @@ export function voiceRoutes(deps: Deps, hub: VoiceHub, models: ModelRegistry, no
       return c.json(body);
     }
 
+    await assertBudget(deps, p.userId, deps.config.voice.model);
     let result;
     try {
       result = await resolveUtterance(models, deps.config.voice.model, target.context, utt, AbortSignal.timeout(MODEL_DEADLINE_MS));
@@ -146,6 +148,7 @@ export function voiceRoutes(deps: Deps, hub: VoiceHub, models: ModelRegistry, no
       if (err instanceof ModelError && err.code === 'bad_request') throw new ApiError(422, 'voice_unsupported_input', err.message);
       throw new ApiError(503, 'voice_model_unavailable', 'The voice model could not answer in time. Try again.');
     }
+    await recordSpend(deps, p.userId, 'voice_bridge', result.model, result.costUsd);
     const { resolution: r } = result;
     let body;
     if (r.outcome === 'command') {
