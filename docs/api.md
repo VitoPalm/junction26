@@ -54,6 +54,7 @@ exist.
 | 400 | `invalid_request` | Body/headers invalid. `details` lists `{ path, message }` per issue |
 | 400 | `invalid_pairing_code` | Wrong, expired or already used pairing code |
 | 401 | `unauthenticated` | Missing, invalid or revoked token |
+| 402 | `budget_exhausted` | The caller's [demo budget](#demo-budget) is used up. `details.budgetUsd`, `details.spentUsd`. `fake:` models still work |
 | 403 | `forbidden` | Valid session of the wrong kind (device on an authoring endpoint, or the reverse) |
 | 404 | `not_found` / `no_release` / `no_state` | Missing or not yours / never published / never backed up |
 | 409 | `idempotency_key_reused` | Same `Idempotency-Key`, different request body |
@@ -74,6 +75,27 @@ printable ASCII characters; a UUID is ideal). Retrying with the same key returns
 the original result with status `200` instead of `202`. Reusing a key with a
 different body returns `409 idempotency_key_reused`. Keys are scoped per user
 and kept forever (they live on the job row).
+
+### Demo budget
+
+With `USER_BUDGET_USD` set (e.g. `0.20`), each user has a lifetime cap on paid
+model spend. `GET /v1/usage` returns
+`{ usage: { budgetUsd, spentUsd, remainingUsd, exempt } }` (`budgetUsd` and
+`remainingUsd` are `null` when no cap applies). Once `remainingUsd` reaches 0,
+every endpoint that starts paid model work answers `402 budget_exhausted`
+before doing anything: `POST /projects/:id/messages`, `POST /coach/requests`,
+`POST /laundry/labels`, `PUT /notes/:id/audio`, `POST /notes/:id/live`,
+`POST /notes/:id/transcribe`, `POST /voice/utterances`, `POST /voice/resolve`. Requests on a `fake:`
+model are never blocked or counted. Idempotent replays of existing jobs are
+answered as before.
+
+Spend is the sum of each job's recorded `usage.costUsd` plus the API's own
+model calls (table `model_usage`). A job that is queued or running, or that ran
+without a reported cost, counts a conservative estimate per attempt
+(`apps/api/src/budget.ts`); an API call without a reported cost counts $0.002.
+Concurrent requests can overshoot the cap by what is already in flight.
+`BUDGET_EXEMPT_USERS` lists internal user ids (from `GET /v1/me`) or identity
+`external_id`s that have no cap.
 
 **Limits** (env-configurable): JSON bodies ≤ max(`MAX_DEFINITION_BYTES`,
 `MAX_STATE_BYTES`) + 64 KiB; uploads ≤ `MAX_UPLOAD_BYTES` (50 MiB default).
@@ -499,3 +521,7 @@ or implement managed-generation change review.
 State PUT bodies are limited to `MAX_STATE_BYTES` (256 KiB by default), measured
 as actual UTF-8 bytes even when `Content-Length` is absent. Oversized requests
 return `413 payload_too_large`.
+
+### Browser preview voice resolution
+
+`POST /v1/voice/resolve` requires a user session. Send JSON `{ context, text }` or `{ context, audio: { format: "wav", data: "<base64>" } }`, with exactly one utterance. `context` has the same `projectId`, `title`, `view`, `tools`, and `state` fields as the voice bridge context. Audio is limited to 512 KiB decoded. The response is `{ outcome: "command", tool, args, heard }` or `{ outcome: "ignored", reason, heard }`. The caller executes the returned command; this endpoint does not deliver to glasses. Invalid input returns 400, an exhausted [demo budget](#demo-budget) 402, oversized audio 413, unsupported model input 422, and an unavailable model 503. Audio and transcripts are not logged or stored.

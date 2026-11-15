@@ -15,7 +15,7 @@ import { stateRoutes } from './routes/state.ts';
 import { coachRoutes } from './routes/coach.ts';
 import { laundryRoutes } from './routes/laundry.ts';
 import { uploadRoutes } from './routes/uploads.ts';
-import { deviceRoutes, healthRoutes, jobRoutes, pairRoute } from './routes/misc.ts';
+import { deviceRoutes, healthRoutes, jobRoutes, pairRoute, usageRoutes } from './routes/misc.ts';
 import { authoringMetaRoutes, webRoutes } from './routes/web.ts';
 import { voiceRoutes } from './routes/voice.ts';
 import { fakeVoice, VoiceHub } from './voice.ts';
@@ -89,9 +89,11 @@ export function createApp(deps: Deps) {
     maxSize: Math.max(deps.config.limits.maxDefinitionBytes, deps.config.limits.maxStateBytes) + 64 * 1024,
     onError: (c) => c.json(errorBody('payload_too_large', 'The request body is too large'), 413),
   });
+  const voiceResolveLimit = bodyLimit({ maxSize: 800 * 1024, onError: (c) => c.json(errorBody('payload_too_large', 'The request body is too large'), 413) });
+  app.use('/v1/voice/resolve', voiceResolveLimit);
   // Uploads, voice clips and voice-note audio enforce their own limits.
   const ownLimit = (path: string) =>
-    path.startsWith('/v1/uploads') || path === '/v1/voice/utterances' || /^\/v1\/notes\/[^/]+\/(audio|live)$/.test(path);
+    path.startsWith('/v1/uploads') || path === '/v1/voice/utterances' || path === '/v1/voice/resolve' || /^\/v1\/notes\/[^/]+\/(audio|live)$/.test(path);
   app.use('/v1/*', async (c, next) => (ownLimit(c.req.path) ? next() : jsonLimit(c, next)));
 
   app.route('/v1/devices/pair', pairRoute(deps));
@@ -106,6 +108,7 @@ export function createApp(deps: Deps) {
   v1.route('/releases', releaseRoutes(deps));
   v1.route('/uploads', uploadRoutes(deps));
   v1.route('/jobs', jobRoutes(deps));
+  v1.route('/usage', usageRoutes(deps));
   v1.route('/devices', deviceRoutes(deps));
   v1.route('/coach', coachRoutes(deps));
   v1.route('/laundry', laundryRoutes(deps));

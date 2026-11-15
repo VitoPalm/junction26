@@ -64,6 +64,10 @@ const EnvSchema = z.object({
   MAX_STATE_BYTES: positiveInt.default(256 * 1024),
   GENERATION_CONCURRENCY: positiveInt.default(2),
   MAX_OUTPUT_TOKENS: positiveInt.default(16_000),
+  /** Per-user lifetime model spend cap in USD for a public demo (docs/api.md, "Demo budget"). Unset = no cap. */
+  USER_BUDGET_USD: z.coerce.number().positive().optional(),
+  /** Users the cap doesn't apply to: internal user ids or identity subjects (e.g. "clerk:user_…"), comma-separated. */
+  BUDGET_EXEMPT_USERS: z.string().optional(),
 
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_BASE_URL: z.string().url().default('https://openrouter.ai/api/v1'),
@@ -158,6 +162,8 @@ export interface Config {
     generationConcurrency: number;
     maxOutputTokens: number;
   };
+  /** Per-user demo spend cap; null = unlimited. */
+  budget: { userUsd: number | null; exempt: string[] };
   model: {
     apiKey: string | undefined;
     baseUrl: string;
@@ -331,6 +337,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       generationConcurrency: e.GENERATION_CONCURRENCY,
       maxOutputTokens: e.MAX_OUTPUT_TOKENS,
     },
+    budget: { userUsd: e.USER_BUDGET_USD ?? null, exempt: list(e.BUDGET_EXEMPT_USERS) },
     model: {
       apiKey: e.OPENROUTER_API_KEY,
       baseUrl: e.OPENROUTER_BASE_URL,

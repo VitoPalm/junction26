@@ -40,6 +40,7 @@ PostgreSQL 18.
 | `state_backups` | Every backup attempt, including refused ones | `(project_id, device_id, operation_id)` unique (idempotency) |
 | `project_state` | Pointer to the current accepted backup + `server_version` | One row per project |
 | `voice_notes` | Voice notes on applet pages ([voice-notes.md](voice-notes.md)): anchor (`view_id`, `step_id`), page label, values at start, status, audio key/type/hash/size, transcript | Client-generated `id`; audio key ⇔ hash (CHECK); `uploaded`/`transcribing`/`transcribed`/`failed` need audio; only notes without audio can be `discarded`; edited transcripts are never overwritten (`transcript_edited`) |
+| `model_usage` | Ledger of model calls the API makes directly (voice resolution, live stop-phrase checks) for the [demo budget](api.md#demo-budget) (`0007_model_usage.sql`): source, model, `cost_usd`, `estimated` | Owner FK; `cost_usd ≥ 0`; no transcripts or audio |
 | `note_recorder_sessions` | Native background recorder credentials (`0004_note_recorder_sessions.sql`) | Token HMAC only; owner FK; 12-hour expiry; owner-scoped revocation; API permits only recorder events, confirmation, discard, live check and upload |
 
 What's not here on purpose: chat transcripts and documents in packages; any

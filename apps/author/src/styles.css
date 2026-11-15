@@ -252,6 +252,8 @@ input:not([type='checkbox']):focus { outline: none; border-color: var(--ink); bo
 .tile-meta .tiny { opacity: 0.7; }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: color-mix(in srgb, var(--tink) 12%, transparent); }
 .pill.live { background: var(--surface); color: var(--live); box-shadow: var(--shadow-sm); }
+.pill.budget { background: var(--surface-2); margin-right: 6px; }
+.pill.budget.empty { color: var(--danger, #c0392b); }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 50%, transparent); animation: pulse 2.2s ease-out infinite; flex: none; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 50%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
 .empty-note { padding: 28px 22px; border-radius: var(--r-lg); border: 1.5px dashed var(--line-strong); color: var(--muted); display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
@@ -581,3 +583,10 @@ input:not([type='checkbox']):focus { outline: none; border-color: var(--ink); bo
 .chip { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); }
 .chip.ok { background: var(--live-soft); color: var(--live); }
 .chip.warn { background: var(--bad-soft); color: var(--bad); }
+.browser-voice { gap: 10px; }
+.voice-talk { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 14px; border: 0; border-radius: 12px; background: var(--accent); color: white; font: inherit; font-weight: 700; cursor: pointer; touch-action: none; }
+.voice-talk:disabled { opacity: .6; cursor: default; }
+.browser-voice meter { width: 100%; }
+.voice-text { display: flex; flex-direction: column; gap: 5px; font-size: .85rem; }
+.voice-text div { display: flex; gap: 8px; }
+.voice-text input { flex: 1; min-width: 0; }

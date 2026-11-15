@@ -22,6 +22,7 @@ import {
 } from '@junction26/db';
 import { ModelError, type ModelRegistry } from '@junction26/model';
 import { objectKeys } from '@junction26/storage';
+import { assertBudget, recordSpend } from '../budget.ts';
 import type { AppEnv, Deps, Principal } from '../context.ts';
 import { requireDevice, requireUser } from '../auth.ts';
 import { ApiError, badRequest, forbidden, notFound } from '../errors.ts';
@@ -300,6 +301,7 @@ export function noteRoutes(deps: Deps, hub: NoteHub, models: ModelRegistry) {
     if (endReason !== null && !END_REASONS.has(endReason)) throw badRequest(`endReason must be one of ${[...END_REASONS].join(', ')}`);
     const body = c.req.raw.body;
     if (!body) throw badRequest('The request body is empty');
+    await assertBudget(deps, p.userId, deps.config.notes.transcribeModel);
 
     const key = objectKeys.voiceNote(p.userId, note.id);
     const inspector = new Inspector(max, (head) => sniff(head));
@@ -374,9 +376,11 @@ export function noteRoutes(deps: Deps, hub: NoteHub, models: ModelRegistry) {
     const bytes = Buffer.from(await c.req.arrayBuffer());
     if (bytes.length > MAX_LIVE_WINDOW_BYTES) throw new ApiError(413, 'payload_too_large', `Windows are limited to ${MAX_LIVE_WINDOW_BYTES} bytes`);
     if (!sniffWav(bytes)) throw new ApiError(415, 'content_mismatch', 'The body is not a WAV file');
+    await assertBudget(deps, p.userId, deps.config.notes.liveModel);
     const started = performance.now();
     try {
       const r = await checkStopPhrase(models, deps.config.notes.liveModel, bytes.toString('base64'), AbortSignal.timeout(LIVE_DEADLINE_MS));
+      await recordSpend(deps, p.userId, 'notes_live', r.model, r.costUsd);
       c.get('log').info('voice note live check', { noteId: note.id, stop: r.stop, model: r.model, costUsd: r.costUsd, ms: Math.round(performance.now() - started) });
       return c.json({ stop: r.stop, startSeconds: r.startSeconds });
     } catch (err) {
@@ -401,6 +405,7 @@ export function noteRoutes(deps: Deps, hub: NoteHub, models: ModelRegistry) {
     requireUser(p);
     const note = await ownNote(deps, c);
     if (!note.audioKey || !note.audioSha256) throw new ApiError(409, 'no_audio', 'This note has no recording yet');
+    await assertBudget(deps, p.userId, deps.config.notes.transcribeModel);
     const { job } = await enqueueJob(deps.pool, {
       ownerId: p.userId,
       projectId: note.projectId,

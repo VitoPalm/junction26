@@ -265,3 +265,7 @@ Don't claim device behavior that wasn't observed on the device.
   both phones.
 - **V4 (optional):** echo-safe spoken confirmations, push-to-talk or prefix
   gate, DAT Speech mode B.
+
+### Browser preview
+
+The authoring preview also offers hold-to-talk and a text fallback in the browser. It sends the preview's current context to `POST /v1/voice/resolve` and executes a returned tool locally in the preview; it does not require paired glasses or Meta AI.

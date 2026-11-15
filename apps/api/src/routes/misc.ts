@@ -11,9 +11,17 @@ import {
   withTransaction,
 } from '@junction26/db';
 import type { AppEnv, Deps } from '../context.ts';
+import { budgetStatus } from '../budget.ts';
 import { authorId, hmac, newDeviceToken, newPairingCode, normalizePairingCode, PAIRING_CODE_TTL_MS } from '../auth.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { deviceView, jobView, param, readJson } from '../http.ts';
+
+/** The caller's demo budget (docs/api.md, "Demo budget"). */
+export function usageRoutes(deps: Deps) {
+  const app = new Hono<AppEnv>();
+  app.get('/', async (c) => c.json({ usage: await budgetStatus(deps, authorId(c)) }));
+  return app;
+}
 
 export function jobRoutes(deps: Deps) {
   const app = new Hono<AppEnv>();

@@ -483,7 +483,7 @@ function PreviewPanel(props: {
         </div>
       )}
       {def && <>
-        <GlassesPreview definition={def} resetKey={selected ?? ''} />
+        <GlassesPreview definition={def} resetKey={selected ?? ''} projectId={props.projectId} api={api} />
         <button className="secondary wide" onClick={() => setDemoOpen(true)}><IconGlasses size={20} /> See it on glasses</button>
         {demoOpen && <GlassesDemo definition={def} resetKey={selected ?? ''} onClose={() => setDemoOpen(false)} />}
       </>}

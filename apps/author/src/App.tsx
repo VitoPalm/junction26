@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { LaundryScreen } from './Laundry.tsx';
 import { HashRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { CAPABILITIES, LIMITATIONS } from '@junction26/applet-format';
-import { createApi, defaultServer, devToken, isNative, loadSession, saveSession, type Api, type Device, type Project, type Session } from './api.ts';
+import { createApi, defaultServer, devToken, isNative, loadSession, saveSession, type Api, type Device, type Project, type Session, type Usage } from './api.ts';
 import { ProjectScreen } from './ProjectScreen.tsx';
 import { GlassesScreen } from './GlassesScreen.tsx';
 import { stopSessionRecorder } from './recorder.ts';
@@ -149,6 +149,7 @@ function Library() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [devices, setDevices] = useState<Device[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [usage, setUsage] = useState<Usage | null>(null);
   const [welcome, setWelcome] = useState(() => {
     try {
       return !localStorage.getItem(WELCOME_KEY);
@@ -159,6 +160,7 @@ function Library() {
   useEffect(() => {
     api.projects().then((r) => setProjects(r.projects), (e: Error) => setError(e.message));
     api.devices().then((r) => setDevices(r.devices), () => setDevices(null));
+    api.usage().then((r) => setUsage(r.usage), () => setUsage(null));
   }, [api]);
   const paired = devices?.filter((d) => !d.revokedAt) ?? [];
   const live = projects?.filter((p) => p.currentReleaseId).length ?? 0;
@@ -171,6 +173,11 @@ function Library() {
           <span>Solutions</span>
         </Link>
         <span className="grow" />
+        {usage?.budgetUsd != null && (
+          <span className={`pill budget${usage.remainingUsd === 0 ? ' empty' : ''}`} title={`Demo credit: $${usage.spentUsd.toFixed(3)} of $${usage.budgetUsd.toFixed(2)} used. Free demo models keep working.`}>
+            ${(usage.remainingUsd ?? 0).toFixed(2)} left
+          </span>
+        )}
         <Link className="icon-btn" to="/glasses" aria-label={paired.length ? 'Glasses (paired)' : 'Glasses'}>
           <IconGlasses size={22} />
           {paired.length > 0 && <span className="status-dot" />}
