@@ -293,6 +293,11 @@ export function generateRevisionHandler(models: ModelRegistry): JobHandler {
       const inspect = async (value: string): Promise<Interpreted> => {
         const outcome = interpret(value);
         if (outcome.ok && outcome.definition) {
+          // Task modules (e.g. laundry) are created by server code, never invented by the
+          // model: an unknown task kind passes the schema but renders "update the app".
+          const baseTask = base ? validOrNull(base.definition)?.task : undefined;
+          if (outcome.definition.task && outcome.definition.task.kind !== baseTask?.kind)
+            return { ok: false, issues: [{ path: 'definition.task', code: 'task_not_allowed', message: 'Remove "task". Task modules are added by the app, not by you; for a manual use views plus guide.' }] };
           const issues = sources.resolve(outcome.definition, base ? validOrNull(base.definition) : null);
           if (issues.length) return { ok: false, issues };
           if (spec.provider !== 'fake') {

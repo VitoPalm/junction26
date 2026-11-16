@@ -1,0 +1,142 @@
+{
+  "videoModel": "google/veo-3.1-lite",
+  "imageModel": "bytedance-seed/seedream-5-0-flash",
+  "resolution": "720p",
+  "aspectRatio": "16:9",
+  "style": "Photorealistic documentary footage, natural soft daylight, 35mm lens, shallow depth of field, realistic skin and hands, calm pacing. No text, no logos, no brand names, no subtitles, no on-screen graphics or UI, no visible screens with content.",
+  "pov": "Steady first-person point of view from the wearer's eyes, camera almost static with slight natural head motion, hands in the lower half of the frame, the upper-middle of the frame calm and uncluttered.",
+  "character": "A person in their early thirties with short dark curly hair, a heather-grey hoodie and dark jeans, wearing plain thick black rectangular glasses with no logos.",
+  "characterStill": "Portrait reference, waist up, the person sits on a light wooden floor in a bright Scandinavian living room, white flat-pack furniture panels around them, looking slightly off camera.",
+  "shots": [
+    {
+      "id": "h01-hook",
+      "duration": 8,
+      "ref": true,
+      "prompt": "Wide shot. The person kneels on the living room floor surrounded by white flat-pack desk panels, screws in small bags and an unfolded paper instruction manual. They squint at the manual, turn it sideways, sigh. A phone lies on the floor out of reach, screen dark."
+    },
+    {
+      "id": "h02-phone",
+      "duration": 6,
+      "ref": true,
+      "prompt": "Medium close-up over the shoulder. The person sits back on their heels and photographs the paper manual cover with their phone, the phone screen turned away from camera, then sets the phone down on the cardboard box."
+    },
+    {
+      "id": "h03-glasses-on",
+      "duration": 4,
+      "ref": true,
+      "prompt": "Close-up. The person sits cross-legged on the floor, not wearing glasses at first, holding the black glasses in one hand. They unfold the glasses and put them on, blink, a small confident smile, then pick up a screwdriver from the floor.",
+      "bare": true
+    },
+    {
+      "id": "h04-pov-steps",
+      "duration": 8,
+      "ref": false,
+      "pov": true,
+      "prompt": "The wearer's two hands hold a white melamine desk panel steady against a cardboard box on a wooden floor and push a wooden dowel into a pre-drilled hole. Hands keep working the whole time."
+    },
+    {
+      "id": "h05-pov-screws",
+      "duration": 8,
+      "ref": false,
+      "pov": true,
+      "prompt": "The wearer's open left palm holds two different screws, one short and one long, side by side. The hand stays still for several seconds as if the wearer is thinking and talking, then the right hand picks the short screw."
+    },
+    {
+      "id": "h06-backwards",
+      "duration": 6,
+      "ref": true,
+      "prompt": "Medium shot. The person holds a half-assembled white desk frame and notices a side panel is mounted backwards, unfinished edge facing out. They pause, tilt their head, and say one short sentence quietly, hands still on the panel."
+    },
+    {
+      "id": "h07-pov-fix",
+      "duration": 8,
+      "ref": false,
+      "pov": true,
+      "prompt": "The wearer's hands unscrew a white side panel with a screwdriver, lift it off, turn it around, and line it up again. Calm, deliberate motion."
+    },
+    {
+      "id": "h08-doorbell",
+      "duration": 6,
+      "ref": true,
+      "prompt": "Medium shot. The person looks up toward a doorway as if hearing the doorbell, takes off the black glasses, places them on top of the cardboard box and stands up to leave the frame. Half-built desk in the foreground."
+    },
+    {
+      "id": "h09-next-day",
+      "duration": 6,
+      "ref": true,
+      "prompt": "Morning light the next day, warmer tones. The person, not wearing glasses at first, sits down by the half-built desk, picks up the black glasses from the top of the cardboard box, puts them on and reaches for the screwdriver.",
+      "bare": true
+    },
+    {
+      "id": "h10-done",
+      "duration": 6,
+      "ref": true,
+      "prompt": "Medium wide shot. The person sits at the finished white desk with a laptop and a plant on it, runs a hand over the desktop, leans back satisfied."
+    },
+    {
+      "id": "c01-cook-struggle",
+      "duration": 6,
+      "ref": true,
+      "prompt": "Kitchen counter. The person, glasses on, has both hands covered in sticky batter and flour. A phone propped against a jar has gone dark; they try to wake it with a knuckle, smear flour on it, and sigh."
+    },
+    {
+      "id": "b01-cooking",
+      "duration": 6,
+      "ref": false,
+      "pov": true,
+      "prompt": "The wearer whisks pancake batter in a glass bowl on a bright kitchen counter, flour on their fingers, eggs and milk nearby."
+    },
+    {
+      "id": "b02-crochet",
+      "duration": 6,
+      "ref": false,
+      "pov": true,
+      "prompt": "Close first-person view of hands crocheting with a hook and soft mustard-yellow yarn, a few rows of a granny square visible, rhythmic stitches."
+    },
+    {
+      "id": "l01-laundry-struggle",
+      "duration": 6,
+      "ref": true,
+      "prompt": "Laundry room. The person, glasses on, holds a shirt inside-out and squints at a tiny care label, turning it under the light, puzzled, a heap of mixed clothes on the washing machine."
+    },
+    {
+      "id": "b03-laundry",
+      "duration": 6,
+      "ref": false,
+      "pov": true,
+      "prompt": "The wearer sorts clothes into piles on top of a front-loading washing machine, holding up a navy t-shirt and turning its inside care label toward themselves."
+    },
+    {
+      "id": "t01-table-struggle",
+      "duration": 6,
+      "ref": true,
+      "prompt": "Warm evening light at a wooden game table with miniatures and friends. The person, glasses on, frantically erases a number on a paper character sheet, the paper starts to tear, friends wait impatiently."
+    },
+    {
+      "id": "b04-tabletop",
+      "duration": 6,
+      "ref": true,
+      "prompt": "Warm evening light. The person sits at a wooden table with three friends playing a tabletop role-playing game, painted miniatures, paper character sheets and snacks on the table. Friends laugh; the person grins and says something short."
+    },
+    {
+      "id": "b05-bike",
+      "duration": 6,
+      "ref": false,
+      "pov": true,
+      "prompt": "The wearer's greasy hands fit a chain back onto the rear cog of an upside-down bicycle in a garage, a hex key in one hand."
+    },
+    {
+      "id": "b06-workout",
+      "duration": 6,
+      "ref": true,
+      "prompt": "In a bright home gym corner, the person does slow dumbbell curls, counting reps under their breath, glasses on."
+    },
+    {
+      "id": "b07-meds",
+      "duration": 4,
+      "ref": false,
+      "pov": true,
+      "prompt": "Morning kitchen counter. The wearer opens one compartment of a weekly pill organizer and tips two tablets into their palm, a glass of water beside it."
+    }
+  ]
+}

@@ -181,7 +181,7 @@ export function noteRoutes(deps: Deps, hub: NoteHub, models: ModelRegistry) {
     if (!(await getProject(deps.pool, p.userId, body.projectId))) throw notFound('Project');
     const existing = await getVoiceNote(deps.pool, p.userId, body.id);
     if (!existing && !hub.hasRecorder(p.userId)) {
-      throw new ApiError(409, 'no_recorder', 'Open the Applets app on your phone and turn on the note recorder.');
+      throw new ApiError(409, 'no_recorder', 'Open Solutions on your phone and turn on the note recorder.');
     }
     const r = await createVoiceNote(deps.pool, {
       id: body.id,

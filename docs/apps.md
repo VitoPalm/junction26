@@ -163,6 +163,9 @@ One React codebase: web build served at `/author/`, and Capacitor 8.5 shells
   Publish. Glasses screen: install deep link, pairing code with countdown
   (notices when pairing completes), device list.
 - Naming: people see "solutions" (brand "Solutions"); the code says applet.
+  Both web app titles and application metadata, the phone web manifest
+  (`name` and `short_name`), native display names and the glasses install link
+  use "Solutions". Technical IDs, routes and persisted storage names stay stable.
   See the decision log in [product-spec.md](product-spec.md).
 - Look: warm light/dark themes from `prefers-color-scheme`, tokens at the top of
   `src/styles.css`, Bricolage Grotesque + Figtree from Google Fonts (system

@@ -1,0 +1,185 @@
+{
+  "model": "google/gemini-3.8-flash-tts",
+  "voices": {
+    "narrator": {
+      "voice": "Kore",
+      "instructions": "Warm, confident product-demo narrator. Natural, unhurried, friendly. Not salesy."
+    },
+    "wearer": {
+      "voice": "Puck",
+      "instructions": "A normal person mid-task, talking casually to their glasses. Relaxed, slightly distracted, quiet."
+    },
+    "agent": {
+      "voice": "Aoede",
+      "instructions": "A helpful assistant voice coming from smart glasses. Clear, brief, calm, slightly crisp. Short sentences."
+    }
+  },
+  "lines": [
+    {
+      "id": "01",
+      "who": "narrator",
+      "shot": "h01-hook",
+      "text": "Flat-pack furniture. Thirty-two steps, four kinds of screws, and a manual that assumes you have three hands."
+    },
+    {
+      "id": "02",
+      "who": "narrator",
+      "shot": "h02-phone",
+      "text": "So give the manual to your phone. Ask for a guide, and we turn it into a Solution for your Meta Ray-Ban Display glasses."
+    },
+    {
+      "id": "03",
+      "who": "narrator",
+      "shot": "h03-glasses-on",
+      "text": "Now your hands stay on the work."
+    },
+    {
+      "id": "04",
+      "who": "narrator",
+      "shot": "h04-pov-steps",
+      "text": "One step at a time. The diagram, big and bright. A pinch on the Neural Band moves you forward."
+    },
+    {
+      "id": "05",
+      "who": "narrator",
+      "shot": "h05-pov-screws",
+      "text": "But this isn't just the manual mirrored onto a screen. You can talk to it."
+    },
+    {
+      "id": "06",
+      "who": "wearer",
+      "shot": "h05-pov-screws",
+      "pauseBefore": 0.6,
+      "text": "Which parts do I need for this step?"
+    },
+    {
+      "id": "29",
+      "who": "agent",
+      "shot": "h05-pov-screws",
+      "pauseBefore": 0.4,
+      "text": "Four cam bolts, the short silver ones marked A, and the two side panels. Manual page two."
+    },
+    {
+      "id": "07",
+      "who": "narrator",
+      "shot": "h05-pov-screws",
+      "pauseBefore": 1.5,
+      "text": "Answers come from your manual, with the page they came from."
+    },
+    {
+      "id": "08",
+      "who": "wearer",
+      "shot": "h06-backwards",
+      "pauseBefore": 0.5,
+      "text": "I think I put this side panel on backwards."
+    },
+    {
+      "id": "30",
+      "who": "agent",
+      "shot": "h06-backwards",
+      "pauseBefore": 0.4,
+      "text": "Okay. Undo the left side and refit it: three steps, then back to step four. Use this fix?"
+    },
+    {
+      "id": "32",
+      "who": "wearer",
+      "shot": "h07-pov-fix",
+      "pauseBefore": 0.3,
+      "text": "Yeah, do it."
+    },
+    {
+      "id": "09",
+      "who": "narrator",
+      "shot": "h07-pov-fix",
+      "pauseBefore": 1.5,
+      "text": "Nothing changes until you say yes. Three short steps, then straight back to where you were."
+    },
+    {
+      "id": "10",
+      "who": "narrator",
+      "shot": "h08-doorbell",
+      "text": "Life interrupts."
+    },
+    {
+      "id": "11",
+      "who": "narrator",
+      "shot": "h09-next-day",
+      "pauseBefore": 1.5,
+      "text": "Tomorrow it opens right on your step. Everything runs on the glasses, offline."
+    },
+    {
+      "id": "21",
+      "who": "narrator",
+      "shot": "c01-cook-struggle",
+      "text": "Batter on your hands, and the recipe just locked."
+    },
+    {
+      "id": "22",
+      "who": "narrator",
+      "shot": "b01-cooking",
+      "text": "Now a pinch moves you to the next step. Your phone stays clean."
+    },
+    {
+      "id": "23",
+      "who": "narrator",
+      "shot": "l01-laundry-struggle",
+      "text": "Care labels nobody can read?"
+    },
+    {
+      "id": "24",
+      "who": "narrator",
+      "shot": "b03-laundry",
+      "text": "Snap them once on your phone. The laundry block sorts your loads and walks you through every wash."
+    },
+    {
+      "id": "25",
+      "who": "narrator",
+      "shot": "t01-table-struggle",
+      "text": "Erasing hit points all night?"
+    },
+    {
+      "id": "26",
+      "who": "narrator",
+      "shot": "b04-tabletop",
+      "text": "Your character sheet keeps score, by voice."
+    },
+    {
+      "id": "16",
+      "who": "wearer",
+      "shot": "b04-tabletop",
+      "pauseBefore": 0.4,
+      "text": "Hey Meta, take five damage."
+    },
+    {
+      "id": "31",
+      "who": "agent",
+      "shot": "b04-tabletop",
+      "pauseBefore": 0.4,
+      "text": "Done. Brakka is at nineteen of twenty-four."
+    },
+    {
+      "id": "27",
+      "who": "narrator",
+      "shot": "montage",
+      "text": "Each of these is a block: a template for hands-free help. Guides, counters, checklists, live dashboards. Describe your situation, and it becomes a Solution."
+    },
+    {
+      "id": "28",
+      "who": "narrator",
+      "shot": "p03-notes",
+      "text": "Need to remember something mid-task? Record a note. It lands on your phone, filed under the step you were on."
+    },
+    {
+      "id": "19",
+      "who": "narrator",
+      "shot": "architecture",
+      "text": "Build them in our app or straight from Claude or ChatGPT. Under the hood, Solutions are checked data, not generated code. They run offline on the glasses, driven by the Neural Band and by Meta AI through WebMCP."
+    },
+    {
+      "id": "20",
+      "who": "narrator",
+      "shot": "h10-done",
+      "text": "Bring your manual. Keep your hands on what you're making."
+    }
+  ]
+}
