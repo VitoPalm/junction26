@@ -386,7 +386,7 @@ shared production database.
 2. Enable Developer Mode (Settings → App Info → tap App version ×5 → Enable).
    Restart the glasses and the app so WebMCP picks it up.
 3. Add our app: scan the QR for
-   `fb-viewapp://web_app_deep_link?appName=Junction26&appUrl=<PUBLIC_ORIGIN>/glasses/`
+   `fb-viewapp://web_app_deep_link?appName=Solutions&appUrl=<PUBLIC_ORIGIN>/glasses/`
    (generate it with the simulator's QR tool), then confirm on the glasses.
 4. First launch online; check that warm relaunch makes 0 requests; then test
    airplane mode.

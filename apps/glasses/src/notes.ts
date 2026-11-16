@@ -177,7 +177,7 @@ export async function startNote(anchor: NoteAnchor, ctx: StartContext): Promise<
   if (r.status === 409 && r.json?.error?.code === 'no_recorder') {
     const message = 'Turn on the recorder in the phone app';
     flash('unavailable', message, key, projectId);
-    return { ok: false, code: 'no_recorder', message: 'Open the Applets app on your phone and turn on the note recorder, then try again.' };
+    return { ok: false, code: 'no_recorder', message: 'Open Solutions on your phone and turn on the note recorder, then try again.' };
   }
   if (r.status !== 201 && r.status !== 200) {
     const message = r.status === 0 ? 'No connection' : 'Couldn’t start the note';

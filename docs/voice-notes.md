@@ -123,7 +123,7 @@ States:
 | Starting | "Connecting to phone…" (until the phone confirms recording) |
 | Recording | Bright REC dot + elapsed time, "Say *stop recording meta*" |
 | Saved | "Saved" for about 2 s, then idle (count + 1) |
-| Unavailable | "Open the Applets app on your phone" (bridge not connected) |
+| Unavailable | "Open Solutions on your phone" (bridge not connected) |
 
 The hint text comes from the component, not the model, so the wording is the
 same everywhere and always fits. The band can focus the component and pinch to

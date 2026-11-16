@@ -174,7 +174,9 @@ Input: `{ projectId, messageId, baseRevisionId, attachmentIds, model }`.
    the model extracted text, supported images and bounded source tools. Text-only
    models cannot inspect diagrams; limits are in [model-pipeline.md](model-pipeline.md).
 5. Parse `{ reply, definition|null }`; validate the canonical schema, references,
-   copy and source refs, hydrate images, and measure fit at 600×600. Up to two
+   copy and source refs, hydrate images, and measure fit at 600×600. A `task`
+   the model adds (or whose kind differs from the current revision's) is an
+   issue: task modules come from server code, never from the model. Up to two
    repairs retain tool context and receive exact issues. A clarification can
    succeed without producing a revision.
 6. In one transaction: revision (`source: model`, `job_id`), assistant message,

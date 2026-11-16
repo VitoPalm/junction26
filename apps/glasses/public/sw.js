@@ -6,7 +6,8 @@
    enough: the first load fetches its assets before the worker controls the
    page, so they would never reach the cache and an offline launch would get
    HTML without code. */
-const CACHE = 'j26-glasses-v2';
+// Refresh installed shells when the app name changes.
+const CACHE = 'j26-glasses-v3';
 const SCOPE = self.registration.scope; // .../glasses/
 
 async function precache() {

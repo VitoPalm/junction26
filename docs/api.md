@@ -302,7 +302,8 @@ recorder (a user session) records and uploads it, the worker transcribes it.
    viewId, stepId?, pageLabel (≤120), noteLabel?, stateSnapshot? }`. Retrying
    the same `id` returns `200` with the existing note and sends `start` again
    only while it is still `starting`. Without an open recorder: `409
-   no_recorder` and nothing is stored. Then `GET /v1/notes/:id/events` (SSE):
+   no_recorder` and nothing is stored; the message asks the wearer to open
+   Solutions on their phone and turn on the note recorder. Then `GET /v1/notes/:id/events` (SSE):
    `ready`, `status { status }`, `recording { startedAt }`, `stopping
    { reason }`, then `saved` or `discarded { reason }`, which end the stream.
 3. Phone: `POST /v1/notes/:id/recording` as soon as it records. Optional live
